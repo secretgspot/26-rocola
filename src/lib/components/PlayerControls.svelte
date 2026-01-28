@@ -34,8 +34,9 @@
 
 <style>
 	.controls { display:flex; gap:.5rem; align-items:center }
-	button { padding:.5rem .65rem; border-radius:6px; border:0; background:var(--accent,#2b8aee); color:#fff }
-	button.ghost { background:transparent; border:1px solid rgba(0,0,0,0.08); color:inherit }
+	button { padding:.5rem .65rem; border-radius:6px; border:0; color:#fff }
+	button.btn-accent { background: var(--accent); color:#041525 }
+	button.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:inherit }
 </style>
 
 <div>

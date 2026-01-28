@@ -1,7 +1,7 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
 	// global styles (Open Props + Rocola theme)
-	import '$lib/styles/app.css';
+	import '../lib/styles/app.css';
 
 	let { children } = $props();
 </script>
