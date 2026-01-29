@@ -5,9 +5,10 @@
 	$: tier = (item.tier || item.tierName || 'free').toLowerCase();
 	
 	// Format title: if it contains " - ", split it for better hierarchy
-	$: titleParts = item.title.includes(' - ') ? item.title.split(' - ') : [item.title];
-	$: artist = titleParts.length > 1 ? titleParts[0] : (item.channelTitle || 'Unknown Artist');
-	$: track = titleParts.length > 1 ? titleParts.slice(1).join(' - ') : item.title;
+	$: displayTitle = item.title || item.song?.title || 'Untitled';
+	$: titleParts = displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle];
+	$: artist = titleParts.length > 1 ? titleParts[0] : (item.channelTitle || item.song?.channelTitle || 'Unknown Artist');
+	$: track = titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle;
 </script>
 
 <div class="item {tier} glitch-hover">

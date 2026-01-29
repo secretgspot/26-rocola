@@ -1,6 +1,6 @@
 <script>
 	import { onMount, onDestroy } from 'svelte';
-	import { queue, currentSong, previousSong, toasts, initRealtime, addToast } from '$lib/client/stores.js';
+	import { queue, currentSong, previousSong, toasts, initRealtime, addToast, refreshQueue } from '$lib/client/stores.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
@@ -40,24 +40,10 @@
 			previousSong.set($currentSong);
 			currentSong.set(data.next);
 			playbackProgress = 0;
-			// Refresh queue
-			try {
-				const qRes = await fetch('/api/queue');
-				const qData = await qRes.json();
-				const items = (qData.queue || []).map((r) => ({ ...r.left, song: r.right }));
-				
-				const cRes = await fetch('/api/queue/current');
-				const cData = await cRes.json();
-
-				if (cData?.current) {
-					const currentSongId = cData.current.songId ?? cData.current.id ?? cData.current.videoId;
-					queue.set(items.filter((it) => (it.song?.id ?? it.songId ?? it.id) !== currentSongId));
-				} else {
-					queue.set(items);
-				}
-			} catch (e) {
-				console.warn('Failed to refresh queue', e);
-			}
+			
+			// Refresh queue using normalized logic
+			await refreshQueue();
+			
 			addToast({ message: `Now playing: ${data.next.title || data.next.videoId}`, level: 'info' });
 		} else if (data.message) {
 			addToast({ message: data.message, level: 'info' });

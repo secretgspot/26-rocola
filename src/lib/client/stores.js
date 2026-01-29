@@ -9,7 +9,7 @@ export const toasts = writable([]);
 /**
  * Normalizes a queue item from various potential shapes (flat, {left,right}, {song})
  */
-function normalizeQueueItem(item) {
+export function normalizeQueueItem(item) {
 	if (!item) return null;
 	const left = item.left ?? item;
 	const song = item.song ?? item.right ?? item.song ?? null;
@@ -35,7 +35,7 @@ function normalizeQueueItem(item) {
 /**
  * Filter out current song and items with no plays left
  */
-function filterQueue(items, current) {
+export function filterQueue(items, current) {
 	const currentQueueId = current?.queueId ?? current?.id;
 	
 	const filtered = items
@@ -57,23 +57,7 @@ function filterQueue(items, current) {
 	return filtered;
 }
 
-export function addToast({ message, level = 'info', ttl = 3500 }) {
-	const id = crypto.randomUUID();
-	const t = { id, message, level };
-	toasts.update((a) => [t, ...a]);
-	setTimeout(() => toasts.update((a) => a.filter((x) => x.id !== id)), ttl);
-	return id;
-}
-
-let initialized = false;
-
-export async function initRealtime() {
-	if (initialized) return;
-	initialized = true;
-	
-	console.info('[Store] Initializing realtime...');
-	
-	// Initial Fetch
+export async function refreshQueue() {
 	try {
 		const [qRes, cRes] = await Promise.all([
 			fetch('/api/queue'),
@@ -96,8 +80,28 @@ export async function initRealtime() {
 			}
 		}
 	} catch (err) {
-		console.error('[Store] Initial fetch error:', err);
+		console.error('[Store] Refresh error:', err);
 	}
+}
+
+export function addToast({ message, level = 'info', ttl = 3500 }) {
+	const id = crypto.randomUUID();
+	const t = { id, message, level };
+	toasts.update((a) => [t, ...a]);
+	setTimeout(() => toasts.update((a) => a.filter((x) => x.id !== id)), ttl);
+	return id;
+}
+
+let initialized = false;
+
+export async function initRealtime() {
+	if (initialized) return;
+	initialized = true;
+	
+	console.info('[Store] Initializing realtime...');
+	
+	// Initial Fetch
+	refreshQueue();
 
 	// WebSocket setup
 	try {
