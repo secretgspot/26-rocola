@@ -64,37 +64,6 @@
 			error = data.error || 'Failed to add song';
 		}
 	}
-	
-	// Dev seed function
-	async function seedDev() {
-		const { queue, currentSong, devSeeded } = await import('$lib/client/stores.js');
-		try {
-			const res = await fetch('/api/debug/seed', { method: 'POST' });
-			const data = await res.json();
-			if (data.ok) {
-				addToast({ message: `Seeded ${data.seeded} items`, level: 'success' });
-				devSeeded.set(true);
-				// Refresh logic matches previous implementation
-				const cRes = await fetch('/api/queue/current');
-				const cData = await cRes.json();
-				currentSong.set(cData.current || null);
-				const qRes = await fetch('/api/queue');
-				const qData = await qRes.json();
-				const items = (qData.queue || []).map((r) => ({ ...r.left, song: r.right }));
-				if (cData?.current) {
-					const currentSongId = cData.current.songId ?? cData.current.id ?? cData.current.videoId;
-					queue.set(items.filter((it) => (it.song?.id ?? it.songId ?? it.id) !== currentSongId));
-				} else {
-					queue.set(items);
-				}
-				close();
-			} else {
-				addToast({ message: data.error || 'Seed failed', level: 'warn' });
-			}
-		} catch (e) {
-			addToast({ message: 'Seed failed', level: 'warn' });
-		}
-	}
 </script>
 
 <!-- FAB -->
@@ -154,12 +123,6 @@
 							<div class="tier-name">PLATINUM</div>
 							<div class="tier-price">$10</div>
 						</button>
-					</div>
-				{/if}
-				
-				{#if import.meta.env.DEV && !metadata}
-					<div class="dev-actions">
-						<button class="btn-text" on:click={seedDev}>[DEV: SEED QUEUE]</button>
 					</div>
 				{/if}
 			</div>

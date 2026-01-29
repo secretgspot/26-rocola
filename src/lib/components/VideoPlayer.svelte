@@ -6,7 +6,6 @@
 
 	let el;
 	let player = null;
-	let isFullscreen = false;
 
 	const dispatch = createEventDispatcher();
 
@@ -29,15 +28,6 @@
 
 	function next() { dispatch('next'); }
 
-	function toggleFullscreen() {
-		if (!document.fullscreenElement) {
-			const wrapper = el.parentElement; // request fullscreen on wrapper
-			wrapper.requestFullscreen().then(() => isFullscreen = true).catch(() => {});
-		} else {
-			document.exitFullscreen().then(() => isFullscreen = false).catch(() => {});
-		}
-	}
-
 	onDestroy(() => {
 		player?.destroy?.();
 	});
@@ -57,9 +47,6 @@
 			{/if}
 		</div>
 		<div class="actions">
-			<button class="btn-icon" on:click={toggleFullscreen} title="Fullscreen">
-				[ ⛶ ]
-			</button>
 			{#if import.meta.env.DEV}
 				<button class="btn-icon warn" on:click={next} title="Force Next (Dev)">
 					[ >> ]
