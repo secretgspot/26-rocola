@@ -9,8 +9,8 @@
 </svelte:head>
 
 <style global>
-@import 'open-props/normalize.css';
-@import 'open-props/open-props.min.css';
+@import url('https://unpkg.com/open-props@1.13.1/normalize.css');
+@import url('https://unpkg.com/open-props@1.13.1/open-props.min.css');
 
 :root {
   /* Rocola theme tokens */
