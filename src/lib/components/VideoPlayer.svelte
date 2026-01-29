@@ -7,6 +7,16 @@
 
 	let el;
 	let player = null;
+	let progress = 0;
+	let duration = 0;
+	let currentTime = 0;
+	let progressInterval;
+
+	// 'Live' decoder stats simulation
+	let bitrate = 4500;
+	let latency = 42;
+	let buffer = 100;
+	let statsInterval;
 
 	const dispatch = createEventDispatcher();
 
@@ -21,6 +31,24 @@
 				}
 			}
 		});
+
+		// Start progress tracking
+		progressInterval = setInterval(() => {
+			if (player && typeof player._raw?.getCurrentTime === 'function') {
+				currentTime = player.getCurrentTime();
+				duration = player._raw.getDuration() || 0;
+				if (duration > 0) {
+					progress = (currentTime / duration) * 100;
+				}
+			}
+		}, 500);
+
+		// Start stats simulation
+		statsInterval = setInterval(() => {
+			bitrate = 4200 + Math.floor(Math.random() * 600);
+			latency = 35 + Math.floor(Math.random() * 15);
+			buffer = 95 + Math.floor(Math.random() * 5);
+		}, 2000);
 	});
 
 	$: if (player && $currentSong?.videoId) {
@@ -31,6 +59,8 @@
 
 	onDestroy(() => {
 		player?.destroy?.();
+		clearInterval(progressInterval);
+		clearInterval(statsInterval);
 	});
 </script>
 
@@ -65,12 +95,12 @@
 
 		<div class="overlay-bottom">
 			<div class="decoder-stats">
-				<div class="stat">BITRATE: 4500kbps</div>
-				<div class="stat">LATENCY: 42ms</div>
-				<div class="stat">BUFFER: 100%</div>
+				<div class="stat">BITRATE: {bitrate}kbps</div>
+				<div class="stat">LATENCY: {latency}ms</div>
+				<div class="stat">BUFFER: {buffer}%</div>
 			</div>
 			<div class="playback-bar">
-				<div class="progress"></div>
+				<div class="progress-fill" style="width: {progress}%"></div>
 			</div>
 		</div>
 
@@ -125,6 +155,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-start;
+		z-index: 5;
 	}
 
 	.stream-info {
@@ -147,6 +178,7 @@
 		background: var(--neon-green);
 		border-radius: 50%;
 		box-shadow: 0 0 5px var(--neon-green);
+		animation: pulse 1s infinite;
 	}
 	.live-indicator span {
 		font-family: var(--font-pixel);
@@ -222,6 +254,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.5rem;
+		z-index: 5;
 	}
 	.decoder-stats {
 		display: flex;
@@ -239,12 +272,21 @@
 		background: rgba(255,255,255,0.1);
 		position: relative;
 	}
-	.playback-bar .progress {
+	.playback-bar .progress-fill {
 		position: absolute;
 		top: 0; left: 0; height: 100%;
-		width: 40%; /* Placeholder */
 		background: var(--neon-cyan);
 		box-shadow: 0 0 10px var(--neon-cyan);
+		transition: width 0.5s linear;
+	}
+
+	.corner-accents {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
 	}
 
 	.corner-accents .accent {
@@ -253,10 +295,15 @@
 		height: 20px;
 		border: 1px solid var(--neon-cyan);
 		opacity: 0.4;
-		pointer-events: none;
 	}
 	.accent.top-left { top: 1rem; left: 1rem; border-right: 0; border-bottom: 0; }
 	.accent.top-right { top: 1rem; right: 1rem; border-left: 0; border-bottom: 0; }
 	.accent.bottom-left { bottom: 1rem; left: 1rem; border-right: 0; border-top: 0; }
 	.accent.bottom-right { bottom: 1rem; right: 1rem; border-left: 0; border-top: 0; }
+
+	@keyframes pulse {
+		0% { opacity: 1; }
+		50% { opacity: 0.4; }
+		100% { opacity: 1; }
+	}
 </style>
