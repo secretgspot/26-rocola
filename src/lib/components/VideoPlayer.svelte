@@ -39,6 +39,7 @@
 				duration = player._raw.getDuration() || 0;
 				if (duration > 0) {
 					progress = (currentTime / duration) * 100;
+					dispatch('timeupdate', { progress });
 				}
 			}
 		}, 500);
@@ -90,17 +91,6 @@
 						<span class="text">SKIP_BUFFER</span>
 					</button>
 				{/if}
-			</div>
-		</div>
-
-		<div class="overlay-bottom">
-			<div class="decoder-stats">
-				<div class="stat">BITRATE: {bitrate}kbps</div>
-				<div class="stat">LATENCY: {latency}ms</div>
-				<div class="stat">BUFFER: {buffer}%</div>
-			</div>
-			<div class="playback-bar">
-				<div class="progress-fill" style="width: {progress}%"></div>
 			</div>
 		</div>
 

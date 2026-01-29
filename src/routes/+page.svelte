@@ -1,14 +1,33 @@
 <script>
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { queue, currentSong, previousSong, toasts, initRealtime, addToast } from '$lib/client/stores.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 
+	let statsInterval;
+	let bitrate = 4820;
+	let latency = 32;
+	let buffer = 100;
+	let playbackProgress = 0;
+
 	onMount(() => {
 		initRealtime();
+		statsInterval = setInterval(() => {
+			bitrate = 4200 + Math.floor(Math.random() * 800);
+			latency = 28 + Math.floor(Math.random() * 12);
+			buffer = 98 + Math.floor(Math.random() * 2);
+		}, 3000);
 	});
+
+	onDestroy(() => {
+		clearInterval(statsInterval);
+	});
+
+	function handleTimeUpdate(e) {
+		playbackProgress = e.detail.progress;
+	}
 
 	async function advance() {
 		const res = await fetch('/api/queue/next', { method: 'POST' });
@@ -20,18 +39,16 @@
 		if (data.next) {
 			previousSong.set($currentSong);
 			currentSong.set(data.next);
+			playbackProgress = 0;
 			// Refresh queue
 			try {
 				const qRes = await fetch('/api/queue');
 				const qData = await qRes.json();
 				const items = (qData.queue || []).map((r) => ({ ...r.left, song: r.right }));
-				const currentSongId = data.next.songId ?? data.next.id ?? data.next.videoId;
-				const filtered = items.filter((it) => {
-					const playsLeft = it.playsRemainingToday ?? it.song?.playsRemainingToday ?? 1;
-					const available = (it.song?.isAvailable ?? 1) === 1;
-					const id = it.song?.id ?? it.songId ?? it.id;
-					return playsLeft > 0 && available && id !== currentSongId;
-				});
+				
+				const cRes = await fetch('/api/queue/current');
+				const cData = await cRes.json();
+
 				if (cData?.current) {
 					const currentSongId = cData.current.songId ?? cData.current.id ?? cData.current.videoId;
 					queue.set(items.filter((it) => (it.song?.id ?? it.songId ?? it.id) !== currentSongId));
@@ -61,7 +78,7 @@
 	<div class="bg-decoration bottom-right"></div>
 
 	<!-- Main Grid -->
-	<header class="top-bar glass-panel">
+	<header class="top-bar">
 		<div class="logo">
 			<span class="glitch" data-text="ROCOLA">ROCOLA</span>
 			<span class="version">v2.6</span>
@@ -78,17 +95,37 @@
 		{#if $currentSong}
 			{#if $currentSong.videoId}
 				<div class="video-wrapper">
-					<VideoPlayer on:next={advance} />
+					<VideoPlayer on:next={advance} on:timeupdate={handleTimeUpdate} />
 				</div>
 				<div class="now-playing-info">
-					<div class="info-header">
-						<span class="tag">NOW PLAYING</span>
-						<span class="duration">LIVE_STREAM</span>
+					<div class="info-top">
+						<div class="info-main">
+							<div class="info-header">
+								<span class="tag">NOW PLAYING</span>
+							</div>
+							<h2 class="song-title">{$currentSong.title}</h2>
+							<div class="info-footer">
+								<div class="channel-badge">{$currentSong.channelTitle}</div>
+								<div class="video-id">{$currentSong.videoId}</div>
+							</div>
+						</div>
+						<div class="system-stats">
+							<div class="stat-box">
+								<span class="label">BITRATE</span>
+								<span class="val cyan">{bitrate}kbps</span>
+							</div>
+							<div class="stat-box">
+								<span class="label">LATENCY</span>
+								<span class="val green">{latency}ms</span>
+							</div>
+							<div class="stat-box">
+								<span class="label">BUFFER</span>
+								<span class="val pink">{buffer}%</span>
+							</div>
+						</div>
 					</div>
-					<h2 class="song-title">{$currentSong.title}</h2>
-					<div class="info-footer">
-						<div class="channel-badge">{$currentSong.channelTitle}</div>
-						<div class="video-id">{$currentSong.videoId}</div>
+					<div class="playback-bar">
+						<div class="progress-fill" style="width: {playbackProgress}%"></div>
 					</div>
 				</div>
 			{:else}
@@ -130,7 +167,7 @@
 		width: 100vw;
 		display: grid;
 		grid-template-columns: 1fr;
-		grid-template-rows: 50px 1fr 35%; /* Slimmer header */
+		grid-template-rows: 60px 1fr 35%; 
 		gap: var(--gap);
 		padding: var(--gap);
 		box-sizing: border-box;
@@ -141,7 +178,7 @@
 	@media (min-width: 1024px) {
 		.app-container {
 			grid-template-columns: 1fr 400px;
-			grid-template-rows: 50px 1fr;
+			grid-template-rows: 60px 1fr;
 			max-width: 1600px;
 			margin: 0 auto;
 		}
@@ -167,10 +204,10 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 1.5rem;
-		background: rgba(0,0,0,0.6);
-		border-bottom: 1px solid var(--neon-cyan);
-		box-shadow: 0 4px 20px rgba(0, 243, 255, 0.05);
+		padding: 0 0.5rem;
+		background: transparent;
+		border: none;
+		box-shadow: none;
 	}
 	.logo {
 		display: flex;
@@ -180,15 +217,17 @@
 	.logo .glitch {
 		font-family: var(--font-display);
 		font-weight: 800;
-		font-size: 1.25rem;
-		letter-spacing: 0.2em;
+		font-size: 1.5rem;
+		letter-spacing: 0.25em;
 		color: var(--neon-cyan);
 		position: relative;
+		text-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
 	}
 	.version {
 		font-family: var(--font-mono);
 		font-size: 0.5rem;
 		color: var(--text-muted);
+		margin-top: 4px;
 	}
 
 	.header-meta {
@@ -203,11 +242,13 @@
 		color: var(--neon-green);
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		opacity: 0.8;
+		gap: 0.6rem;
+		background: rgba(10, 255, 10, 0.05);
+		padding: 6px 12px;
+		border: 1px solid rgba(10, 255, 10, 0.1);
 	}
 	.status-text {
-		letter-spacing: 0.1em;
+		letter-spacing: 0.15em;
 	}
 	.live-dot {
 		width: 4px;
@@ -235,45 +276,52 @@
 	}
 
 	.now-playing-info {
-		padding: 1.25rem 1.5rem;
-		background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 100%);
+		padding: 1.5rem 2rem;
+		background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(5, 7, 20, 0.8) 100%);
 		border-top: 1px solid var(--glass-border);
+		display: flex;
+		flex-direction: column;
+		gap: 1.25rem;
 	}
-	.info-header {
+	.info-top {
 		display: flex;
 		justify-content: space-between;
+		align-items: flex-end;
+		gap: 2rem;
+	}
+	.info-main {
+		flex: 1;
+		min-width: 0;
+	}
+	.info-header {
 		margin-bottom: 0.5rem;
 	}
 	.info-header .tag {
 		font-family: var(--font-pixel);
 		font-size: 0.45rem;
 		color: var(--neon-pink);
-		letter-spacing: 0.15em;
-	}
-	.info-header .duration {
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		color: var(--text-muted);
+		letter-spacing: 0.2em;
 	}
 	.song-title {
-		font-size: 1.25rem;
+		font-size: 1.5rem;
 		margin-bottom: 0.75rem;
 		color: #fff;
-		font-weight: 700;
+		font-weight: 800;
 		line-height: 1.2;
+		letter-spacing: -0.01em;
 		display: -webkit-box;
-		-webkit-line-clamp: 2;
+		-webkit-line-clamp: 1;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
 	.info-footer {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
+		gap: 1.5rem;
 	}
 	.channel-badge {
 		font-family: var(--font-mono);
-		font-size: 0.65rem;
+		font-size: 0.7rem;
 		color: var(--neon-cyan);
 		background: rgba(0, 243, 255, 0.05);
 		padding: 2px 8px;
@@ -281,8 +329,44 @@
 	}
 	.video-id {
 		font-family: var(--font-mono);
-		font-size: 0.55rem;
+		font-size: 0.6rem;
 		color: var(--text-muted);
+	}
+
+	.system-stats {
+		display: flex;
+		gap: 1.5rem;
+		padding-bottom: 4px;
+	}
+	.stat-box {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		min-width: 60px;
+	}
+	.stat-box .label {
+		font-family: var(--font-pixel);
+		font-size: 0.35rem;
+		color: var(--text-muted);
+	}
+	.stat-box .val {
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		font-weight: 700;
+	}
+
+	.playback-bar {
+		width: 100%;
+		height: 2px;
+		background: rgba(255,255,255,0.05);
+		position: relative;
+	}
+	.playback-bar .progress-fill {
+		position: absolute;
+		top: 0; left: 0; height: 100%;
+		background: var(--neon-cyan);
+		box-shadow: 0 0 10px var(--neon-cyan);
+		transition: width 0.5s linear;
 	}
 	
 	.empty-state {
@@ -337,7 +421,7 @@
 		border-left: 1px solid var(--glass-border);
 	}
 	.queue-header {
-		padding: 1rem 1.25rem;
+		padding: 1.25rem 1.5rem;
 		border-bottom: 1px solid var(--glass-border);
 		display: flex;
 		justify-content: space-between;
@@ -348,12 +432,13 @@
 		font-size: 0.75rem;
 		color: #fff;
 		font-family: var(--font-pixel);
+		letter-spacing: 0.1em;
 	}
 	.queue-meta .count {
 		background: var(--neon-cyan);
 		color: #000;
-		padding: 1px 6px;
-		font-size: 0.65rem;
+		padding: 2px 8px;
+		font-size: 0.7rem;
 		font-family: var(--font-mono);
 		font-weight: 800;
 	}
