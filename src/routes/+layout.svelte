@@ -6,12 +6,11 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<link rel="stylesheet" href="https://unpkg.com/open-props@1.13.1/normalize.css">
+	<link rel="stylesheet" href="https://unpkg.com/open-props@1.13.1/open-props.min.css">
 </svelte:head>
 
 <style global>
-@import url('https://unpkg.com/open-props@1.13.1/normalize.css');
-@import url('https://unpkg.com/open-props@1.13.1/open-props.min.css');
-
 :root {
   /* Rocola theme tokens */
   --bg: #0a0e27;
@@ -32,9 +31,9 @@ html, body, #svelte {
 }
 body {
   margin: 0;
-  background: radial-gradient(1200px 600px at 10% 10%, rgba(131,56,236,0.06), transparent),
-              radial-gradient(900px 400px at 90% 90%, rgba(0,217,255,0.03), transparent),
-              var(--bg);
+  /* prefer Open Props gradient token if available, fallback to radial background */
+  background-image: var(--gradient-5, radial-gradient(1200px 600px at 10% 10%, rgba(131,56,236,0.06), transparent));
+  background-color: var(--bg);
   color: #e6eef8;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
   -webkit-font-smoothing: antialiased;
@@ -76,5 +75,15 @@ body {
   .container { padding: .6rem; }
 }
 </style>
+
+<script>
+	import { onMount } from 'svelte';
+
+	onMount(() => {
+		if (typeof window !== 'undefined' && window.getComputedStyle) {
+			console.log('open-props --gradient-5:', getComputedStyle(document.documentElement).getPropertyValue('--gradient-5'));
+		}
+	});
+</script>
 
 {@render children()}
