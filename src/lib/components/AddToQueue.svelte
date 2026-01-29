@@ -1,7 +1,7 @@
 <script>
 	import { createEventDispatcher } from 'svelte';
 	import { addToast } from '$lib/client/stores.js';
-	import { fade, scale } from 'svelte/transition';
+	import { fade, scale, fly } from 'svelte/transition';
 
 	let url = '';
 	let validating = false;
@@ -66,65 +66,110 @@
 </script>
 
 <!-- FAB -->
-<button class="fab" on:click={open} class:hidden={isOpen}>
-	<span class="plus">+</span>
+<button class="fab glitch-hover" on:click={open} class:hidden={isOpen}>
+	<div class="fab-inner">
+		<span class="label">ADD_TRACK</span>
+		<span class="plus">+</span>
+	</div>
+	<div class="fab-rings">
+		<div class="ring"></div>
+		<div class="ring"></div>
+	</div>
 </button>
 
 <!-- Modal Overlay -->
 {#if isOpen}
-	<div class="modal-backdrop" on:click|self={close} transition:fade={{duration: 200}}>
-		<div class="modal-window glass-panel" transition:scale={{duration: 250, start: 0.9}}>
+	<div class="modal-backdrop" on:click|self={close} transition:fade={{duration: 300}}>
+		<div class="modal-window glass-panel" transition:fly={{y: 20, duration: 400, opacity: 0}}>
+			<div class="corner-label">TX_TERMINAL</div>
 			<header>
-				<h3>ADD SONG</h3>
-				<button class="close-btn" on:click={close}>×</button>
+				<div class="header-main">
+					<div class="icon-box">IN</div>
+					<h3>INJECT SEQUENCE</h3>
+				</div>
+				<button class="close-btn" on:click={close}>[ X ]</button>
 			</header>
 
 			<div class="modal-body">
-				<div class="input-group">
-					<input 
-						type="text" 
-						placeholder="Paste YouTube URL..." 
-						bind:value={url} 
-						on:keydown={(e) => e.key === 'Enter' && validate()}
-					/>
-					<button class="btn-neon" on:click={validate} disabled={validating || !url}>
-						{validating ? 'SCANNING...' : 'SCAN'}
-					</button>
+				<div class="input-container">
+					<div class="input-label">YT_SOURCE_URL</div>
+					<div class="input-group">
+						<input 
+							type="text" 
+							placeholder="https://youtube.com/watch?v=..." 
+							bind:value={url} 
+							on:keydown={(e) => e.key === 'Enter' && validate()}
+						/>
+						<button class="btn-scan" on:click={validate} disabled={validating || !url}>
+							<div class="scan-line" class:scanning={validating}></div>
+							{validating ? 'SCANNING...' : 'SCAN'}
+						</button>
+					</div>
 				</div>
 
 				{#if error}
-					<div class="error-msg">⚠️ {error}</div>
+					<div class="error-msg" in:fly={{y: -10}}>
+						<span class="err-tag">ERROR</span> {error}
+					</div>
 				{/if}
 
 				{#if metadata}
-					<div class="preview-card" in:fade>
-						<div class="preview-thumb" style="background-image: url({metadata.thumbnail})"></div>
+					<div class="preview-card" in:scale={{start: 0.95, duration: 300}}>
+						<div class="preview-thumb">
+							<img src={metadata.thumbnail} alt="" />
+							<div class="thumb-overlay"></div>
+						</div>
 						<div class="preview-info">
 							<h4>{metadata.title}</h4>
 							<p>{metadata.channelTitle}</p>
+							<div class="vid-id">ID: {metadata.videoId}</div>
 						</div>
 					</div>
 
 					<div class="tiers-grid">
 						<button class="tier-card free" on:click={() => submit('free')}>
-							<div class="tier-name">FREE</div>
-							<div class="tier-price">$0</div>
+							<div class="tier-header">
+								<span class="tier-name">FREE_LOAD</span>
+								<span class="tier-price">$0</span>
+							</div>
+							<div class="tier-desc">Standard priority queue</div>
+							<div class="tier-bar"></div>
 						</button>
 						<button class="tier-card silver disabled">
-							<div class="tier-name">SILVER</div>
-							<div class="tier-price">$2</div>
+							<div class="tier-header">
+								<span class="tier-name">SILVER_BOOST</span>
+								<span class="tier-price">$2</span>
+							</div>
+							<div class="tier-desc">Priority injection</div>
+							<div class="tier-bar"></div>
 						</button>
 						<button class="tier-card gold disabled">
-							<div class="tier-name">GOLD</div>
-							<div class="tier-price">$5</div>
+							<div class="tier-header">
+								<span class="tier-name">GOLD_STRIKE</span>
+								<span class="tier-price">$5</span>
+							</div>
+							<div class="tier-desc">Instant playback*</div>
+							<div class="tier-bar"></div>
 						</button>
 						<button class="tier-card platinum disabled">
-							<div class="tier-name">PLATINUM</div>
-							<div class="tier-price">$10</div>
+							<div class="tier-header">
+								<span class="tier-name">ULTRA_VOID</span>
+								<span class="tier-price">$10</span>
+							</div>
+							<div class="tier-desc">Force system takeover</div>
+							<div class="tier-bar"></div>
 						</button>
 					</div>
 				{/if}
 			</div>
+			
+			<footer class="modal-footer">
+				<div class="system-logs">
+					<div class="log-line">READY FOR INPUT...</div>
+					{#if validating}<div class="log-line green">VALIDATING SOURCE...</div>{/if}
+					{#if metadata}<div class="log-line cyan">SOURCE VERIFIED: {metadata.videoId}</div>{/if}
+				</div>
+			</footer>
 		</div>
 	</div>
 {/if}
@@ -132,31 +177,68 @@
 <style>
 	/* FAB */
 	.fab {
-		width: 56px;
-		height: 56px;
-		border-radius: 50%;
-		background: var(--neon-cyan);
-		border: none;
-		box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
-		color: #000;
-		font-size: 2rem;
+		width: 64px;
+		height: 64px;
+		background: #000;
+		border: 1px solid var(--neon-cyan);
+		position: relative;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
-		transition: transform 0.2s, opacity 0.2s;
+		transition: all 0.3s;
 		z-index: 1000;
 	}
-	.fab:hover {
-		transform: scale(1.1) rotate(90deg);
-		box-shadow: 0 0 30px rgba(0, 243, 255, 0.6);
+	.fab-inner {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		z-index: 5;
 	}
+	.fab .label {
+		font-family: var(--font-pixel);
+		font-size: 0.35rem;
+		color: var(--neon-cyan);
+		margin-bottom: 2px;
+	}
+	.fab .plus {
+		font-size: 1.5rem;
+		color: #fff;
+		line-height: 1;
+		font-weight: 200;
+	}
+	
+	.fab:hover {
+		box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+		transform: scale(1.05);
+	}
+	.fab:hover .plus {
+		transform: rotate(90deg);
+		color: var(--neon-cyan);
+	}
+	
+	.fab-rings .ring {
+		position: absolute;
+		top: 50%; left: 50%;
+		width: 100%; height: 100%;
+		border: 1px solid var(--neon-cyan);
+		transform: translate(-50%, -50%);
+		pointer-events: none;
+		opacity: 0.3;
+	}
+	.fab:hover .ring:nth-child(1) { animation: ring-pulse 2s infinite; }
+	.fab:hover .ring:nth-child(2) { animation: ring-pulse 2s infinite 1s; }
+
 	.fab.hidden {
 		opacity: 0;
+		transform: scale(0.5) rotate(-90deg);
 		pointer-events: none;
 	}
-	.plus {
-		margin-top: -4px; /* optical adjustment */
+
+	@keyframes ring-pulse {
+		0% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
+		100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
 	}
 
 	/* Modal */
@@ -166,8 +248,8 @@
 		left: 0;
 		width: 100vw;
 		height: 100vh;
-		background: rgba(0,0,0,0.8);
-		backdrop-filter: blur(4px);
+		background: rgba(2, 3, 10, 0.9);
+		backdrop-filter: blur(8px);
 		z-index: 2000;
 		display: flex;
 		align-items: center;
@@ -178,180 +260,281 @@
 
 	.modal-window {
 		width: 100%;
-		max-width: 500px;
-		background: #0a0e27;
-		border: 1px solid var(--neon-cyan);
-		box-shadow: 0 0 40px rgba(0, 243, 255, 0.1);
+		max-width: 550px;
+		background: #050714;
+		border: 1px solid var(--glass-border);
+		box-shadow: 0 0 60px rgba(0, 243, 255, 0.1);
 		display: flex;
 		flex-direction: column;
+		position: relative;
+	}
+	
+	.corner-label {
+		position: absolute;
+		top: -10px;
+		left: 20px;
+		background: var(--neon-cyan);
+		color: #000;
+		font-family: var(--font-pixel);
+		font-size: 0.45rem;
+		padding: 2px 6px;
 	}
 
 	header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem;
-		border-bottom: 1px solid rgba(255,255,255,0.1);
-		background: rgba(0,243,255,0.05);
+		padding: 1.5rem;
+		border-bottom: 1px solid var(--glass-border);
+		background: rgba(255,255,255,0.02);
+	}
+	.header-main {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+	.icon-box {
+		background: var(--neon-cyan);
+		color: #000;
+		font-family: var(--font-pixel);
+		font-size: 0.6rem;
+		padding: 4px 6px;
 	}
 	header h3 {
-		color: var(--neon-cyan);
+		color: #fff;
 		font-size: 1rem;
+		letter-spacing: 0.2em;
 	}
 	.close-btn {
 		background: none;
 		border: none;
-		color: var(--text-dim);
-		font-size: 1.5rem;
+		color: var(--text-muted);
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
 		cursor: pointer;
-		line-height: 1;
 	}
-	.close-btn:hover { color: #fff; }
+	.close-btn:hover { color: var(--neon-pink); }
 
 	.modal-body {
-		padding: 1.5rem;
+		padding: 2rem;
 		display: flex;
 		flex-direction: column;
-		gap: 1.5rem;
+		gap: 2rem;
 	}
 
 	/* Inputs */
+	.input-container {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	.input-label {
+		font-family: var(--font-pixel);
+		font-size: 0.45rem;
+		color: var(--text-dim);
+	}
 	.input-group {
 		display: flex;
 		gap: 0.5rem;
 	}
 	input {
 		flex: 1;
-		background: rgba(0,0,0,0.3);
-		border: 1px solid rgba(255,255,255,0.2);
-		padding: 0.75rem;
+		background: rgba(0,0,0,0.5);
+		border: 1px solid var(--glass-border);
+		padding: 1rem;
 		color: #fff;
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		border-radius: 4px;
+		font-size: 0.85rem;
+		border-radius: 0;
 	}
 	input:focus {
 		outline: none;
 		border-color: var(--neon-cyan);
-		box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+		box-shadow: 0 0 15px rgba(0, 243, 255, 0.15);
 	}
-	.btn-neon {
-		background: rgba(0, 243, 255, 0.1);
+	.btn-scan {
+		background: #000;
 		border: 1px solid var(--neon-cyan);
 		color: var(--neon-cyan);
 		font-family: var(--font-display);
-		padding: 0 1rem;
+		font-weight: 700;
+		padding: 0 1.5rem;
 		cursor: pointer;
-		border-radius: 4px;
+		position: relative;
+		overflow: hidden;
 		transition: all 0.2s;
 	}
-	.btn-neon:hover:not(:disabled) {
+	.btn-scan:hover:not(:disabled) {
 		background: var(--neon-cyan);
 		color: #000;
-		box-shadow: 0 0 15px rgba(0, 243, 255, 0.4);
 	}
-	.btn-neon:disabled {
+	.btn-scan:disabled {
 		opacity: 0.5;
 		cursor: not-allowed;
 	}
+	.scan-line {
+		position: absolute;
+		top: 0; left: 0; width: 100%; height: 2px;
+		background: var(--neon-cyan);
+		opacity: 0;
+	}
+	.scan-line.scanning {
+		opacity: 1;
+		animation: scan-anim 1s linear infinite;
+	}
+	@keyframes scan-anim {
+		0% { top: 0; }
+		100% { top: 100%; }
+	}
 
 	.error-msg {
+		background: rgba(255, 0, 0, 0.05);
+		border-left: 2px solid #ff4444;
+		padding: 0.75rem;
 		color: #ff4444;
 		font-family: var(--font-mono);
-		font-size: 0.7rem;
+		font-size: 0.75rem;
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.err-tag {
+		font-family: var(--font-pixel);
+		font-size: 0.5rem;
+		background: #ff4444;
+		color: #fff;
+		padding: 2px 4px;
 	}
 
 	/* Preview */
 	.preview-card {
 		display: flex;
-		gap: 1rem;
-		background: rgba(255,255,255,0.05);
-		padding: 0.75rem;
-		border-radius: 8px;
+		gap: 1.5rem;
+		background: rgba(255,255,255,0.02);
+		padding: 1rem;
+		border: 1px solid var(--glass-border);
 	}
 	.preview-thumb {
-		width: 80px;
-		height: 60px;
-		background-size: cover;
-		background-position: center;
-		border-radius: 4px;
-		background-color: #000;
+		width: 120px;
+		height: 80px;
+		position: relative;
+		flex-shrink: 0;
+	}
+	.preview-thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.thumb-overlay {
+		position: absolute;
+		top: 0; left: 0; width: 100%; height: 100%;
+		background: linear-gradient(rgba(0, 243, 255, 0.1), transparent);
+		pointer-events: none;
 	}
 	.preview-info {
 		flex: 1;
 		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
 	}
 	.preview-info h4 {
-		font-size: 0.9rem;
-		margin-bottom: 0.25rem;
+		font-size: 0.95rem;
+		margin-bottom: 0.5rem;
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		color: #fff;
 	}
 	.preview-info p {
+		font-family: var(--font-mono);
 		font-size: 0.75rem;
-		color: var(--text-dim);
+		color: var(--neon-cyan);
 		margin: 0;
+	}
+	.vid-id {
+		font-family: var(--font-mono);
+		font-size: 0.6rem;
+		color: var(--text-muted);
+		margin-top: 4px;
 	}
 
 	/* Tiers */
 	.tiers-grid {
 		display: grid;
 		grid-template-columns: 1fr 1fr;
-		gap: 0.75rem;
+		gap: 1rem;
 	}
 	.tier-card {
-		background: rgba(255,255,255,0.03);
-		border: 1px solid transparent;
-		padding: 1rem;
-		border-radius: 8px;
+		background: rgba(255,255,255,0.01);
+		border: 1px solid var(--glass-border);
+		padding: 1.25rem;
 		cursor: pointer;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
+		gap: 0.5rem;
 		transition: all 0.2s;
+		text-align: left;
+		position: relative;
 	}
 	.tier-card:hover:not(.disabled) {
+		background: rgba(255,255,255,0.04);
+		border-color: var(--neon-cyan);
 		transform: translateY(-2px);
 	}
-	.tier-card.free { border-color: var(--text-dim); }
-	.tier-card.free:hover { background: rgba(255,255,255,0.1); }
-	
-	.tier-card.silver { border-color: var(--tier-silver); }
-	.tier-card.gold { border-color: var(--tier-gold); }
-	.tier-card.platinum { border-color: var(--tier-platinum); }
+	.tier-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+	}
+	.tier-name {
+		font-family: var(--font-pixel);
+		font-size: 0.55rem;
+		color: var(--text-dim);
+	}
+	.tier-card.free .tier-name { color: var(--text-dim); }
+	.tier-card.silver .tier-name { color: var(--tier-silver); }
+	.tier-card.gold .tier-name { color: var(--tier-gold); }
+	.tier-card.platinum .tier-name { color: var(--tier-platinum); }
+
+	.tier-price {
+		font-family: var(--font-mono);
+		font-size: 0.85rem;
+		color: #fff;
+	}
+	.tier-desc {
+		font-family: var(--font-mono);
+		font-size: 0.65rem;
+		color: var(--text-muted);
+	}
+	.tier-bar {
+		height: 2px;
+		width: 100%;
+		background: var(--glass-border);
+		margin-top: 4px;
+	}
+	.tier-card:hover .tier-bar { background: var(--neon-cyan); box-shadow: 0 0 5px var(--neon-cyan); }
 
 	.tier-card.disabled {
-		opacity: 0.4;
+		opacity: 0.3;
 		cursor: not-allowed;
 		filter: grayscale(1);
 	}
-
-	.tier-name {
-		font-family: var(--font-display);
-		font-size: 0.8rem;
-		margin-bottom: 0.25rem;
-		color: #fff;
-	}
-	.tier-price {
-		font-family: var(--font-mono);
-		font-size: 0.9rem;
-		color: var(--text-dim);
-	}
 	
-	.dev-actions {
-		display: flex;
-		justify-content: center;
+	.modal-footer {
+		padding: 1rem 1.5rem;
+		background: #000;
+		border-top: 1px solid var(--glass-border);
 	}
-	.btn-text {
-		background: none;
-		border: none;
-		color: var(--text-dim);
+	.system-logs {
 		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		cursor: pointer;
-		opacity: 0.5;
+		font-size: 0.55rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
 	}
-	.btn-text:hover { opacity: 1; }
+	.log-line { color: var(--text-muted); }
+	.log-line.green { color: var(--neon-green); }
+	.log-line.cyan { color: var(--neon-cyan); }
 
 </style>
