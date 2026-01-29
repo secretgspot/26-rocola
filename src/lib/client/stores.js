@@ -65,7 +65,12 @@ export function addToast({ message, level = 'info', ttl = 3500 }) {
 	return id;
 }
 
+let initialized = false;
+
 export async function initRealtime() {
+	if (initialized) return;
+	initialized = true;
+	
 	console.info('[Store] Initializing realtime...');
 	
 	// Initial Fetch

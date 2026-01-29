@@ -57,7 +57,6 @@
 		
 		const data = await res.json();
 		if (data.ok) {
-			addToast({ message: 'Song added to queue', level: 'success' });
 			dispatch('queued');
 			close();
 		} else {
