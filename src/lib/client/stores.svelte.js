@@ -1,13 +1,44 @@
-import { writable, get } from 'svelte/store';
 import { connectWebSocket } from '$lib/client/websocket.js';
 
-export const queue = writable([]);
-export const currentSong = writable(null);
-export const previousSong = writable(null);
-export const toasts = writable([]);
+/**
+ * @typedef {Object} Song
+ * @property {string} id
+ * @property {string} queueId
+ * @property {string} songId
+ * @property {string} videoId
+ * @property {string} title
+ * @property {string} channelTitle
+ * @property {string} thumbnail
+ * @property {number} playsRemainingToday
+ * @property {string} tier
+ */
+
+/**
+ * @typedef {Object} Toast
+ * @property {string} id
+ * @property {string} message
+ * @property {string} level
+ */
+
+/**
+ * @type {{
+ *   queue: Song[],
+ *   currentSong: Song | null,
+ *   previousSong: Song | null,
+ *   toasts: Toast[]
+ * }}
+ */
+export const playerState = $state({
+	queue: [],
+	currentSong: null,
+	previousSong: null,
+	toasts: []
+});
 
 /**
  * Normalizes a queue item from various potential shapes (flat, {left,right}, {song})
+ * @param {any} item
+ * @returns {Song | null}
  */
 export function normalizeQueueItem(item) {
 	if (!item) return null;
@@ -21,6 +52,7 @@ export function normalizeQueueItem(item) {
 		videoId: left.videoId ?? song?.videoId,
 		title: left.title ?? song?.title ?? 'Untitled',
 		channelTitle: left.channelTitle ?? song?.channelTitle ?? 'Unknown Channel',
+		thumbnail: left.thumbnail ?? song?.thumbnail ?? '',
 		playsRemainingToday: left.playsRemainingToday ?? 1,
 		tier: left.tier ?? 'free',
 		song: song
@@ -29,11 +61,14 @@ export function normalizeQueueItem(item) {
 	// Fallback for ID if queueId is missing
 	if (!normalized.queueId) normalized.queueId = normalized.songId;
 	
+	// @ts-ignore
 	return normalized;
 }
 
 /**
  * Filter out current song and items with no plays left
+ * @param {any[]} items
+ * @param {any} current
  */
 export function filterQueue(items, current) {
 	const currentQueueId = current?.queueId ?? current?.id;
@@ -41,6 +76,7 @@ export function filterQueue(items, current) {
 	const filtered = items
 		.map(it => normalizeQueueItem(it))
 		.filter(it => {
+			if (!it) return false;
 			// Must have plays left
 			if (it.playsRemainingToday <= 0) return false;
 			// Must not be the currently playing queue entry
@@ -48,12 +84,7 @@ export function filterQueue(items, current) {
 			return true;
 		});
 		
-	console.debug('[Store] Filtered queue:', { 
-		total: items.length, 
-		visible: filtered.length, 
-		currentQueueId 
-	});
-	
+	// @ts-ignore
 	return filtered;
 }
 
@@ -69,14 +100,14 @@ export async function refreshQueue() {
 			const data = await cRes.json();
 			if (data.ok && data.current) {
 				current = data.current;
-				currentSong.set(current);
+				playerState.currentSong = current;
 			}
 		}
 		
 		if (qRes.ok) {
 			const data = await qRes.json();
 			if (data.ok && data.queue) {
-				queue.set(filterQueue(data.queue, current));
+				playerState.queue = filterQueue(data.queue, current);
 			}
 		}
 	} catch (err) {
@@ -84,11 +115,16 @@ export async function refreshQueue() {
 	}
 }
 
+/**
+ * @param {{message: string, level?: string, ttl?: number}} param0
+ */
 export function addToast({ message, level = 'info', ttl = 3500 }) {
 	const id = crypto.randomUUID();
 	const t = { id, message, level };
-	toasts.update((a) => [t, ...a]);
-	setTimeout(() => toasts.update((a) => a.filter((x) => x.id !== id)), ttl);
+	playerState.toasts = [t, ...playerState.toasts];
+	setTimeout(() => {
+		playerState.toasts = playerState.toasts.filter((x) => x.id !== id);
+	}, ttl);
 	return id;
 }
 
@@ -98,74 +134,64 @@ export async function initRealtime() {
 	if (initialized) return;
 	initialized = true;
 	
-	console.info('[Store] Initializing realtime...');
-	
-	// Initial Fetch
 	refreshQueue();
 
-	// WebSocket setup
 	try {
 		const ws = connectWebSocket();
 		
 		ws.on('queue_changed', (payload) => {
-			console.debug('[WS] queue_changed received');
 			if (payload?.queue) {
-				queue.set(filterQueue(payload.queue, get(currentSong)));
+				playerState.queue = filterQueue(payload.queue, playerState.currentSong);
 			}
 		});
 		
 		ws.on('song_added', (payload) => {
-			console.debug('[WS] song_added received', payload);
-			// Refresh queue data
 			fetch('/api/queue')
 				.then(r => r.json())
 				.then(data => {
 					if (data.ok && data.queue) {
 						const items = data.queue.map(normalizeQueueItem);
-						queue.set(filterQueue(items, get(currentSong)));
+						playerState.queue = filterQueue(items, playerState.currentSong);
 						
-						const added = items.find(it => it.queueId === payload.id || it.songId === payload.songId);
-						addToast({ 
-							message: added ? `Queued: ${added.title}` : 'Song added to queue', 
-							level: 'success' 
-						});
+						const added = items.find(it => it && (it.queueId === payload.id || it.songId === payload.songId));
+						if (added) {
+							addToast({ 
+								message: `Queued: ${added.title}`, 
+								level: 'success' 
+							});
+						}
 					}
 					
-					// If idle, auto-play
-					if (!get(currentSong)) {
-						console.info('[Store] Idle, fetching current after song_added');
+					if (!playerState.currentSong) {
 						fetch('/api/queue/current')
 							.then(r => r.json())
 							.then(cd => {
-								if (cd.ok && cd.current) currentSong.set(cd.current);
+								if (cd.ok && cd.current) playerState.currentSong = cd.current;
 							});
 					}
 				});
 		});
 		
 		ws.on('song_playing', (payload) => {
-			console.debug('[WS] song_playing received', payload);
-			previousSong.set(get(currentSong));
+			playerState.previousSong = playerState.currentSong;
 			
 			fetch('/api/queue/current')
 				.then(r => r.json())
 				.then(data => {
 					if (data.ok && data.current) {
-						currentSong.set(data.current);
-						// Re-fetch queue to ensure correctly filtered state
+						playerState.currentSong = data.current;
 						fetch('/api/queue')
 							.then(r => r.json())
 							.then(qdata => {
-								if (qdata.ok) queue.set(filterQueue(qdata.queue, data.current));
+								if (qdata.ok) playerState.queue = filterQueue(qdata.queue, data.current);
 							});
 					}
 				});
 		});
 		
 		ws.on('song_ended', (payload) => {
-			console.debug('[WS] song_ended received', payload);
-			previousSong.set(get(currentSong));
-			currentSong.set(null);
+			playerState.previousSong = playerState.currentSong;
+			playerState.currentSong = null;
 		});
 
 	} catch (e) {

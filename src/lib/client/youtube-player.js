@@ -24,7 +24,7 @@ function loadApi() {
 /**
  * Create a player attached to an element id.
  * @param {string} elementId
- * @param {{videoId?: string, onStateChange?: function}} options
+ * @param {{videoId?: string, onStateChange?: function, onError?: function}} options
  */
 export async function createPlayer(elementId, options = {}) {
   await loadApi();
@@ -35,15 +35,22 @@ export async function createPlayer(elementId, options = {}) {
       width: '640',
       videoId: options.videoId || '',
       playerVars: {
+        autoplay: 1,
+        mute: 0,
         rel: 0,
         modestbranding: 1,
         controls: 0, // hide UI controls to emulate a jukebox
         enablejsapi: 1,
         disablekb: 1,
-        origin: window.location ? window.location.origin : undefined
+        origin: window.location ? window.location.origin : undefined,
+        widget_referrer: window.location ? window.location.href : undefined
       },
       events: {
-        onReady: () => {
+        onReady: (event) => {
+          // Attempt to play immediately
+          if (options.videoId) {
+            event.target.playVideo();
+          }
           resolve({
             play: () => player.playVideo(),
             pause: () => player.pauseVideo(),

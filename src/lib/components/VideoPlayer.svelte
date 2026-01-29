@@ -1,41 +1,49 @@
 <script>
-	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { createPlayer } from '$lib/client/youtube-player';
-	import { currentSong, previousSong, addToast } from '$lib/client/stores.js';
-	import { get } from 'svelte/store';
+	import { playerState, addToast } from '$lib/client/stores.svelte.js';
 
-	let el;
-	let player = null;
-	let progress = 0;
-	let duration = 0;
-	let currentTime = 0;
-	let progressInterval;
+	let { onnext, ontimeupdate } = $props();
 
-	const dispatch = createEventDispatcher();
+	let el = $state();
+	let player = $state(null);
+	let progress = $state(0);
+	let duration = $state(0);
+	let currentTime = $state(0);
+	/** @type {any} */
+	let progressInterval = $state();
 
-	onMount(async () => {
-		// lazy create player
-		player = await createPlayer(el.id, { 
-			videoId: get(currentSong)?.videoId,
-			onStateChange: (e) => {
-				// YT.PlayerState.ENDED is 0
-				if (e.data === 0) {
-					next();
+	$effect(() => {
+		if (el && !player) {
+			createPlayer(el.id, { 
+				videoId: playerState.currentSong?.videoId,
+				onStateChange: (e) => {
+					// YT.PlayerState.ENDED is 0
+					if (e.data === 0) {
+						onnext?.();
+					}
+				},
+				onError: (e) => {
+					const errorMsgs = {
+						2: 'Invalid parameter',
+						5: 'HTML5 player error',
+						100: 'Video not found/removed',
+						101: 'Embed blocked by owner',
+						150: 'Embed blocked by owner'
+					};
+					// @ts-ignore
+					const msg = errorMsgs[e.data] || 'Playback error';
+					addToast({ message: `Skipping: ${msg}`, level: 'warn' });
+					onnext?.();
 				}
-			},
-			onError: (e) => {
-				const errorMsgs = {
-					2: 'Invalid parameter',
-					5: 'HTML5 player error',
-					100: 'Video not found/removed',
-					101: 'Embed blocked by owner',
-					150: 'Embed blocked by owner'
-				};
-				const msg = errorMsgs[e.data] || 'Playback error';
-				addToast({ message: `Skipping: ${msg}`, level: 'warn' });
-				next();
-			}
-		});
+			}).then(p => {
+				player = p;
+				// Auto play if we have a song
+				if (playerState.currentSong?.videoId) {
+					player.load(playerState.currentSong.videoId, true);
+				}
+			});
+		}
 
 		// Start progress tracking
 		progressInterval = setInterval(() => {
@@ -44,21 +52,22 @@
 				duration = player._raw.getDuration() || 0;
 				if (duration > 0) {
 					progress = (currentTime / duration) * 100;
-					dispatch('timeupdate', { progress });
+					ontimeupdate?.({ progress });
 				}
 			}
 		}, 500);
+
+		return () => {
+			clearInterval(progressInterval);
+			player?.destroy?.();
+		};
 	});
 
-	$: if (player && $currentSong?.videoId) {
-		player.load($currentSong.videoId, true);
-	}
-
-	function next() { dispatch('next'); }
-
-	onDestroy(() => {
-		player?.destroy?.();
-		clearInterval(progressInterval);
+	// React to song changes
+	$effect(() => {
+		if (player && playerState.currentSong?.videoId) {
+			player.load(playerState.currentSong.videoId, true);
+		}
 	});
 </script>
 

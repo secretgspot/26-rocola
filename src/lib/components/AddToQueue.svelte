@@ -1,15 +1,15 @@
 <script>
-	import { createEventDispatcher } from 'svelte';
-	import { addToast } from '$lib/client/stores.js';
+	import { addToast } from '$lib/client/stores.svelte.js';
 	import { fade, scale, fly } from 'svelte/transition';
 
-	let url = '';
-	let validating = false;
-	let metadata = null;
-	let error = '';
-	let isOpen = false;
+	let { onqueued } = $props();
 
-	const dispatch = createEventDispatcher();
+	let url = $state('');
+	let validating = $state(false);
+	/** @type {any} */
+	let metadata = $state(null);
+	let error = $state('');
+	let isOpen = $state(false);
 
 	function open() { isOpen = true; }
 	function close() { isOpen = false; reset(); }
@@ -29,8 +29,8 @@
 				error = data.error || 'Invalid video';
 				metadata = null;
 			} else {
-				metadata = data.metadata || { title: 'Unknown', thumbnail: '', channelTitle: '' };
-				metadata.videoId = data.videoId;
+				const meta = data.metadata || { title: 'Unknown', thumbnail: '', channelTitle: '' };
+				metadata = { ...meta, videoId: data.videoId };
 			}
 		} catch (e) {
 			error = 'Validation failed';
@@ -57,7 +57,7 @@
 		
 		const data = await res.json();
 		if (data.ok) {
-			dispatch('queued');
+			onqueued?.();
 			close();
 		} else {
 			error = data.error || 'Failed to add song';
@@ -66,7 +66,7 @@
 </script>
 
 <!-- FAB -->
-<button class="fab glitch-hover" on:click={open} class:hidden={isOpen}>
+<button class="fab glitch-hover" onclick={open} class:hidden={isOpen}>
 	<div class="fab-inner">
 		<span class="label">ADD_TRACK</span>
 		<span class="plus">+</span>
@@ -79,7 +79,7 @@
 
 <!-- Modal Overlay -->
 {#if isOpen}
-	<div class="modal-backdrop" on:click|self={close} transition:fade={{duration: 300}}>
+	<div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} transition:fade={{duration: 300}}>
 		<div class="modal-window glass-panel" transition:fly={{y: 20, duration: 400, opacity: 0}}>
 			<div class="corner-label">TX_TERMINAL</div>
 			<header>
@@ -87,7 +87,7 @@
 					<div class="icon-box">IN</div>
 					<h3>INJECT SEQUENCE</h3>
 				</div>
-				<button class="close-btn" on:click={close}>[ X ]</button>
+				<button class="close-btn" onclick={close}>[ X ]</button>
 			</header>
 
 			<div class="modal-body">
@@ -98,9 +98,9 @@
 							type="text" 
 							placeholder="https://youtube.com/watch?v=..." 
 							bind:value={url} 
-							on:keydown={(e) => e.key === 'Enter' && validate()}
+							onkeydown={(e) => e.key === 'Enter' && validate()}
 						/>
-						<button class="btn-scan" on:click={validate} disabled={validating || !url}>
+						<button class="btn-scan" onclick={validate} disabled={validating || !url}>
 							<div class="scan-line" class:scanning={validating}></div>
 							{validating ? 'SCANNING...' : 'SCAN'}
 						</button>
@@ -127,7 +127,7 @@
 					</div>
 
 					<div class="tiers-grid">
-						<button class="tier-card free" on:click={() => submit('free')}>
+						<button class="tier-card free" onclick={() => submit('free')}>
 							<div class="tier-header">
 								<span class="tier-name">FREE_LOAD</span>
 								<span class="tier-price">$0</span>

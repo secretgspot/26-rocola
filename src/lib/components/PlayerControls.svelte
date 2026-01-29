@@ -1,30 +1,36 @@
 <script>
-	import { createEventDispatcher, onMount } from 'svelte';
+	import { onDestroy } from 'svelte';
 	import { createPlayer } from '$lib/client/youtube-player';
-	import { get } from 'svelte/store';
-	import { currentSong } from '$lib/client/stores';
+	import { playerState } from '$lib/client/stores.svelte.js';
 
-	const dispatch = createEventDispatcher();
-	let playerController = null;
-	let playerEl;
+	let { onnext } = $props();
+	let playerController = $state(null);
+	let playerEl = $state();
 
-	onMount(async () => {
-		playerController = await createPlayer(playerEl.id, {
-			videoId: get(currentSong)?.videoId || ''
-		});
+	$effect(() => {
+		if (playerEl && !playerController) {
+			createPlayer(playerEl.id, {
+				videoId: playerState.currentSong?.videoId || ''
+			}).then(p => {
+				playerController = p;
+			});
+		}
+		return () => playerController?.destroy?.();
 	});
 
-	$: if (playerController) {
-		if ($currentSong && $currentSong.videoId) {
-			playerController.load($currentSong.videoId);
-		} else {
-			playerController.stop();
+	$effect(() => {
+		if (playerController) {
+			if (playerState.currentSong && playerState.currentSong.videoId) {
+				playerController.load(playerState.currentSong.videoId);
+			} else {
+				playerController.stop();
+			}
 		}
-	}
+	});
 
 	function play() { playerController?.play(); }
 	function pause() { playerController?.pause(); }
-	function next() { dispatch('next'); }
+	function next() { onnext?.(); }
 	function seek(delta) {
 		if (!playerController) return;
 		const current = typeof playerController._raw?.getCurrentTime === 'function' ? playerController._raw.getCurrentTime() : 0;
@@ -34,18 +40,17 @@
 
 <style>
 	.controls { display:flex; gap:.5rem; align-items:center }
-	button { padding:.5rem .65rem; border-radius:6px; border:0; color:#fff }
-	button.btn-accent { background: var(--accent); color:#041525 }
+	button { padding:.5rem .65rem; border-radius:6px; border:0; color:#fff; cursor: pointer; }
 	button.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:inherit }
 </style>
 
 <div>
-	<div bind:this={playerEl} id="yt-player" style="width:100%; max-width:720px; height:360px; margin-bottom:.6rem"></div>
+	<div bind:this={playerEl} id="yt-player-controls" style="width:100%; max-width:720px; height:360px; margin-bottom:.6rem"></div>
 	<div class="controls">
-		<button on:click={play}>▶ Play</button>
-		<button on:click={pause} class="ghost">⏸ Pause</button>
-		<button on:click={() => seek(-10)} class="ghost">⏪ -10s</button>
-		<button on:click={() => seek(10)} class="ghost">+10s ⏩</button>
-		<button on:click={next} style="margin-left:auto">Next ⏭</button>
+		<button onclick={play}>▶ Play</button>
+		<button onclick={pause} class="ghost">⏸ Pause</button>
+		<button onclick={() => seek(-10)} class="ghost">⏪ -10s</button>
+		<button onclick={() => seek(10)} class="ghost">+10s ⏩</button>
+		<button onclick={next} style="margin-left:auto">Next ⏭</button>
 	</div>
 </div>

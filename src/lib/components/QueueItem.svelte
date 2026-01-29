@@ -1,14 +1,14 @@
 <script>
-	export let item;
+	let { item } = $props();
 
 	// Determine tier for styling
-	$: tier = (item.tier || item.tierName || 'free').toLowerCase();
+	let tier = $derived((item.tier || item.tierName || 'free').toLowerCase());
 	
 	// Format title: if it contains " - ", split it for better hierarchy
-	$: displayTitle = item.title || item.song?.title || 'Untitled';
-	$: titleParts = displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle];
-	$: artist = titleParts.length > 1 ? titleParts[0] : (item.channelTitle || item.song?.channelTitle || 'Unknown Artist');
-	$: track = titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle;
+	let displayTitle = $derived(item.title || item.song?.title || 'Untitled');
+	let titleParts = $derived(displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle]);
+	let artist = $derived(titleParts.length > 1 ? titleParts[0] : (item.channelTitle || item.song?.channelTitle || 'Unknown Artist'));
+	let track = $derived(titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle);
 </script>
 
 <div class="item {tier} glitch-hover">

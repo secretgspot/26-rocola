@@ -1,32 +1,27 @@
 <script>
-	import { onMount, onDestroy } from 'svelte';
-	import { queue, currentSong, previousSong, toasts, initRealtime, addToast, refreshQueue } from '$lib/client/stores.js';
+	import { playerState, initRealtime, addToast, refreshQueue } from '$lib/client/stores.svelte.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 
-	let statsInterval;
-	let bitrate = 4820;
-	let latency = 32;
-	let buffer = 100;
-	let playbackProgress = 0;
+	let bitrate = $state(4820);
+	let latency = $state(32);
+	let buffer = $state(100);
+	let playbackProgress = $state(0);
 
-	onMount(() => {
+	$effect(() => {
 		initRealtime();
-		statsInterval = setInterval(() => {
+		const statsInterval = setInterval(() => {
 			bitrate = 4200 + Math.floor(Math.random() * 800);
 			latency = 28 + Math.floor(Math.random() * 12);
 			buffer = 98 + Math.floor(Math.random() * 2);
 		}, 3000);
-	});
-
-	onDestroy(() => {
-		clearInterval(statsInterval);
+		return () => clearInterval(statsInterval);
 	});
 
 	function handleTimeUpdate(e) {
-		playbackProgress = e.detail.progress;
+		playbackProgress = e.progress;
 	}
 
 	async function advance() {
@@ -37,8 +32,8 @@
 			return;
 		}
 		if (data.next) {
-			previousSong.set($currentSong);
-			currentSong.set(data.next);
+			playerState.previousSong = playerState.currentSong;
+			playerState.currentSong = data.next;
 			playbackProgress = 0;
 			
 			// Refresh queue using normalized logic
@@ -54,7 +49,7 @@
 <div class="app-container">
 	<!-- Toast Layer -->
 	<div class="toasts-layer">
-		{#each $toasts as t (t.id)}
+		{#each playerState.toasts as t (t.id)}
 			<Toast message={t.message} level={t.level} />
 		{/each}
 	</div>
@@ -71,7 +66,7 @@
 		</div>
 		<div class="header-meta">
 			{#if import.meta.env.DEV}
-				<button class="btn-skip" on:click={advance} title="Force Next (Dev)">
+				<button class="btn-skip" onclick={advance} title="Force Next (Dev)">
 					SKIP_BUFFER
 				</button>
 			{/if}
@@ -83,10 +78,10 @@
 	</header>
 
 	<main class="player-zone glass-panel">
-		{#if $currentSong}
-			{#if $currentSong.videoId}
+		{#if playerState.currentSong}
+			{#if playerState.currentSong.videoId}
 				<div class="video-wrapper">
-					<VideoPlayer on:next={advance} on:timeupdate={handleTimeUpdate} />
+					<VideoPlayer onnext={advance} ontimeupdate={handleTimeUpdate} />
 				</div>
 				<div class="now-playing-info">
 					<div class="info-top">
@@ -94,10 +89,10 @@
 							<div class="info-header">
 								<span class="tag">NOW PLAYING</span>
 							</div>
-							<h2 class="song-title">{$currentSong.title}</h2>
+							<h2 class="song-title">{playerState.currentSong.title}</h2>
 							<div class="info-footer">
-								<div class="channel-badge">{$currentSong.channelTitle}</div>
-								<div class="video-id">{$currentSong.videoId}</div>
+								<div class="channel-badge">{playerState.currentSong.channelTitle}</div>
+								<div class="video-id">{playerState.currentSong.videoId}</div>
 							</div>
 						</div>
 						<div class="system-stats">
@@ -138,7 +133,7 @@
 		<div class="queue-header">
 			<h3>UP NEXT</h3>
 			<div class="queue-meta">
-				<span class="count">{$queue.length}</span>
+				<span class="count">{playerState.queue.length}</span>
 			</div>
 		</div>
 		<div class="queue-content">
@@ -148,7 +143,7 @@
 
 	<!-- Floating Controls -->
 	<div class="fab-layer">
-		<AddToQueue />
+		<AddToQueue onqueued={refreshQueue} />
 	</div>
 </div>
 

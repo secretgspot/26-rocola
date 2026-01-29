@@ -1,14 +1,14 @@
 <script>
-	import { queue } from '$lib/client/stores.js';
+	import { playerState } from '$lib/client/stores.svelte.js';
 	import QueueItem from '$lib/components/QueueItem.svelte';
 	import { fly } from 'svelte/transition';
 </script>
 
 <div class="list">
-	{#if $queue.length === 0}
+	{#if playerState.queue.length === 0}
 		<div class="empty-queue">Queue is empty. Be the first!</div>
 	{:else}
-		{#each $queue as item (item.id)}
+		{#each playerState.queue as item (item.id)}
 			<div in:fly={{ y: 10, duration: 200 }} class="item-wrapper">
 				<QueueItem {item} />
 			</div>
