@@ -84,6 +84,11 @@
 			<span class="version">v2.6</span>
 		</div>
 		<div class="header-meta">
+			{#if import.meta.env.DEV}
+				<button class="btn-skip" on:click={advance} title="Force Next (Dev)">
+					SKIP_BUFFER
+				</button>
+			{/if}
 			<div class="status">
 				<span class="live-dot"></span> 
 				<span class="status-text">SYSTEM_ACTIVE</span>
@@ -234,6 +239,23 @@
 		display: flex;
 		align-items: center;
 		gap: 1.5rem;
+	}
+
+	.btn-skip {
+		background: rgba(255, 215, 0, 0.05);
+		border: 1px solid rgba(255, 215, 0, 0.2);
+		color: var(--tier-gold);
+		font-family: var(--font-pixel);
+		font-size: 0.4rem;
+		padding: 4px 8px;
+		cursor: pointer;
+		transition: all 0.2s;
+		letter-spacing: 0.1em;
+	}
+	.btn-skip:hover {
+		background: var(--tier-gold);
+		color: #000;
+		box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 	}
 
 	.status {
