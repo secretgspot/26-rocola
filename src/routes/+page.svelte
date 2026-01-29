@@ -216,6 +216,11 @@
 		position: relative;
 		text-shadow: 0 0 20px rgba(0, 243, 255, 0.2);
 	}
+	@media (max-width: 480px) {
+		.logo .glitch {
+			font-size: 1.1rem;
+		}
+	}
 	.version {
 		font-family: var(--font-mono);
 		font-size: 0.5rem;
@@ -228,6 +233,11 @@
 		align-items: center;
 		gap: 1.5rem;
 	}
+	@media (max-width: 480px) {
+		.header-meta {
+			gap: 0.5rem;
+		}
+	}
 
 	.btn-skip {
 		background: rgba(255, 215, 0, 0.05);
@@ -239,6 +249,7 @@
 		cursor: pointer;
 		transition: all 0.2s;
 		letter-spacing: 0.1em;
+		white-space: nowrap;
 	}
 	.btn-skip:hover {
 		background: var(--tier-gold);
@@ -256,6 +267,15 @@
 		background: rgba(10, 255, 10, 0.05);
 		padding: 6px 12px;
 		border: 1px solid rgba(10, 255, 10, 0.1);
+		white-space: nowrap;
+	}
+	@media (max-width: 480px) {
+		.status {
+			padding: 4px 8px;
+		}
+		.status-text {
+			display: none;
+		}
 	}
 	.status-text {
 		letter-spacing: 0.15em;
@@ -293,11 +313,24 @@
 		flex-direction: column;
 		gap: 1.25rem;
 	}
+	@media (max-width: 480px) {
+		.now-playing-info {
+			padding: 1rem;
+			gap: 0.75rem;
+		}
+	}
 	.info-top {
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
 		gap: 2rem;
+	}
+	@media (max-width: 768px) {
+		.info-top {
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 1rem;
+		}
 	}
 	.info-main {
 		flex: 1;
@@ -324,6 +357,12 @@
 		-webkit-box-orient: vertical;
 		overflow: hidden;
 	}
+	@media (max-width: 480px) {
+		.song-title {
+			font-size: 1.1rem;
+			-webkit-line-clamp: 2;
+		}
+	}
 	.info-footer {
 		display: flex;
 		align-items: center;
@@ -348,11 +387,21 @@
 		gap: 1.5rem;
 		padding-bottom: 4px;
 	}
+	@media (max-width: 480px) {
+		.system-stats {
+			gap: 1rem;
+		}
+	}
 	.stat-box {
 		display: flex;
 		flex-direction: column;
 		gap: 4px;
 		min-width: 60px;
+	}
+	@media (max-width: 480px) {
+		.stat-box {
+			min-width: auto;
+		}
 	}
 	.stat-box .label {
 		font-family: var(--font-pixel);
@@ -478,6 +527,13 @@
 		right: 2rem;
 		z-index: 1000;
 	}
+	@media (max-width: 480px) {
+		.fab-layer {
+			bottom: 1rem;
+			right: 1rem;
+		}
+	}
+
 
 	@keyframes pulse {
 		0% { opacity: 1; }

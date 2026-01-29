@@ -268,6 +268,13 @@
 		flex-direction: column;
 		position: relative;
 	}
+
+	@media (max-width: 480px) {
+		.modal-window {
+			max-height: 90vh;
+			overflow-y: auto;
+		}
+	}
 	
 	.corner-label {
 		position: absolute;
@@ -288,6 +295,11 @@
 		border-bottom: 1px solid var(--glass-border);
 		background: rgba(255,255,255,0.02);
 	}
+	@media (max-width: 480px) {
+		header {
+			padding: 1rem;
+		}
+	}
 	.header-main {
 		display: flex;
 		align-items: center;
@@ -305,6 +317,11 @@
 		font-size: 1rem;
 		letter-spacing: 0.2em;
 	}
+	@media (max-width: 480px) {
+		header h3 {
+			font-size: 0.8rem;
+		}
+	}
 	.close-btn {
 		background: none;
 		border: none;
@@ -320,6 +337,12 @@
 		display: flex;
 		flex-direction: column;
 		gap: 2rem;
+	}
+	@media (max-width: 480px) {
+		.modal-body {
+			padding: 1rem;
+			gap: 1.5rem;
+		}
 	}
 
 	/* Inputs */
@@ -337,6 +360,11 @@
 		display: flex;
 		gap: 0.5rem;
 	}
+	@media (max-width: 400px) {
+		.input-group {
+			flex-direction: column;
+		}
+	}
 	input {
 		flex: 1;
 		background: rgba(0,0,0,0.5);
@@ -346,6 +374,7 @@
 		font-family: var(--font-mono);
 		font-size: 0.85rem;
 		border-radius: 0;
+		min-width: 0;
 	}
 	input:focus {
 		outline: none;
@@ -363,6 +392,12 @@
 		position: relative;
 		overflow: hidden;
 		transition: all 0.2s;
+		white-space: nowrap;
+	}
+	@media (max-width: 400px) {
+		.btn-scan {
+			padding: 0.75rem;
+		}
 	}
 	.btn-scan:hover:not(:disabled) {
 		background: var(--neon-cyan);
@@ -413,6 +448,16 @@
 		background: rgba(255,255,255,0.02);
 		padding: 1rem;
 		border: 1px solid var(--glass-border);
+	}
+	@media (max-width: 480px) {
+		.preview-card {
+			flex-direction: column;
+			gap: 1rem;
+		}
+		.preview-thumb {
+			width: 100%;
+			height: 120px;
+		}
 	}
 	.preview-thumb {
 		width: 120px;
@@ -465,6 +510,11 @@
 		grid-template-columns: 1fr 1fr;
 		gap: 1rem;
 	}
+	@media (max-width: 400px) {
+		.tiers-grid {
+			grid-template-columns: 1fr;
+		}
+	}
 	.tier-card {
 		background: rgba(255,255,255,0.01);
 		border: 1px solid var(--glass-border);
@@ -477,6 +527,12 @@
 		text-align: left;
 		position: relative;
 	}
+	@media (max-width: 480px) {
+		.tier-card {
+			padding: 1rem;
+		}
+	}
+
 	.tier-card:hover:not(.disabled) {
 		background: rgba(255,255,255,0.04);
 		border-color: var(--neon-cyan);
