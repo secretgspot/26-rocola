@@ -1,7 +1,14 @@
 <script>
 	import favicon from '$lib/assets/favicon.svg';
+	import { onMount } from 'svelte';
 
 	let { children } = $props();
+
+	onMount(() => {
+		if (typeof window !== 'undefined' && window.getComputedStyle) {
+			console.log('open-props --gradient-5:', getComputedStyle(document.documentElement).getPropertyValue('--gradient-5'));
+		}
+	});
 </script>
 
 <svelte:head>
@@ -75,15 +82,5 @@ body {
   .container { padding: .6rem; }
 }
 </style>
-
-<script>
-	import { onMount } from 'svelte';
-
-	onMount(() => {
-		if (typeof window !== 'undefined' && window.getComputedStyle) {
-			console.log('open-props --gradient-5:', getComputedStyle(document.documentElement).getPropertyValue('--gradient-5'));
-		}
-	});
-</script>
 
 {@render children()}
