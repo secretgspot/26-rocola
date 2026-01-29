@@ -60,20 +60,35 @@
 /* Base Reset & Typography */
 html, body {
   height: 100%;
-  overflow: hidden; /* Prevent body scroll, handle inside containers */
+  overflow: hidden;
   background-color: var(--bg-dark);
   background-image: 
-    radial-gradient(circle at 15% 50%, rgba(188, 19, 254, 0.08) 0%, transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.08) 0%, transparent 25%);
+    radial-gradient(circle at 15% 50%, rgba(188, 19, 254, 0.12) 0%, transparent 40%),
+    radial-gradient(circle at 85% 30%, rgba(0, 243, 255, 0.12) 0%, transparent 40%);
   color: var(--text-main);
   font-family: var(--font-body);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-image: 
+    linear-gradient(rgba(0, 243, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 243, 255, 0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  background-position: center center;
+  pointer-events: none;
+  z-index: -1;
+  mask-image: radial-gradient(ellipse at center, black, transparent 80%);
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   margin: 0;
+  color: #fff;
 }
 
 /* Scrollbar */

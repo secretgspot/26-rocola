@@ -82,11 +82,11 @@
 				</div>
 			{/if}
 		{:else}
-			<div class="empty-state">
-				<div class="pulse-ring"></div>
-				<p>WAITING FOR INPUT...</p>
-			</div>
-		{/if}
+							<div class="empty-state">
+								<div class="pulse-ring"></div>
+								<p class="glitch-text" data-text="SYSTEM IDLE">SYSTEM IDLE</p>
+								<p class="sub-text">WAITING FOR SEQUENCE...</p>
+							</div>		{/if}
 	</main>
 
 	<aside class="queue-zone glass-panel">
@@ -217,8 +217,34 @@
 		justify-content: center;
 		color: var(--text-dim);
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		gap: 1rem;
+		gap: 0.5rem;
+		background: radial-gradient(circle, rgba(0, 243, 255, 0.03) 0%, transparent 70%);
+	}
+	.pulse-ring {
+		width: 60px;
+		height: 60px;
+		border: 2px solid var(--neon-cyan);
+		border-radius: 50%;
+		margin-bottom: 1rem;
+		animation: ring-pulse 2s infinite;
+		opacity: 0.5;
+	}
+	.glitch-text {
+		font-size: 1rem;
+		color: #fff;
+		letter-spacing: 0.3em;
+		position: relative;
+	}
+	.sub-text {
+		font-size: 0.6rem;
+		color: var(--neon-pink);
+		opacity: 0.6;
+	}
+
+	@keyframes ring-pulse {
+		0% { transform: scale(0.8); opacity: 0.5; }
+		50% { transform: scale(1.2); opacity: 0.1; }
+		100% { transform: scale(0.8); opacity: 0.5; }
 	}
 
 	/* Queue Zone */
