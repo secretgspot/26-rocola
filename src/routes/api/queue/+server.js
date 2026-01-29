@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { queue, songs } from '$lib/server/db/schema.js';
 import { broadcast } from '$lib/server/ws.js';
+import { gt, eq } from 'drizzle-orm';
 
 
 export async function GET() {
@@ -32,6 +33,16 @@ export async function POST({ request }) {
 		let song;
 		if (existing) {
 			song = existing;
+			// Update metadata if provided to fix any stale/seed data
+			if (metadata) {
+				await db.update(songs).set({
+					title: metadata.title || song.title,
+					thumbnail: metadata.thumbnail || song.thumbnail,
+					channelTitle: metadata.channelTitle || song.channelTitle,
+					metadata: JSON.stringify(metadata)
+				}).where(eq(songs.id, song.id));
+				song = { ...song, ...metadata };
+			}
 		} else {
 			const id = crypto.randomUUID();
 			const title = metadata?.title || 'Unknown Title';
@@ -41,6 +52,10 @@ export async function POST({ request }) {
 			await db.insert(songs).values({ id, videoId, title, thumbnail, channelTitle, metadata: metadata ? JSON.stringify(metadata) : null, submittedBy: 'anon', createdAt, isAvailable: 1, totalPlays: 0 });
 			song = { id, videoId, title, thumbnail, channelTitle };
 		}
+
+		// Check if queue was empty before adding
+		const existingQueue = await db.select().from(queue).where(gt(queue.playsRemainingToday, 0)).limit(1);
+		const wasEmpty = existingQueue.length === 0;
 
 		// add to queue
 		const qId = crypto.randomUUID();
@@ -55,8 +70,14 @@ export async function POST({ request }) {
 			const sRows = await db.select().from(songs);
 			const sMap = new Map(sRows.map((s) => [s.id, s]));
 			const snapshot = qRows.map((q) => ({ ...q, song: sMap.get(q.songId) || null }));
+			
 			broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
 			broadcast('queue_changed', { queue: snapshot });
+
+			// If the player was idle, notify clients to start playing this song
+			if (wasEmpty) {
+				broadcast('song_playing', { songId: song.id });
+			}
 		} catch (e) {
 			console.warn('Failed to broadcast queue change', e?.message || e);
 		}

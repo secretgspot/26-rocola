@@ -64,9 +64,14 @@ export async function POST() {
 			return a.left.baseRank - b.left.baseRank;
 		});
 
-		const next = { ...afterRows[0].left, ...afterRows[0].right };
+		const next = { 
+			...afterRows[0].right, 
+			...afterRows[0].left, 
+			queueId: afterRows[0].left.id, 
+			songId: afterRows[0].right.id 
+		};
 		try {
-			broadcast('song_playing', { songId: next.songId, startedAt: now });
+			broadcast('song_playing', { songId: next.songId, queueId: next.queueId, startedAt: now });
 		} catch (e) {
 			console.warn('Failed to broadcast song_playing', e?.message || e);
 		}

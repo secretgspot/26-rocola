@@ -1,6 +1,6 @@
 <script>
 	import { onMount } from 'svelte';
-	import { queue, currentSong, previousSong, devSeeded, toasts, initRealtime, addToast } from '$lib/client/stores.js';
+	import { queue, currentSong, previousSong, toasts, initRealtime, addToast } from '$lib/client/stores.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
@@ -32,10 +32,11 @@
 					const id = it.song?.id ?? it.songId ?? it.id;
 					return playsLeft > 0 && available && id !== currentSongId;
 				});
-				if (import.meta.env.DEV && !$devSeeded) {
-					queue.set([]);
+				if (cData?.current) {
+					const currentSongId = cData.current.songId ?? cData.current.id ?? cData.current.videoId;
+					queue.set(items.filter((it) => (it.song?.id ?? it.songId ?? it.id) !== currentSongId));
 				} else {
-					queue.set(filtered);
+					queue.set(items);
 				}
 			} catch (e) {
 				console.warn('Failed to refresh queue', e);

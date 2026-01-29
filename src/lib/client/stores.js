@@ -5,25 +5,58 @@ export const queue = writable([]);
 export const currentSong = writable(null);
 export const previousSong = writable(null);
 export const toasts = writable([]);
-export const devSeeded = writable(false); // dev-only flag: when true we show the dev-seeded queue
 
+/**
+ * Normalizes a queue item from various potential shapes (flat, {left,right}, {song})
+ */
 function normalizeQueueItem(item) {
-	const song = item.song || item.right || item.song || null;
-	return {
-		id: item.id ?? item.left?.id ?? item.songId ?? item.song?.id,
-		title: item.title ?? song?.title ?? item.left?.title ?? 'Untitled',
-		channelTitle: item.channelTitle ?? song?.channelTitle ?? 'Unknown channel',
-		playsRemainingToday: item.playsRemainingToday ?? song?.playsRemainingToday ?? undefined,
-		tierName: item.tierName ?? song?.tierName,
-		videoId: item.videoId ?? song?.videoId ?? song?.videoId,
+	if (!item) return null;
+	const left = item.left ?? item;
+	const song = item.song ?? item.right ?? item.song ?? null;
+	
+	const normalized = {
+		id: left.id ?? item.queueId ?? left.songId ?? song?.id,
+		queueId: left.id ?? item.queueId,
+		songId: left.songId ?? song?.id,
+		videoId: left.videoId ?? song?.videoId,
+		title: left.title ?? song?.title ?? 'Untitled',
+		channelTitle: left.channelTitle ?? song?.channelTitle ?? 'Unknown Channel',
+		playsRemainingToday: left.playsRemainingToday ?? 1,
+		tier: left.tier ?? 'free',
 		song: song
 	};
+	
+	// Fallback for ID if queueId is missing
+	if (!normalized.queueId) normalized.queueId = normalized.songId;
+	
+	return normalized;
 }
 
 /**
- * Add a toast notification
- * @param {{message:string,level?:string,ttl?:number}} opts
+ * Filter out current song and items with no plays left
  */
+function filterQueue(items, current) {
+	const currentQueueId = current?.queueId ?? current?.id;
+	
+	const filtered = items
+		.map(it => normalizeQueueItem(it))
+		.filter(it => {
+			// Must have plays left
+			if (it.playsRemainingToday <= 0) return false;
+			// Must not be the currently playing queue entry
+			if (currentQueueId && it.queueId === currentQueueId) return false;
+			return true;
+		});
+		
+	console.debug('[Store] Filtered queue:', { 
+		total: items.length, 
+		visible: filtered.length, 
+		currentQueueId 
+	});
+	
+	return filtered;
+}
+
 export function addToast({ message, level = 'info', ttl = 3500 }) {
 	const id = crypto.randomUUID();
 	const t = { id, message, level };
@@ -32,107 +65,101 @@ export function addToast({ message, level = 'info', ttl = 3500 }) {
 	return id;
 }
 
-function filterOutCurrentItems(items, current) {
-	// Exclude played/unavailable songs and the current song
-	const currentSongId = current ? (current.songId ?? current.id ?? current.videoId) : null;
-	return items
-		.filter((it) => {
-			const playsLeft = it.playsRemainingToday ?? it.song?.playsRemainingToday ?? 1;
-			const available = (it.song?.isAvailable ?? 1) === 1;
-			return playsLeft > 0 && available;
-		})
-		.filter((it) => (currentSongId ? (it.song?.id ?? it.songId ?? it.id) !== currentSongId : true));
-}
-
-/**
- * Initialize realtime subscriptions and initial fetch
- */
 export async function initRealtime() {
+	console.info('[Store] Initializing realtime...');
+	
+	// Initial Fetch
 	try {
-		const [qRes, currentRes] = await Promise.all([fetch('/api/queue'), fetch('/api/queue/current')]);
+		const [qRes, cRes] = await Promise.all([
+			fetch('/api/queue'),
+			fetch('/api/queue/current')
+		]);
+		
 		let current = null;
-		if (currentRes.ok) {
-			const data = await currentRes.json();
-			if (data.ok) current = data.current || null;
+		if (cRes.ok) {
+			const data = await cRes.json();
+			if (data.ok && data.current) {
+				current = data.current;
+				currentSong.set(current);
+			}
 		}
+		
 		if (qRes.ok) {
 			const data = await qRes.json();
-			const items = (data.queue || []).map((r) => normalizeQueueItem({ ...r.left, song: r.right }));
-			// in dev, keep the UI queue empty until developer explicitly seeds
-			if (import.meta.env.DEV && !get(devSeeded)) {
-				queue.set([]);
-			} else {
-				queue.set(filterOutCurrentItems(items, current));
+			if (data.ok && data.queue) {
+				queue.set(filterQueue(data.queue, current));
 			}
 		}
-		if (current) currentSong.set(current);
 	} catch (err) {
-		console.warn('Initial fetch failed', err);
+		console.error('[Store] Initial fetch error:', err);
 	}
 
-	// connect websocket
+	// WebSocket setup
 	try {
 		const ws = connectWebSocket();
+		
 		ws.on('queue_changed', (payload) => {
+			console.debug('[WS] queue_changed received');
 			if (payload?.queue) {
-				const items = payload.queue.map((r) => normalizeQueueItem(r));
-				// ignore server queue snapshots in dev until the user seeds
-				if (import.meta.env.DEV && !get(devSeeded)) {
-					queue.set([]);
-					return;
-				}
-				queue.set(filterOutCurrentItems(items, get(currentSong)));
+				queue.set(filterQueue(payload.queue, get(currentSong)));
 			}
 		});
+		
 		ws.on('song_added', (payload) => {
-			// refresh queue and show a contextual toast with title when possible
+			console.debug('[WS] song_added received', payload);
+			// Refresh queue data
 			fetch('/api/queue')
-				.then((r) => r.json())
-				.then((d) => {
-					const items = (d.queue || []).map((r) => normalizeQueueItem({ ...r.left, song: r.right }));
-					// ignore server queue updates in dev until seeded
-					if (import.meta.env.DEV && !get(devSeeded)) {
-						queue.set([]);
-					} else {
-						queue.set(filterOutCurrentItems(items, get(currentSong)));
-					}
-					// find added item by id or songId
-					let found = null;
-					if (payload?.id) found = items.find((it) => it.id === payload.id || it.song?.id === payload.id);
-					if (!found && payload?.songId) found = items.find((it) => it.song?.id === payload.songId || it.id === payload.songId);
-					if (found) addToast({ message: `Queued: ${found.title}`, level: 'success' });
-					else addToast({ message: 'Song added to queue', level: 'success' });
-				});
-		});
-		ws.on('song_playing', (payload) => {
-			// move current to previous and refresh current
-			previousSong.set(get(currentSong));
-			if (payload?.songId) {
-				fetch('/api/queue/current')
-					.then((r) => r.json())
-					.then((d) => {
-						const newCurrent = d.current || null;
-						currentSong.set(newCurrent);
-						// refresh queue to exclude the new current
-						fetch('/api/queue').then((r) => r.json()).then((d) => {
-							const items = (d.queue || []).map((r) => normalizeQueueItem({ ...r.left, song: r.right }));
-							queue.set(filterOutCurrentItems(items, newCurrent));
+				.then(r => r.json())
+				.then(data => {
+					if (data.ok && data.queue) {
+						const items = data.queue.map(normalizeQueueItem);
+						queue.set(filterQueue(items, get(currentSong)));
+						
+						const added = items.find(it => it.queueId === payload.id || it.songId === payload.songId);
+						addToast({ 
+							message: added ? `Queued: ${added.title}` : 'Song added to queue', 
+							level: 'success' 
 						});
+					}
+					
+					// If idle, auto-play
+					if (!get(currentSong)) {
+						console.info('[Store] Idle, fetching current after song_added');
+						fetch('/api/queue/current')
+							.then(r => r.json())
+							.then(cd => {
+								if (cd.ok && cd.current) currentSong.set(cd.current);
+							});
+					}
 				});
-				addToast({ message: 'Now playing', level: 'info' });
-			}
 		});
+		
+		ws.on('song_playing', (payload) => {
+			console.debug('[WS] song_playing received', payload);
+			previousSong.set(get(currentSong));
+			
+			fetch('/api/queue/current')
+				.then(r => r.json())
+				.then(data => {
+					if (data.ok && data.current) {
+						currentSong.set(data.current);
+						// Re-fetch queue to ensure correctly filtered state
+						fetch('/api/queue')
+							.then(r => r.json())
+							.then(qdata => {
+								if (qdata.ok) queue.set(filterQueue(qdata.queue, data.current));
+							});
+					}
+				});
+		});
+		
 		ws.on('song_ended', (payload) => {
+			console.debug('[WS] song_ended received', payload);
 			previousSong.set(get(currentSong));
 			currentSong.set(null);
-			addToast({ message: 'Song ended', level: 'info' });
-			// queue refreshed via queue_changed event usually
 		});
-		ws.on('test_event', (payload) => {
-			console.log('WS test_event', payload);
-			addToast({ message: 'WS test event', level: 'info' });
-		});
+
 	} catch (e) {
-		console.warn('WS init failed', e);
+		console.warn('[Store] WS initialization failed:', e);
 	}
 }

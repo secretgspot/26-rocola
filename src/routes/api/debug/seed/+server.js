@@ -5,68 +5,79 @@ import { broadcast } from '$lib/server/ws.js';
 import Database from 'better-sqlite3';
 import { env } from '$env/dynamic/private';
 
-const SEED_IDS = ['wn1OPI6lwnY', 'S-Z7IuPC1Wo', 'dytoUhPxMd0', 'd1ln5Pqbh5c'];
-const BAD_TITLES = ['Test song', 'Nirvana - Smells like teen spirit'];
+const SEED_DATA = [
+	{ 
+		id: 'wn1OPI6lwnY', 
+		title: 'Nirvana - Smells Like Teen Spirit', 
+		channel: 'Nirvana', 
+		thumb: 'https://i.ytimg.com/vi/wn1OPI6lwnY/hqdefault.jpg' 
+	},
+	{ 
+		id: 'S-Z7IuPC1Wo', 
+		title: "Guns N' Roses - Sweet Child O' Mine", 
+		channel: "Guns N' Roses", 
+		thumb: 'https://i.ytimg.com/vi/S-Z7IuPC1Wo/hqdefault.jpg' 
+	},
+	{ 
+		id: 'dytoUhPxMd0', 
+		title: 'Rick Astley - Never Gonna Give You Up', 
+		channel: 'Rick Astley', 
+		thumb: 'https://i.ytimg.com/vi/dytoUhPxMd0/hqdefault.jpg' 
+	},
+	{ 
+		id: 'd1ln5Pqbh5c', 
+		title: 'Queen – Bohemian Rhapsody', 
+		channel: 'Queen Official', 
+		thumb: 'https://i.ytimg.com/vi/d1ln5Pqbh5c/hqdefault.jpg' 
+	}
+];
 
 export async function POST() {
-	// Guard: only allow in development environment
 	if (env.NODE_ENV !== 'development') return json({ ok: false, error: 'Not allowed' }, { status: 403 });
 
 	let rawDb;
 	try {
 		rawDb = new Database(env.DATABASE_URL);
 
-		// Full cleanup strategy (dev): wipe analytics and queue, ensure only SEED_IDS remain in songs/queue
-		rawDb.pragma('foreign_keys = OFF');
-		// wipe analytics referencing queue (safe in dev)
-		rawDb.prepare('DELETE FROM queue_plays').run();
-		rawDb.prepare('DELETE FROM daily_play_counts').run();
-		// wipe queue
-		rawDb.prepare('DELETE FROM queue').run();
-
-		// remove songs that are not in the seed list
-		const placeholders = SEED_IDS.map(() => '?').join(',');
-		rawDb.prepare(`DELETE FROM songs WHERE videoId NOT IN (${placeholders})`).run(...SEED_IDS);
-
-		// re-insert or upsert seed songs and queue
+		// Seed logic: Just add the seeds, don't delete user songs
 		const now = Math.floor(Date.now() / 1000);
 		let rank = Date.now();
-		for (const vid of SEED_IDS) {
-			let song = rawDb.prepare('SELECT * FROM songs WHERE videoId = ?').get(vid);
+		
+		for (const data of SEED_DATA) {
+			let song = rawDb.prepare('SELECT * FROM songs WHERE videoId = ?').get(data.id);
 			let songId;
-			if (song) songId = song.id;
-			else {
+			
+			if (song) {
+				songId = song.id;
+				// Repair metadata
+				rawDb.prepare('UPDATE songs SET title = ?, channelTitle = ?, thumbnail = ? WHERE id = ?')
+					.run(data.title, data.channel, data.thumb, songId);
+			} else {
 				songId = crypto.randomUUID();
-				rawDb.prepare('INSERT INTO songs (id, videoId, title, thumbnail, duration, channelTitle, metadata, submittedBy, createdAt, isAvailable, totalPlays) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(songId, vid, `Seeded ${vid}`, '', 0, 'Seed channel', null, 'seed', now, 1, 0);
+				rawDb.prepare('INSERT INTO songs (id, videoId, title, thumbnail, duration, channelTitle, metadata, submittedBy, createdAt, isAvailable, totalPlays) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(songId, data.id, data.title, data.thumb, 180, data.channel, JSON.stringify({ title: data.title, channelTitle: data.channel, thumbnail: data.thumb }), 'seed', now, 1, 0);
 			}
-			// insert queue entry
-			rawDb.prepare('INSERT INTO queue (id, songId, tier, baseRank, rankBoost, playsRemainingToday, promotionExpiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(crypto.randomUUID(), songId, 'seed', rank, 0, 1, null, now, now);
-			rank += 10;
+			
+			// Check if already in queue
+			let inQueue = rawDb.prepare('SELECT * FROM queue WHERE songId = ? AND playsRemainingToday > 0').get(songId);
+			if (!inQueue) {
+				rawDb.prepare('INSERT INTO queue (id, songId, tier, baseRank, rankBoost, playsRemainingToday, promotionExpiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(crypto.randomUUID(), songId, 'seed', rank, 0, 1, null, now, now);
+				rank += 10;
+			}
 		}
 
-		rawDb.pragma('foreign_keys = ON');
+		rawDb.close();
 
-		// Build snapshot and broadcast
-		const qRows = await db.select().from(queue).orderBy(queue.baseRank).limit(200);
+		// Broadcast fresh state
+		const qRows = await db.select().from(queue).orderBy(queue.baseRank).limit(100);
 		const sAll = await db.select().from(songs);
 		const sMap = new Map(sAll.map((s) => [s.id, s]));
 		const snapshot = qRows.map((q) => ({ ...q, song: sMap.get(q.songId) || null }));
 		broadcast('queue_changed', { queue: snapshot });
 
-		// compute and broadcast current if available
-		const rows = qRows.map((q) => ({ left: q, right: sMap.get(q.songId) || null }));
-		const available = rows.filter((r) => r.left.playsRemainingToday > 0 && r.right && r.right.isAvailable === 1);
-		if (available.length) {
-			const computed = available.map((r) => ({ ...r.left, ...r.right, visibleRank: (r.left.tier === 'platinum' ? 3 : r.left.tier === 'gold' ? 2 : r.left.tier === 'silver' ? 1 : 0) * 1000000 + r.left.baseRank }));
-			computed.sort((a, b) => b.visibleRank - a.visibleRank || a.baseRank - b.baseRank);
-			broadcast('song_playing', { songId: computed[0].songId });
-		}
-
-		rawDb.close();
-		return json({ ok: true, seeded: SEED_IDS.length, removed: 0, finalQueue: snapshot.length });
+		return json({ ok: true, message: 'Seeded items added/repaired.' });
 	} catch (err) {
-		console.error('Seed endpoint error', err);
-		if (rawDb) try { rawDb.close(); } catch (e) {}
-		return json({ ok: false, error: err?.message || String(err) }, { status: 500 });
+		console.error('Seed error', err);
+		if (rawDb) rawDb.close();
+		return json({ ok: false, error: err.message });
 	}
 }

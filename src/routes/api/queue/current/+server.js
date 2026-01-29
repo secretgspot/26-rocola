@@ -33,7 +33,12 @@ export async function GET() {
 	});
 
 	const top = rows[0];
-	const current = { ...top.left, ...top.right };
+	const current = { 
+		...top.right, 
+		...top.left, 
+		queueId: top.left.id, 
+		songId: top.right.id 
+	};
 		return json({ ok: true, current });
 	} catch (err) {
 		console.error(err);

@@ -12,7 +12,15 @@
 
 	onMount(async () => {
 		// lazy create player
-		player = await createPlayer(el.id, { videoId: get(currentSong)?.videoId });
+		player = await createPlayer(el.id, { 
+			videoId: get(currentSong)?.videoId,
+			onStateChange: (e) => {
+				// YT.PlayerState.ENDED is 0
+				if (e.data === 0) {
+					next();
+				}
+			}
+		});
 	});
 
 	$: if (player && $currentSong?.videoId) {
