@@ -100,14 +100,22 @@ export async function refreshQueue() {
 			const data = await cRes.json();
 			if (data.ok && data.current) {
 				current = data.current;
-				playerState.currentSong = current;
+				// Only update if different
+				const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
+				const newId = current.queueId || current.id;
+				if (currentId !== newId) {
+					console.debug('[Store] Updating currentSong');
+					playerState.currentSong = current;
+				}
+			} else if (data.ok && !data.current) {
+				playerState.currentSong = null;
 			}
 		}
 		
 		if (qRes.ok) {
 			const data = await qRes.json();
 			if (data.ok && data.queue) {
-				playerState.queue = filterQueue(data.queue, current);
+				playerState.queue = filterQueue(data.queue, playerState.currentSong);
 			}
 		}
 	} catch (err) {
@@ -173,13 +181,18 @@ export async function initRealtime() {
 		});
 		
 		ws.on('song_playing', (payload) => {
-			playerState.previousSong = playerState.currentSong;
-			
+			// Update current song if it changed
 			fetch('/api/queue/current')
 				.then(r => r.json())
 				.then(data => {
 					if (data.ok && data.current) {
-						playerState.currentSong = data.current;
+						const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
+						const newId = data.current.queueId || data.current.id;
+						if (currentId !== newId) {
+							playerState.previousSong = playerState.currentSong;
+							playerState.currentSong = data.current;
+						}
+						
 						fetch('/api/queue')
 							.then(r => r.json())
 							.then(qdata => {
