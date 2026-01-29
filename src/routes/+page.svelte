@@ -64,25 +64,17 @@
 	<header class="top-bar glass-panel">
 		<div class="logo">
 			<span class="glitch" data-text="ROCOLA">ROCOLA</span>
-			<span class="version">v2.6.0</span>
+			<span class="version">v2.6</span>
 		</div>
-		<div class="system-status">
-			<div class="stat-item">
-				<span class="label">CPU</span>
-				<div class="bar-container"><div class="bar" style="width: 45%"></div></div>
-			</div>
-			<div class="stat-item">
-				<span class="label">WS</span>
-				<span class="status-val green">CONNECTED</span>
-			</div>
+		<div class="header-meta">
 			<div class="status">
-				<span class="live-dot"></span> LIVE FEED
+				<span class="live-dot"></span> 
+				<span class="status-text">SYSTEM_ACTIVE</span>
 			</div>
 		</div>
 	</header>
 
 	<main class="player-zone glass-panel">
-		<div class="panel-label">MAIN_VIEWPORT</div>
 		{#if $currentSong}
 			{#if $currentSong.videoId}
 				<div class="video-wrapper">
@@ -91,12 +83,12 @@
 				<div class="now-playing-info">
 					<div class="info-header">
 						<span class="tag">NOW PLAYING</span>
-						<span class="duration">04:20</span>
+						<span class="duration">LIVE_STREAM</span>
 					</div>
 					<h2 class="song-title">{$currentSong.title}</h2>
 					<div class="info-footer">
 						<div class="channel-badge">{$currentSong.channelTitle}</div>
-						<div class="video-id">ID: {$currentSong.videoId}</div>
+						<div class="video-id">{$currentSong.videoId}</div>
 					</div>
 				</div>
 			{:else}
@@ -115,23 +107,14 @@
 	</main>
 
 	<aside class="queue-zone glass-panel">
-		<div class="panel-label">QUEUE_BUFFER</div>
 		<div class="queue-header">
 			<h3>UP NEXT</h3>
 			<div class="queue-meta">
-				<span class="label">ITEMS:</span>
 				<span class="count">{$queue.length}</span>
 			</div>
 		</div>
 		<div class="queue-content">
 			<Queue />
-		</div>
-		<div class="queue-footer">
-			<div class="scroll-indicator">
-				<div class="dot active"></div>
-				<div class="dot"></div>
-				<div class="dot"></div>
-			</div>
 		</div>
 	</aside>
 
@@ -147,7 +130,7 @@
 		width: 100vw;
 		display: grid;
 		grid-template-columns: 1fr;
-		grid-template-rows: 70px 1fr 35%;
+		grid-template-rows: 50px 1fr 35%; /* Slimmer header */
 		gap: var(--gap);
 		padding: var(--gap);
 		box-sizing: border-box;
@@ -157,8 +140,8 @@
 
 	@media (min-width: 1024px) {
 		.app-container {
-			grid-template-columns: 1fr 380px;
-			grid-template-rows: 70px 1fr;
+			grid-template-columns: 1fr 400px;
+			grid-template-rows: 50px 1fr;
 			max-width: 1600px;
 			margin: 0 auto;
 		}
@@ -179,101 +162,59 @@
 	.top-left { top: -100px; left: -100px; transform: rotate(45deg); border-width: 40px; }
 	.bottom-right { bottom: -150px; right: -150px; transform: rotate(15deg); border-width: 60px; }
 
-	/* Panel Label */
-	.panel-label {
-		position: absolute;
-		top: 0;
-		right: 2rem;
-		background: var(--neon-cyan);
-		color: #000;
-		font-family: var(--font-pixel);
-		font-size: 0.5rem;
-		padding: 2px 6px;
-		transform: translateY(-50%);
-		z-index: 20;
-		letter-spacing: 0.1em;
-	}
-
 	/* Header */
 	.top-bar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 2rem;
+		padding: 0 1.5rem;
 		background: rgba(0,0,0,0.6);
-		border-bottom: 2px solid var(--neon-cyan);
-		box-shadow: 0 4px 20px rgba(0, 243, 255, 0.1);
+		border-bottom: 1px solid var(--neon-cyan);
+		box-shadow: 0 4px 20px rgba(0, 243, 255, 0.05);
 	}
 	.logo {
 		display: flex;
-		align-items: baseline;
-		gap: 1rem;
+		align-items: center;
+		gap: 0.75rem;
 	}
 	.logo .glitch {
 		font-family: var(--font-display);
-		font-weight: 900;
-		font-size: 1.75rem;
+		font-weight: 800;
+		font-size: 1.25rem;
 		letter-spacing: 0.2em;
 		color: var(--neon-cyan);
 		position: relative;
-		text-shadow: 0 0 10px rgba(0,243,255,0.4);
 	}
 	.version {
 		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		color: var(--text-dim);
-		opacity: 0.6;
+		font-size: 0.5rem;
+		color: var(--text-muted);
 	}
 
-	.system-status {
+	.header-meta {
 		display: flex;
 		align-items: center;
-		gap: 2rem;
-	}
-	.stat-item {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-	.stat-item .label {
-		font-family: var(--font-mono);
-		font-size: 0.5rem;
-		color: var(--text-dim);
-	}
-	.stat-item .status-val {
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		font-weight: 700;
-	}
-	.bar-container {
-		width: 60px;
-		height: 4px;
-		background: rgba(255,255,255,0.1);
-		position: relative;
-	}
-	.bar-container .bar {
-		height: 100%;
-		background: var(--neon-purple);
-		box-shadow: 0 0 5px var(--neon-purple);
+		gap: 1.5rem;
 	}
 
 	.status {
 		font-family: var(--font-pixel);
-		font-size: 0.6rem;
+		font-size: 0.5rem;
 		color: var(--neon-green);
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		background: rgba(0, 255, 0, 0.05);
-		padding: 4px 10px;
-		border: 1px solid rgba(0, 255, 0, 0.2);
+		gap: 0.5rem;
+		opacity: 0.8;
+	}
+	.status-text {
+		letter-spacing: 0.1em;
 	}
 	.live-dot {
-		width: 6px;
-		height: 6px;
+		width: 4px;
+		height: 4px;
 		background: var(--neon-green);
 		border-radius: 50%;
-		box-shadow: 0 0 8px var(--neon-green);
+		box-shadow: 0 0 5px var(--neon-green);
 		animation: pulse 1s infinite;
 	}
 
@@ -292,41 +233,33 @@
 		background: #000;
 		position: relative;
 	}
-	.video-wrapper::before {
-		content: "";
-		position: absolute;
-		top: 0; left: 0; width: 100%; height: 100%;
-		border: 1px solid rgba(255,255,255,0.05);
-		pointer-events: none;
-		z-index: 5;
-	}
 
 	.now-playing-info {
-		padding: 1.5rem 2rem;
-		background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.4) 100%);
+		padding: 1.25rem 1.5rem;
+		background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 100%);
 		border-top: 1px solid var(--glass-border);
 	}
 	.info-header {
 		display: flex;
 		justify-content: space-between;
-		margin-bottom: 0.75rem;
+		margin-bottom: 0.5rem;
 	}
 	.info-header .tag {
 		font-family: var(--font-pixel);
-		font-size: 0.5rem;
+		font-size: 0.45rem;
 		color: var(--neon-pink);
-		letter-spacing: 0.2em;
+		letter-spacing: 0.15em;
 	}
 	.info-header .duration {
 		font-family: var(--font-mono);
-		font-size: 0.7rem;
-		color: var(--text-dim);
+		font-size: 0.6rem;
+		color: var(--text-muted);
 	}
 	.song-title {
-		font-size: 1.5rem;
-		margin-bottom: 1rem;
+		font-size: 1.25rem;
+		margin-bottom: 0.75rem;
 		color: #fff;
-		font-weight: 800;
+		font-weight: 700;
 		line-height: 1.2;
 		display: -webkit-box;
 		-webkit-line-clamp: 2;
@@ -336,19 +269,19 @@
 	.info-footer {
 		display: flex;
 		align-items: center;
-		gap: 1.5rem;
+		gap: 1rem;
 	}
 	.channel-badge {
 		font-family: var(--font-mono);
-		font-size: 0.75rem;
+		font-size: 0.65rem;
 		color: var(--neon-cyan);
 		background: rgba(0, 243, 255, 0.05);
-		padding: 4px 10px;
-		border: 1px solid rgba(0, 243, 255, 0.2);
+		padding: 2px 8px;
+		border: 1px solid rgba(0, 243, 255, 0.15);
 	}
 	.video-id {
 		font-family: var(--font-mono);
-		font-size: 0.6rem;
+		font-size: 0.55rem;
 		color: var(--text-muted);
 	}
 	
@@ -404,7 +337,7 @@
 		border-left: 1px solid var(--glass-border);
 	}
 	.queue-header {
-		padding: 1.25rem 1.5rem;
+		padding: 1rem 1.25rem;
 		border-bottom: 1px solid var(--glass-border);
 		display: flex;
 		justify-content: space-between;
@@ -412,62 +345,32 @@
 		background: rgba(0,0,0,0.3);
 	}
 	.queue-header h3 {
-		font-size: 0.85rem;
+		font-size: 0.75rem;
 		color: #fff;
 		font-family: var(--font-pixel);
-	}
-	.queue-meta {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.queue-meta .label {
-		font-size: 0.5rem;
-		color: var(--text-dim);
-		font-family: var(--font-mono);
 	}
 	.queue-meta .count {
 		background: var(--neon-cyan);
 		color: #000;
 		padding: 1px 6px;
-		font-size: 0.7rem;
+		font-size: 0.65rem;
 		font-family: var(--font-mono);
 		font-weight: 800;
 	}
 	.queue-content {
 		flex: 1;
 		overflow-y: auto;
-		padding: 1rem;
+		padding: 0.75rem;
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
-	}
-	.queue-footer {
-		padding: 1rem;
-		border-top: 1px solid var(--glass-border);
-		display: flex;
-		justify-content: center;
-		background: rgba(0,0,0,0.2);
-	}
-	.scroll-indicator {
-		display: flex;
-		gap: 6px;
-	}
-	.scroll-indicator .dot {
-		width: 4px;
-		height: 4px;
-		background: var(--text-muted);
-	}
-	.scroll-indicator .dot.active {
-		background: var(--neon-cyan);
-		box-shadow: 0 0 5px var(--neon-cyan);
+		gap: 0.5rem;
 	}
 
 	/* Layers */
 	.toasts-layer {
 		position: fixed;
-		top: 2rem;
-		right: 2rem;
+		top: 1.5rem;
+		right: 1.5rem;
 		z-index: 2000;
 		display: flex;
 		flex-direction: column;
@@ -476,8 +379,8 @@
 	}
 	.fab-layer {
 		position: fixed;
-		bottom: 2.5rem;
-		right: 2.5rem;
+		bottom: 2rem;
+		right: 2rem;
 		z-index: 1000;
 	}
 
