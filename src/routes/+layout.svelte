@@ -14,7 +14,7 @@
 <svelte:head>
 	<link rel="icon" href={favicon} />
 	<link rel="stylesheet" href="https://unpkg.com/open-props@1.13.1/normalize.css">
-	<link rel="stylesheet" href="https://unpkg.com/open-props@1.13.1/open-props.min.css">
+	<link rel="stylesheet" href="/vendor/open-props-tokens.css"> <!-- local fallback tokens for blocked CDNs -->
 </svelte:head>
 
 <style global>
