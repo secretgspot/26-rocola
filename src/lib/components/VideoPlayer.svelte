@@ -13,28 +13,18 @@
 	onMount(async () => {
 		// lazy create player
 		player = await createPlayer(el.id, { videoId: get(currentSong)?.videoId });
-
-		// auto-play whenever currentSong changes
-		$currentSong = get(currentSong);
-		$previousSong = get(previousSong);
 	});
 
-	$: if (player) {
-		const cs = get(currentSong);
-		if (cs?.videoId) {
-			player.load(cs.videoId, true);
-			// attempt to play (may be blocked by autoplay policies)
-			try { player.play(); } catch (e) { /* ignore */ }
-		}
+	$: if (player && $currentSong?.videoId) {
+		player.load($currentSong.videoId, true);
 	}
 
-	function next() {
-		dispatch('next');
-	}
+	function next() { dispatch('next'); }
 
 	function toggleFullscreen() {
 		if (!document.fullscreenElement) {
-			el.requestFullscreen().then(() => isFullscreen = true).catch(() => {});
+			const wrapper = el.parentElement; // request fullscreen on wrapper
+			wrapper.requestFullscreen().then(() => isFullscreen = true).catch(() => {});
 		} else {
 			document.exitFullscreen().then(() => isFullscreen = false).catch(() => {});
 		}
@@ -45,22 +35,98 @@
 	});
 </script>
 
-<style>
-	.video-wrap { height: 69vh; display:flex; flex-direction:column; gap:.5rem; align-items:center; justify-content:center; background:var(--video-bg,#000) }
-	.player-frame { width:100%; height:100%; display:flex; align-items:center; justify-content:center }
-	.controls { display:flex; gap:.5rem; align-items:center }
-	.prev { opacity:.9; font-size:0.95rem; color:var(--muted,#ccc) }
-</style>
-
-<div class="video-wrap">
-	{#if $previousSong}
-		<div class="prev">Previous: {$previousSong.title} — {$previousSong.channelTitle}</div>
-	{/if}
-	<div class="player-frame">
-		<div id="yt-player-video" bind:this={el} style="width:100%; height:100%; max-width:1280px;"></div>
-	</div>
-	<div class="controls">
-		<button on:click={next}>Next (dev)</button>
-		<button on:click={toggleFullscreen}>{isFullscreen ? 'Exit full' : 'Fullscreen'}</button>
+<div class="video-container">
+	<div id="yt-player-video" bind:this={el} class="yt-embed"></div>
+	
+	<!-- Overlay Controls (appear on hover) -->
+	<div class="controls-overlay">
+		<div class="info-bar">
+			{#if $previousSong}
+				<div class="prev-song">
+					<span class="label">PREVIOUS:</span>
+					<span class="val">{$previousSong.title}</span>
+				</div>
+			{/if}
+		</div>
+		<div class="actions">
+			<button class="btn-icon" on:click={toggleFullscreen} title="Fullscreen">
+				[ ⛶ ]
+			</button>
+			{#if import.meta.env.DEV}
+				<button class="btn-icon warn" on:click={next} title="Force Next (Dev)">
+					[ >> ]
+				</button>
+			{/if}
+		</div>
 	</div>
 </div>
+
+<style>
+	.video-container {
+		width: 100%;
+		height: 100%;
+		position: relative;
+		background: #000;
+	}
+
+	.yt-embed {
+		width: 100%;
+		height: 100%;
+	}
+
+	.controls-overlay {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		padding: 1rem;
+		box-sizing: border-box;
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		opacity: 0;
+		transition: opacity 0.3s;
+		background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent 40%);
+		pointer-events: none;
+	}
+
+	.video-container:hover .controls-overlay {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	.info-bar {
+		font-family: var(--font-mono);
+		font-size: 0.7rem;
+		color: rgba(255,255,255,0.7);
+	}
+	.prev-song .label { color: var(--text-dim); margin-right: 0.5rem; }
+	.prev-song .val { color: #fff; }
+
+	.actions {
+		display: flex;
+		gap: 0.5rem;
+	}
+
+	.btn-icon {
+		background: rgba(0,0,0,0.5);
+		border: 1px solid rgba(255,255,255,0.2);
+		color: #fff;
+		font-family: var(--font-mono);
+		font-size: 0.8rem;
+		padding: 0.5rem;
+		cursor: pointer;
+		border-radius: 4px;
+	}
+	.btn-icon:hover {
+		background: rgba(255,255,255,0.1);
+		border-color: #fff;
+	}
+	.btn-icon.warn {
+		color: var(--tier-gold);
+		border-color: var(--tier-gold);
+	}
+	.btn-icon.warn:hover {
+		background: rgba(255, 215, 0, 0.1);
+	}
+</style>

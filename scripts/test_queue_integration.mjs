@@ -35,7 +35,7 @@ async function run() {
 	console.log('  Upcoming count:', queue.length);
 
 	// Assert queue does not include current song
-t	if (current) {
+	if (current) {
 		const curId = current.songId ?? current.id ?? current.videoId;
 		const found = queue.find((r) => {
 			const song = r.right || null;
