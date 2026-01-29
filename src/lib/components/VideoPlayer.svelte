@@ -1,7 +1,7 @@
 <script>
 	import { onMount, onDestroy, createEventDispatcher } from 'svelte';
 	import { createPlayer } from '$lib/client/youtube-player';
-	import { currentSong, previousSong } from '$lib/client/stores.js';
+	import { currentSong, previousSong, addToast } from '$lib/client/stores.js';
 	import { get } from 'svelte/store';
 	import { fade, fly } from 'svelte/transition';
 
@@ -29,6 +29,18 @@
 				if (e.data === 0) {
 					next();
 				}
+			},
+			onError: (e) => {
+				const errorMsgs = {
+					2: 'Invalid parameter',
+					5: 'HTML5 player error',
+					100: 'Video not found/removed',
+					101: 'Embed blocked by owner',
+					150: 'Embed blocked by owner'
+				};
+				const msg = errorMsgs[e.data] || 'Playback error';
+				addToast({ message: `Skipping: ${msg}`, level: 'warn' });
+				next();
 			}
 		});
 

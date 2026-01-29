@@ -66,6 +66,7 @@ export async function createPlayer(elementId, options = {}) {
         },
         onError: (e) => {
           console.warn('YT player error', e);
+          if (typeof options.onError === 'function') options.onError(e);
         }
       }
     });
