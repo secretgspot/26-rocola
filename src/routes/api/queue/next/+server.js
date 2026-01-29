@@ -2,14 +2,22 @@ import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
 import { queue, songs, queuePlays } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
-import { broadcast } from '$lib/server/ws.js';
+import { broadcast, getPlaybackState } from '$lib/server/ws.js';
 
 /**
  * POST to advance the queue: mark the current song as played and return the next one
  * @returns {Promise<Response>}
  */
-export async function POST() {
+export async function POST({ request }) {
 	try {
+		let fromQueueId = null;
+		try {
+			const body = await request.json();
+			fromQueueId = body.fromQueueId;
+		} catch (e) {
+			// ignore empty body
+		}
+
 		// Fetch queue and songs and combine in JS
 		const qRows = await db.select().from(queue).orderBy(queue.baseRank).limit(100);
 		const sRows = await db.select().from(songs);
@@ -29,6 +37,17 @@ export async function POST() {
 
 		const current = rows[0].left;
 		const currentSong = rows[0].right;
+
+		// Guard: if client specified a song to skip from, but it's already advanced, just return current
+		if (fromQueueId && current.id !== fromQueueId) {
+			const playback = getPlaybackState();
+			return json({ 
+				ok: true, 
+				message: 'Already advanced', 
+				next: { ...currentSong, ...current, queueId: current.id, songId: current.songId, startedAt: playback.startedAt } 
+			});
+		}
+
 		const now = Math.floor(Date.now() / 1000);
 
 		// Update queue item: decrement playsRemainingToday, update timestamp
@@ -75,7 +94,7 @@ export async function POST() {
 		} catch (e) {
 			console.warn('Failed to broadcast song_playing', e?.message || e);
 		}
-		return json({ ok: true, played: { queueId: current.id, songId: current.songId }, next });
+		return json({ ok: true, played: { queueId: current.id, songId: current.songId }, next: { ...next, startedAt: now } });
 	} catch (err) {
 		console.error(err);
 		return json({ ok: false, error: 'DB error', details: err?.message || String(err) }, { status: 500 });

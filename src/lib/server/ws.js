@@ -9,7 +9,13 @@ import { env } from '$env/dynamic/private';
 
 // Guard to avoid multiple servers during HMR in dev
 if (!globalThis.__rocola_ws) {
-	globalThis.__rocola_ws = { initialized: false };
+	globalThis.__rocola_ws = { 
+		initialized: false,
+		playback: {
+			currentQueueId: null,
+			startedAt: null
+		}
+	};
 }
 
 let WebSocketServer = null;
@@ -41,10 +47,18 @@ export function initWebSocketServer() {
 	const wss = new WebSocketServer({ port });
 	wss.on('connection', (ws) => {
 		console.info('WS client connected');
+		
+		// Send current playback state immediately upon connection
+		if (globalThis.__rocola_ws.playback.currentQueueId) {
+			ws.send(JSON.stringify({
+				event: 'sync_playback',
+				payload: globalThis.__rocola_ws.playback
+			}));
+		}
+
 		ws.on('message', (message) => {
 			try {
 				const data = JSON.parse(message.toString());
-				// Echo or handle control messages later
 				console.debug('WS message from client:', data);
 			} catch (e) {
 				console.debug('WS non-json message');
@@ -69,11 +83,24 @@ export function broadcast(event, payload) {
 		console.warn('WebSocket server not initialized. Skipping broadcast.');
 		return;
 	}
+
+	// Track playback state on broadcast
+	if (event === 'song_playing') {
+		globalThis.__rocola_ws.playback = {
+			currentQueueId: payload.queueId,
+			startedAt: payload.startedAt || Math.floor(Date.now() / 1000)
+		};
+	} else if (event === 'song_ended') {
+		globalThis.__rocola_ws.playback = {
+			currentQueueId: null,
+			startedAt: null
+		};
+	}
+
 	const msg = JSON.stringify({ event, payload });
 	try {
 		console.info('Broadcasting event', event, 'to', wss.clients?.size || 0, 'clients');
 		for (const client of wss.clients) {
-			console.debug('client state', client.readyState);
 			if (client.readyState === 1) {
 				client.send(msg);
 			}
@@ -83,9 +110,9 @@ export function broadcast(event, payload) {
 	}
 }
 
-// Best-effort auto-init when module is imported (will be a no-op if ws missing)
-try {
-	initWebSocketServer();
-} catch (err) {
-	// ignore - init handles missing ws
+/**
+ * Get current playback state
+ */
+export function getPlaybackState() {
+	return globalThis.__rocola_ws.playback;
 }

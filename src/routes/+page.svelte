@@ -25,21 +25,28 @@
 	}
 
 	async function advance() {
-		const res = await fetch('/api/queue/next', { method: 'POST' });
+		const currentQueueId = playerState.currentSong?.queueId || playerState.currentSong?.id;
+		
+		const res = await fetch('/api/queue/next', { 
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ fromQueueId: currentQueueId })
+		});
+		
 		const data = await res.json();
 		if (!data.ok) {
 			addToast({ message: data.error || 'Advance failed', level: 'warn' });
 			return;
 		}
 		if (data.next) {
-			playerState.previousSong = playerState.currentSong;
-			playerState.currentSong = data.next;
-			playbackProgress = 0;
-			
-			// Refresh queue using normalized logic
-			await refreshQueue();
-			
-			addToast({ message: `Now playing: ${data.next.title || data.next.videoId}`, level: 'info' });
+			// Websocket will also broadcast this, but we update locally for snappiness
+			if (playerState.currentSong?.queueId !== data.next.queueId) {
+				playerState.previousSong = playerState.currentSong;
+				playerState.currentSong = data.next;
+				playbackProgress = 0;
+				await refreshQueue();
+				addToast({ message: `Now playing: ${data.next.title || data.next.videoId}`, level: 'info' });
+			}
 		} else if (data.message) {
 			addToast({ message: data.message, level: 'info' });
 		}
