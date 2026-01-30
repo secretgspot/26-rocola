@@ -1,21 +1,37 @@
 import { db } from '$lib/server/db/index.js';
 import { queue, songs, queuePlays } from '$lib/server/db/schema.js';
 import { broadcast, getPlaybackState } from '$lib/server/ws.js';
-import { eq, gt } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 
 /**
- * Get the current queue, sorted by priority.
+ * Get total number of songs played to use as a global turn counter.
+ * @returns {Promise<number>}
+ */
+export async function getGlobalTurn() {
+	const res = await db.select({ count: sql`count(*)` }).from(queuePlays);
+	return Number(res[0]?.count || 0);
+}
+
+/**
+ * Get the current queue, sorted by fair-share priority.
  * 
- * Sort order:
- * 1. Platinum tier songs first (top-5 lock)
- * 2. Gold tier (if plays remaining)
- * 3. Silver tier (if plays remaining)
- * 4. Free tier (if plays remaining)
- * 5. By baseRank (timestamp) ascending as tiebreaker
+ * New Sort Logic (Gap Enforcement):
+ * 1. Calculate EffectiveTurn = max(GlobalTurn, lastPlayedTurn + Gap)
+ * 2. Sort by EffectiveTurn ASC
+ * 3. Sort by Tier Priority DESC (Platinum > Gold > Silver > Free)
+ * 4. Sort by baseRank ASC (Submission Time)
+ * 
+ * Gaps:
+ * - Platinum: 2 (Can play every 2nd turn)
+ * - Gold: 3 (Can play every 3rd turn)
+ * - Silver: 5 (Can play every 5th turn)
+ * - Free: 0 (Usually only plays once, so gap doesn't matter)
  * 
  * @returns {Promise<Array>} The sorted queue with song details
  */
 export async function getQueue() {
+	const currentTurn = await getGlobalTurn();
+
 	// Fetch queue and songs separately and combine in JS
 	const qRows = await db.select().from(queue).orderBy(queue.baseRank).limit(100);
 	const sRows = await db.select().from(songs);
@@ -26,12 +42,37 @@ export async function getQueue() {
 	// Filter playable upcoming rows
 	rows = rows.filter((r) => r.playsRemainingToday > 0 && r.song && r.song.isAvailable === 1);
 
-	// Sort by tier priority then baseRank
+	// Tiers and Gaps
+	const TIER_CONFIG = {
+		platinum: { priority: 3, gap: 2 },
+		gold: { priority: 2, gap: 3 },
+		silver: { priority: 1, gap: 5 },
+		free: { priority: 0, gap: 0 }
+	};
+
+	// Sort by fair-share logic
 	rows.sort((a, b) => {
-		const priority = (t) => (t === 'platinum' ? 3 : t === 'gold' ? 2 : t === 'silver' ? 1 : 0);
-		const pa = priority(a.tier), pb = priority(b.tier);
-		if (pa !== pb) return pb - pa; // higher priority first
-		return a.baseRank - b.baseRank; // older first (FIFO) within tier
+		const configA = TIER_CONFIG[a.tier] || TIER_CONFIG.free;
+		const configB = TIER_CONFIG[b.tier] || TIER_CONFIG.free;
+
+		const nextEligibleA = (a.lastPlayedTurn || 0) + configA.gap;
+		const nextEligibleB = (b.lastPlayedTurn || 0) + configB.gap;
+
+		const effectiveTurnA = Math.max(currentTurn, nextEligibleA);
+		const effectiveTurnB = Math.max(currentTurn, nextEligibleB);
+
+		// 1. Primary: Effective Turn (who is ready to play soonest)
+		if (effectiveTurnA !== effectiveTurnB) {
+			return effectiveTurnA - effectiveTurnB;
+		}
+
+		// 2. Secondary: Tier Priority
+		if (configA.priority !== configB.priority) {
+			return configB.priority - configA.priority;
+		}
+
+		// 3. Tertiary: Submission Time
+		return a.baseRank - b.baseRank;
 	});
 
 	return rows;
@@ -47,7 +88,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	const { videoId, title, thumbnail, channelTitle, metadata } = songData;
 
 	// Check if song exists or create it
-	const allSongs = await db.select().from(songs).limit(1000); // Potential perf bottleneck later
+	const allSongs = await db.select().from(songs).limit(1000); 
 	let existing = allSongs.find((s) => s.videoId === videoId);
 	let song;
 
@@ -81,10 +122,6 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 		song = { id, videoId, title, thumbnail, channelTitle };
 	}
 
-	// Check if queue was empty (play immediately check)
-	const currentQueue = await getQueue();
-	const wasEmpty = currentQueue.length === 0;
-
 	// Add to queue
 	const qId = crypto.randomUUID();
 	const baseRank = Date.now();
@@ -107,6 +144,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 		baseRank,
 		rankBoost,
 		playsRemainingToday,
+		lastPlayedTurn: 0,
 		promotionExpiresAt: null,
 		createdAt,
 		updatedAt: createdAt
@@ -117,8 +155,9 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
 	broadcast('queue_changed', { queue: snapshot });
 
-	if (wasEmpty) {
-		broadcast('song_playing', { songId: song.id, queueId: qId });
+	// Check if it should start playing (if queue was empty)
+	if (snapshot.length === 1 && snapshot[0].id === qId) {
+		broadcast('song_playing', { songId: song.id, queueId: qId, startedAt: Math.floor(Date.now() / 1000) });
 	}
 
 	return { id: qId, song };
@@ -148,10 +187,16 @@ export async function advanceQueue(fromQueueId = null) {
 	}
 
 	const now = Math.floor(Date.now() / 1000);
+	const currentTurn = await getGlobalTurn();
+	const nextTurn = currentTurn + 1;
 
-	// Decrement plays
+	// Decrement plays and update lastPlayedTurn
 	const newPlays = Math.max(0, current.playsRemainingToday - 1);
-	await db.update(queue).set({ playsRemainingToday: newPlays, updatedAt: now }).where(eq(queue.id, current.id));
+	await db.update(queue).set({ 
+		playsRemainingToday: newPlays, 
+		lastPlayedTurn: nextTurn,
+		updatedAt: now 
+	}).where(eq(queue.id, current.id));
 
 	// Update total plays
 	const totalPlays = (current.song.totalPlays || 0) + 1;

@@ -23,6 +23,7 @@ export const queue = sqliteTable('queue', {
 	baseRank: integer('baseRank').notNull(),
 	rankBoost: integer('rankBoost').default(0),
 	playsRemainingToday: integer('playsRemainingToday').notNull(),
+	lastPlayedTurn: integer('lastPlayedTurn').default(0),
 	promotionExpiresAt: integer('promotionExpiresAt'),
 	createdAt: integer('createdAt').notNull(),
 	updatedAt: integer('updatedAt').notNull(),

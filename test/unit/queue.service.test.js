@@ -33,7 +33,7 @@ vi.mock('$lib/server/ws.js', () => ({
 	getPlaybackState: vi.fn().mockReturnValue({ startedAt: 123 })
 }));
 
-describe('queue service sorting', () => {
+describe('queue service fair-share sorting', () => {
 	let queueService;
 	let db;
 
@@ -45,15 +45,26 @@ describe('queue service sorting', () => {
 		db = dbModule.db;
 	});
 
-	it('sorts queue items correctly: Platinum > Gold > Silver > Free > Oldest', async () => {
-		// Mock data
+	it('interleaves high-tier songs based on gaps', async () => {
+		// Mock turn counter = 10 (10 songs played so far)
+		const mockGlobalTurnRes = [{ count: 10 }];
+		
+		// Mock queue data
 		const mockQueue = [
-			{ id: '1', songId: 's1', tier: 'free', baseRank: 1000, playsRemainingToday: 1 },
-			{ id: '2', songId: 's2', tier: 'silver', baseRank: 2000, playsRemainingToday: 3 }, // Newer but silver
-			{ id: '3', songId: 's3', tier: 'gold', baseRank: 3000, playsRemainingToday: 7 },
-			{ id: '4', songId: 's4', tier: 'platinum', baseRank: 4000, playsRemainingToday: 15 },
-			{ id: '5', songId: 's5', tier: 'free', baseRank: 500, playsRemainingToday: 1 }, // Older free
-			{ id: '6', songId: 's6', tier: 'platinum', baseRank: 4500, playsRemainingToday: 15 } // Newer platinum
+			// Platinum: last played at turn 9. Gap is 2, so next eligible is 11.
+			// Since currentTurn (10) < 11, effectiveTurn = 11.
+			{ id: 'plat', tier: 'platinum', lastPlayedTurn: 9, baseRank: 100, playsRemainingToday: 10, songId: 's1' },
+			
+			// Gold: last played at turn 8. Gap is 3, so next eligible is 11.
+			// Since currentTurn (10) < 11, effectiveTurn = 11.
+			{ id: 'gold', tier: 'gold', lastPlayedTurn: 8, baseRank: 200, playsRemainingToday: 5, songId: 's2' },
+			
+			// Free: never played. lastPlayedTurn 0. Gap 0.
+			// nextEligible = 0. max(10, 0) = 10.
+			{ id: 'free1', tier: 'free', lastPlayedTurn: 0, baseRank: 300, playsRemainingToday: 1, songId: 's3' },
+
+			// Another Free: older than free1.
+			{ id: 'free2', tier: 'free', lastPlayedTurn: 0, baseRank: 50, playsRemainingToday: 1, songId: 's4' }
 		];
 
 		const mockSongs = [
@@ -61,33 +72,45 @@ describe('queue service sorting', () => {
 			{ id: 's2', isAvailable: 1 },
 			{ id: 's3', isAvailable: 1 },
 			{ id: 's4', isAvailable: 1 },
-			{ id: 's5', isAvailable: 1 },
-			{ id: 's6', isAvailable: 1 },
 		];
 
-		const queueQueryMock = {
-			from: vi.fn().mockReturnThis(),
-			orderBy: vi.fn().mockReturnThis(),
-			limit: vi.fn().mockResolvedValue(mockQueue)
-		};
+		// Mock the chains
+		db.select.mockImplementation((fields) => {
+			if (fields && fields.count) {
+				return { from: vi.fn().mockResolvedValue(mockGlobalTurnRes) };
+			}
+			return {
+				from: vi.fn().mockReturnThis(),
+				orderBy: vi.fn().mockReturnThis(),
+				limit: vi.fn().mockResolvedValue(mockQueue)
+			};
+		});
 		
-		const songsQueryMock = {
-			from: vi.fn().mockResolvedValue(mockSongs)
-		};
+		// Second call for songs
+		db.select.mockReturnValueOnce({ from: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue(mockQueue) }) // turn count
+				 .mockReturnValueOnce({ from: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue(mockQueue) }) // queue
+				 .mockReturnValueOnce({ from: vi.fn().mockResolvedValue(mockSongs) }); // songs
+
+		// Actually, I need a better way to mock the multiple select calls.
+		// Let's just fix the mock logic:
+		const turnMock = { from: vi.fn().mockResolvedValue(mockGlobalTurnRes) };
+		const queueMock = { from: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(), limit: vi.fn().mockResolvedValue(mockQueue) };
+		const songsMock = { from: vi.fn().mockResolvedValue(mockSongs) };
 
 		db.select
-			.mockReturnValueOnce(queueQueryMock) // First call for queue
-			.mockReturnValueOnce(songsQueryMock); // Second call for songs
+			.mockReturnValueOnce(turnMock)
+			.mockReturnValueOnce(queueMock)
+			.mockReturnValueOnce(songsMock);
 
 		const result = await queueService.getQueue();
 
 		// Expected order:
-		// 1. Platinum (s4, s6) -> s4 (older) then s6
-		// 2. Gold (s3)
-		// 3. Silver (s2)
-		// 4. Free (s5, s1) -> s5 (older) then s1
+		// 1. free2 (Effective 10, Priority 0, baseRank 50)
+		// 2. free1 (Effective 10, Priority 0, baseRank 300)
+		// 3. plat (Effective 11, Priority 3, baseRank 100)
+		// 4. gold (Effective 11, Priority 2, baseRank 200)
 		
 		const ids = result.map(r => r.id);
-		expect(ids).toEqual(['4', '6', '3', '2', '5', '1']);
+		expect(ids).toEqual(['free2', 'free1', 'plat', 'gold']);
 	});
 });
