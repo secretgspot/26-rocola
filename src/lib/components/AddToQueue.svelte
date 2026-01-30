@@ -43,12 +43,6 @@
 	async function submit(tier = 'free') {
 		if (!metadata?.videoId) return;
 		
-		// For now only free is real
-		if (tier !== 'free') {
-			addToast({ message: 'Paid tiers coming soon!', level: 'info' });
-			return; 
-		}
-
 		const res = await fetch('/api/queue', { 
 			method: 'POST', 
 			headers: { 'content-type': 'application/json' }, 
@@ -135,7 +129,7 @@
 							<div class="tier-desc">Standard priority queue</div>
 							<div class="tier-bar"></div>
 						</button>
-						<button class="tier-card silver disabled">
+						<button class="tier-card silver" onclick={() => submit('silver')}>
 							<div class="tier-header">
 								<span class="tier-name">SILVER_BOOST</span>
 								<span class="tier-price">$2</span>
@@ -143,7 +137,7 @@
 							<div class="tier-desc">Priority injection</div>
 							<div class="tier-bar"></div>
 						</button>
-						<button class="tier-card gold disabled">
+						<button class="tier-card gold" onclick={() => submit('gold')}>
 							<div class="tier-header">
 								<span class="tier-name">GOLD_STRIKE</span>
 								<span class="tier-price">$5</span>
@@ -151,7 +145,7 @@
 							<div class="tier-desc">Instant playback*</div>
 							<div class="tier-bar"></div>
 						</button>
-						<button class="tier-card platinum disabled">
+						<button class="tier-card platinum" onclick={() => submit('platinum')}>
 							<div class="tier-header">
 								<span class="tier-name">ULTRA_VOID</span>
 								<span class="tier-price">$10</span>

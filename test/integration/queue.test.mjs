@@ -64,8 +64,8 @@ describe('Queue integration (server + DB)', () => {
 		if (current) {
 			const curId = current.songId ?? current.id ?? current.videoId;
 			const found = queue.find((r) => {
-				const song = r.right || null;
-				return (song?.id ?? r.left?.songId ?? r.left?.id) === curId;
+				const song = r.song || null;
+				return (song?.id ?? r.songId ?? r.id) === curId;
 			});
 			expect(found).toBeUndefined();
 		}
@@ -74,7 +74,7 @@ describe('Queue integration (server + DB)', () => {
 
 		// 4) set playsRemainingToday = 0 for first upcoming
 		const first = queue[0];
-		const qId = first.left.id;
+		const qId = first.id;
 		const db = new Database(DB_PATH);
 		try {
 			const r = db.prepare('UPDATE queue SET playsRemainingToday = 0 WHERE id = ?').run(qId);
@@ -87,7 +87,7 @@ describe('Queue integration (server + DB)', () => {
 		const qRes2 = await fetchJson('/api/queue');
 		expect(qRes2.json.ok).toBe(true);
 		const queue2 = qRes2.json.queue || [];
-		const stillThere = queue2.find((r) => r.left.id === qId);
+		const stillThere = queue2.find((r) => r.id === qId);
 		expect(stillThere).toBeUndefined();
 	});
 });

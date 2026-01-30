@@ -43,5 +43,22 @@ export async function POST({ request }) {
 	}
 
 	// Fallback: no API key, but ID format is valid
+	// Try to fetch basic metadata via oEmbed
+	try {
+		const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+		if (oembedRes.ok) {
+			const oembedData = await oembedRes.json();
+			const metadata = {
+				title: oembedData.title,
+				thumbnail: oembedData.thumbnail_url,
+				channelTitle: oembedData.author_name,
+				duration: null // oEmbed doesn't return duration
+			};
+			return json({ ok: true, videoId: id, metadata });
+		}
+	} catch (e) {
+		// ignore oembed failure
+	}
+
 	return json({ ok: true, videoId: id });
 }
