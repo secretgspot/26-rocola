@@ -6,6 +6,7 @@
  */
 
 import { env } from '$env/dynamic/private';
+import { WebSocketServer } from 'ws';
 
 // Guard to avoid multiple servers during HMR in dev
 if (!globalThis.__rocola_ws) {
@@ -18,29 +19,11 @@ if (!globalThis.__rocola_ws) {
 	};
 }
 
-let WebSocketServer = null;
-// Attempt dynamic import asynchronously so missing package doesn't crash import
-(async () => {
-	try {
-		const wsMod = await import('ws');
-		WebSocketServer = wsMod.WebSocketServer;
-		// call init after we have the WS constructor
-		try {
-			initWebSocketServer();
-		} catch (e) {
-			console.warn('auto init failed', e?.message || e);
-		}
-	} catch (err) {
-		console.error('`ws` package is not installed. Please run `npm install ws` to enable WebSocket features.');
-	}
-})();
-
 /**
  * Initialize a WebSocket server (idempotent).
  * @returns {import('ws').Server | null}
  */
 export function initWebSocketServer() {
-	if (!WebSocketServer) return null;
 	if (globalThis.__rocola_ws.server) return globalThis.__rocola_ws.server;
 
 	const port = Number(env.WS_PORT || 6789);

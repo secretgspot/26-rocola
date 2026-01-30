@@ -4,7 +4,7 @@ import { getPlaybackState, broadcast } from '$lib/server/ws.js';
 
 export async function GET() {
 	try {
-		const rows = await getQueue();
+		const { queue: rows } = await getQueue();
 		
 		if (!rows || rows.length === 0) {
 			return json({ ok: true, current: null });

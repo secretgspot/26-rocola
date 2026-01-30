@@ -1,5 +1,6 @@
 <script>
 	import { addToast } from '$lib/client/stores.svelte.js';
+	import { TIER_CONFIG } from '$lib/config.js';
 	import { fade, scale, fly } from 'svelte/transition';
 
 	let { onqueued } = $props();
@@ -121,38 +122,16 @@
 					</div>
 
 					<div class="tiers-grid">
-						<button class="tier-card free" onclick={() => submit('free')}>
-							<div class="tier-header">
-								<span class="tier-name">FREE_LOAD</span>
-								<span class="tier-price">$0</span>
-							</div>
-							<div class="tier-desc">Standard priority queue</div>
-							<div class="tier-bar"></div>
-						</button>
-						<button class="tier-card silver" onclick={() => submit('silver')}>
-							<div class="tier-header">
-								<span class="tier-name">SILVER_BOOST</span>
-								<span class="tier-price">$2</span>
-							</div>
-							<div class="tier-desc">Priority injection</div>
-							<div class="tier-bar"></div>
-						</button>
-						<button class="tier-card gold" onclick={() => submit('gold')}>
-							<div class="tier-header">
-								<span class="tier-name">GOLD_STRIKE</span>
-								<span class="tier-price">$5</span>
-							</div>
-							<div class="tier-desc">Instant playback*</div>
-							<div class="tier-bar"></div>
-						</button>
-						<button class="tier-card platinum" onclick={() => submit('platinum')}>
-							<div class="tier-header">
-								<span class="tier-name">ULTRA_VOID</span>
-								<span class="tier-price">$10</span>
-							</div>
-							<div class="tier-desc">Force system takeover</div>
-							<div class="tier-bar"></div>
-						</button>
+						{#each Object.values(TIER_CONFIG).sort((a, b) => a.priority - b.priority) as t}
+							<button class="tier-card {t.id}" onclick={() => submit(t.id)}>
+								<div class="tier-header">
+									<span class="tier-name">{t.label}</span>
+									<span class="tier-price">${t.price}</span>
+								</div>
+								<div class="tier-desc">{t.description}</div>
+								<div class="tier-bar" style="background-color: {t.color}"></div>
+							</button>
+						{/each}
 					</div>
 				{/if}
 			</div>

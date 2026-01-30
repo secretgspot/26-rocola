@@ -12,6 +12,7 @@ import { connectWebSocket } from '$lib/client/websocket.js';
  * @property {number} playsRemainingToday
  * @property {string} tier
  * @property {number} [startedAt]
+ * @property {number} [lastPlayedTurn]
  */
 
 /**
@@ -26,14 +27,16 @@ import { connectWebSocket } from '$lib/client/websocket.js';
  *   queue: Song[],
  *   currentSong: Song | null,
  *   previousSong: Song | null,
- *   toasts: Toast[]
+ *   toasts: Toast[],
+ *   currentTurn: number
  * }}
  */
 export const playerState = $state({
 	queue: [],
 	currentSong: null,
 	previousSong: null,
-	toasts: []
+	toasts: [],
+	currentTurn: 0
 });
 
 /**
@@ -57,6 +60,7 @@ export function normalizeQueueItem(item) {
 		playsRemainingToday: left.playsRemainingToday ?? 1,
 		tier: left.tier ?? 'free',
 		startedAt: left.startedAt ?? item.startedAt ?? null,
+		lastPlayedTurn: left.lastPlayedTurn ?? 0,
 		song: song
 	};
 	
@@ -119,6 +123,7 @@ export async function refreshQueue() {
 		if (qRes.ok) {
 			const data = await qRes.json();
 			if (data.ok && data.queue) {
+				playerState.currentTurn = data.currentTurn || 0;
 				playerState.queue = filterQueue(data.queue, playerState.currentSong);
 			}
 		}
@@ -162,6 +167,7 @@ export async function initRealtime() {
 
 		ws.on('queue_changed', (payload) => {
 			if (payload?.queue) {
+				playerState.currentTurn = payload.currentTurn || 0;
 				playerState.queue = filterQueue(payload.queue, playerState.currentSong);
 			}
 		});

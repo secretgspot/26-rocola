@@ -1,0 +1,33 @@
+import { initWebSocketServer } from '$lib/server/ws.js';
+import { dev } from '$app/environment';
+
+// Initialize WebSocket server on startup
+try {
+	initWebSocketServer();
+} catch (e) {
+	console.error('[Hooks] Failed to initialize WebSocket server:', e);
+}
+
+/** @type {import('@sveltejs/kit').Handle} */
+export async function handle({ event, resolve }) {
+	// IP Tracking
+	const clientIp = event.getClientAddress() || '127.0.0.1';
+	event.locals.clientIp = clientIp;
+
+	// Session management (Simple anonymous sessions)
+	let sessionId = event.cookies.get('session_id');
+	if (!sessionId) {
+		sessionId = crypto.randomUUID();
+		event.cookies.set('session_id', sessionId, {
+			path: '/',
+			httpOnly: true,
+			secure: !dev,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 24 * 365 // 1 year
+		});
+	}
+	event.locals.sessionId = sessionId;
+
+	const response = await resolve(event);
+	return response;
+}

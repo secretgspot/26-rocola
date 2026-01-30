@@ -16,10 +16,10 @@
     - [x] Fixed metadata fetching (black thumbnails/unknown titles)
 
 ## Next Steps (Optimizations & Reworks)
-- [ ] Optimize Database Queries (SQL Joins) <!-- CURRENT TASK -->
-- [ ] Refactor WebSocket Initialization (Move out of `db/index.js`)
-- [ ] UI/UX: Add "Cooldown" status indicators to Queue items
-- [ ] Code Structure: Centralize Tier configuration (Price, Plays, Gap)
+- [x] Optimize Database Queries (SQL Joins)
+- [x] Refactor WebSocket Initialization (Move out of `db/index.js`)
+- [x] UI/UX: Add "Cooldown" status indicators to Queue items
+- [x] Code Structure: Centralize Tier configuration (Price, Plays, Gap)
 
 ## Future Phases
 - [ ] Phase 3: Payments (Lemon Squeezy integration)

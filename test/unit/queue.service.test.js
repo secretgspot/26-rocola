@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TIER_CONFIG } from '$lib/config.js';
 
 // Mock SvelteKit env modules
 vi.mock('$env/dynamic/private', () => ({
@@ -95,7 +96,7 @@ describe('queue service fair-share sorting with Joins', () => {
 			orderBy: vi.fn().mockResolvedValue(mockJoinResults)
 		});
 
-		const result = await queueService.getQueue();
+		const { queue: result } = await queueService.getQueue();
 
 		const ids = result.map(r => r.id);
 		expect(ids).toEqual(['free2', 'free1', 'plat', 'gold']);

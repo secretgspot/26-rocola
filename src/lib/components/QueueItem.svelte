@@ -1,4 +1,6 @@
 <script>
+	import { playerState } from '$lib/client/stores.svelte.js';
+	import { getTierConfig } from '$lib/config.js';
 	let { item } = $props();
 
 	// Determine tier for styling
@@ -9,9 +11,16 @@
 	let titleParts = $derived(displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle]);
 	let artist = $derived(titleParts.length > 1 ? titleParts[0] : (item.channelTitle || item.song?.channelTitle || 'Unknown Artist'));
 	let track = $derived(titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle);
+
+	// Cooldown logic
+	let tierConfig = $derived(getTierConfig(tier));
+	let gap = $derived(tierConfig.gap);
+	let nextEligible = $derived((item.lastPlayedTurn || 0) + gap);
+	let isCooldown = $derived(playerState.currentTurn < nextEligible);
+	let turnsToReady = $derived(nextEligible - playerState.currentTurn);
 </script>
 
-<div class="item {tier} glitch-hover">
+<div class="item {tier} glitch-hover" class:cooldown={isCooldown}>
 	<div class="status-indicator"></div>
 	
 	<div class="thumb-container">
@@ -30,6 +39,9 @@
 		<div class="artist-row">
 			<span class="artist">{artist}</span>
 			<span class="separator">//</span>
+			{#if isCooldown}
+				<span class="cooldown-tag">COOLDOWN_{turnsToReady}</span>
+			{/if}
 		</div>
 		<div class="track" title={track}>{track}</div>
 	</div>
@@ -172,6 +184,24 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 		letter-spacing: 0.02em;
+	}
+
+	.cooldown-tag {
+		font-family: var(--font-pixel);
+		font-size: 0.4rem;
+		color: var(--neon-pink);
+		background: rgba(255, 0, 110, 0.1);
+		padding: 2px 4px;
+		border: 1px solid rgba(255, 0, 110, 0.2);
+		animation: pulse 2s infinite;
+	}
+
+	.item.cooldown {
+		opacity: 0.6;
+		filter: grayscale(0.5);
+	}
+	.item.cooldown img {
+		filter: brightness(0.5);
 	}
 
 	.stats {

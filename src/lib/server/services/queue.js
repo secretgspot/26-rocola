@@ -2,6 +2,7 @@ import { db } from '$lib/server/db/index.js';
 import { queue, songs, queuePlays } from '$lib/server/db/schema.js';
 import { broadcast, getPlaybackState } from '$lib/server/ws.js';
 import { eq, sql, gt, and } from 'drizzle-orm';
+import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 
 /**
  * Get total number of songs played to use as a global turn counter.
@@ -41,18 +42,10 @@ export async function getQueue() {
 	
 	let rows = results.map(r => ({ ...r.queue, song: r.song }));
 
-	// Tiers and Gaps
-	const TIER_CONFIG = {
-		platinum: { priority: 3, gap: 2 },
-		gold: { priority: 2, gap: 3 },
-		silver: { priority: 1, gap: 5 },
-		free: { priority: 0, gap: 0 }
-	};
-
 	// Sort by fair-share logic
 	rows.sort((a, b) => {
-		const configA = TIER_CONFIG[a.tier] || TIER_CONFIG.free;
-		const configB = TIER_CONFIG[b.tier] || TIER_CONFIG.free;
+		const configA = getTierConfig(a.tier);
+		const configB = getTierConfig(b.tier);
 
 		const nextEligibleA = (a.lastPlayedTurn || 0) + configA.gap;
 		const nextEligibleB = (b.lastPlayedTurn || 0) + configB.gap;
@@ -74,7 +67,7 @@ export async function getQueue() {
 		return a.baseRank - b.baseRank;
 	});
 
-	return rows;
+	return { queue: rows, currentTurn };
 }
 
 /**
@@ -122,13 +115,8 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	const baseRank = Date.now();
 	const createdAt = Math.floor(Date.now() / 1000);
 	
-	let playsRemainingToday = 1;
-	switch (tier) {
-		case 'platinum': playsRemainingToday = 15; break;
-		case 'gold': playsRemainingToday = 7; break;
-		case 'silver': playsRemainingToday = 3; break;
-		case 'free': default: playsRemainingToday = 1; break;
-	}
+	const tierConfig = getTierConfig(tier);
+	const playsRemainingToday = tierConfig.dailyPlays;
 
 	await db.insert(queue).values({
 		id: qId,
@@ -144,9 +132,9 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	});
 
 	// Broadcast updates
-	const snapshot = await getQueue();
+	const { queue: snapshot, currentTurn } = await getQueue();
 	broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
-	broadcast('queue_changed', { queue: snapshot });
+	broadcast('queue_changed', { queue: snapshot, currentTurn });
 
 	if (snapshot.length === 1 && snapshot[0].id === qId) {
 		broadcast('song_playing', { songId: song.id, queueId: qId, startedAt: Math.floor(Date.now() / 1000) });
@@ -159,7 +147,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
  * Advance the queue to the next song.
  */
 export async function advanceQueue(fromQueueId = null) {
-	const rows = await getQueue();
+	const { queue: rows } = await getQueue();
 
 	if (rows.length === 0) {
 		return { ok: false, error: 'No available songs' };
@@ -177,8 +165,8 @@ export async function advanceQueue(fromQueueId = null) {
 	}
 
 	const now = Math.floor(Date.now() / 1000);
-	const currentTurn = await getGlobalTurn();
-	const nextTurn = currentTurn + 1;
+	const prevTurn = await getGlobalTurn();
+	const nextTurn = prevTurn + 1;
 
 	await db.update(queue).set({ 
 		playsRemainingToday: Math.max(0, current.playsRemainingToday - 1), 
@@ -197,8 +185,8 @@ export async function advanceQueue(fromQueueId = null) {
 
 	broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
 	
-	const afterRows = await getQueue();
-	broadcast('queue_changed', { queue: afterRows });
+	const { queue: afterRows, currentTurn } = await getQueue();
+	broadcast('queue_changed', { queue: afterRows, currentTurn });
 
 	if (afterRows.length > 0) {
 		const next = afterRows[0];
