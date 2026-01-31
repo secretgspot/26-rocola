@@ -29,7 +29,8 @@ import { connectWebSocket } from '$lib/client/websocket.js';
  *   currentSong: Song | null,
  *   previousSong: Song | null,
  *   toasts: Toast[],
- *   currentTurn: number
+ *   currentTurn: number,
+ *   clientCount: number
  * }}
  */
 export const playerState = $state({
@@ -37,7 +38,8 @@ export const playerState = $state({
 	currentSong: null,
 	previousSong: null,
 	toasts: [],
-	currentTurn: 0
+	currentTurn: 0,
+	clientCount: 1
 });
 
 /**
@@ -158,6 +160,13 @@ export async function initRealtime() {
 	try {
 		const ws = connectWebSocket();
 		
+		ws.on('client_count', (payload) => {
+			console.debug('[Store] client_count received', payload);
+			if (payload?.count !== undefined) {
+				playerState.clientCount = payload.count;
+			}
+		});
+
 		ws.on('sync_playback', (payload) => {
 			console.debug('[WS] sync_playback received', payload);
 			if (playerState.currentSong && playerState.currentSong.queueId === payload.currentQueueId) {

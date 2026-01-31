@@ -29,7 +29,14 @@ export function initWebSocketServer() {
 	const port = Number(env.WS_PORT || 6789);
 	const wss = new WebSocketServer({ port });
 	wss.on('connection', (ws) => {
-		console.info('WS client connected');
+		const count = wss.clients.size;
+		console.info(`WS client connected. Total clients: ${count}. State: ${ws.readyState}`);
+		
+		// Send count to the new client specifically
+		ws.send(JSON.stringify({ event: 'client_count', payload: { count } }));
+
+		// Broadcast new client count to everyone (redundant for new client but ensures consistency)
+		broadcast('client_count', { count });
 		
 		// Send current playback state immediately upon connection
 		if (globalThis.__rocola_ws.playback.currentQueueId) {
@@ -39,6 +46,8 @@ export function initWebSocketServer() {
 			}));
 		}
 
+		ws.on('error', (err) => console.error('WS client error:', err));
+
 		ws.on('message', (message) => {
 			try {
 				const data = JSON.parse(message.toString());
@@ -47,7 +56,11 @@ export function initWebSocketServer() {
 				console.debug('WS non-json message');
 			}
 		});
-		ws.on('close', () => console.info('WS client disconnected'));
+		ws.on('close', () => {
+			const count = wss.clients.size;
+			console.info(`WS client disconnected. Remaining clients: ${count}`);
+			broadcast('client_count', { count });
+		});
 	});
 
 	globalThis.__rocola_ws.server = wss;

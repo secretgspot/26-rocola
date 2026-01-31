@@ -49,8 +49,7 @@
 
 	<header class="top-bar border-b">
 		<div class="logo">
-			<span class="logo-text">ROCOLA_SYSTEM</span>
-			<span class="version text-muted">V2.6_BRUTALIST</span>
+			<span class="logo-text">ROCOLA</span>
 		</div>
 		<div class="header-meta">
 			{#if import.meta.env.DEV}
@@ -58,7 +57,7 @@
 			{/if}
 			<div class="status">
 				<div class="live-dot"></div>
-				<span>SYS_ACTIVE</span>
+				<span>SYS_ACTIVE [{playerState.clientCount.toString().padStart(2, '0')}]</span>
 			</div>
 		</div>
 	</header>
@@ -146,7 +145,7 @@
 	.version { font-size: 0.65rem; font-weight: 700; }
 	.header-meta { display: flex; align-items: center; gap: 1rem; }
 	.status { font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; color: var(--text-dim); white-space: nowrap; }
-	.live-dot { width: 8px; height: 8px; background: var(--text-main); }
+	.live-dot { width: 8px; height: 8px; background: var(--text-main); animation: pulse 2s infinite; }
 	.btn-skip { font-size: 0.6rem; padding: 4px 6px; white-space: nowrap; }
 
 	.main-layout {
@@ -190,6 +189,7 @@
 	.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
 	.blink { animation: blink 1s steps(2) infinite; }
 	@keyframes blink { 0% { opacity: 0; } }
+	@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
 
 	.queue-zone {
 		width: 400px;
