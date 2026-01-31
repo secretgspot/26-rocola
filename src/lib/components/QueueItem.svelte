@@ -20,27 +20,23 @@
 	let turnsToReady = $derived(nextEligible - playerState.currentTurn);
 </script>
 
-<div class="item {tier} glitch-hover" class:cooldown={isCooldown}>
-	<div class="status-indicator"></div>
-	
+<div class="item {tier}" class:cooldown={isCooldown}>
 	<div class="thumb-container">
 		<div class="thumb">
 			{#if item.song?.thumbnail || item.thumbnail}
 				<img src={item.song?.thumbnail || item.thumbnail} alt="" loading="lazy" />
 			{:else}
-				<div class="icon">SYS_NODATA</div>
+				<div class="icon">[NO_IMG]</div>
 			{/if}
-			<div class="tier-tag {tier}">{tier.toUpperCase()}</div>
 		</div>
-		<div class="scanline"></div>
+		<div class="tier-tag">{tier.toUpperCase()}</div>
 	</div>
 	
 	<div class="meta">
 		<div class="artist-row">
 			<span class="artist">{artist}</span>
-			<span class="separator">//</span>
 			{#if isCooldown}
-				<span class="cooldown-tag">COOLDOWN_{turnsToReady}</span>
+				<span class="cooldown-tag">CD:{turnsToReady}</span>
 			{/if}
 		</div>
 		<div class="track" title={track}>{track}</div>
@@ -50,7 +46,7 @@
 		{#if item.playsRemainingToday !== undefined}
 			<div class="plays-badge">
 				<span class="label">RMN:</span>
-				<span class="count">{item.playsRemainingToday}</span>
+				<span class="count">{item.playsRemainingToday.toString().padStart(2, '0')}</span>
 			</div>
 		{/if}
 		<div class="entry-id">#{item.id?.toString().slice(-4) || '0000'}</div>
@@ -63,91 +59,82 @@
 		align-items: center;
 		gap: 1rem;
 		padding: 0.75rem;
-		background: rgba(255, 255, 255, 0.02);
-		border: 1px solid var(--glass-border);
-		transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+		background: var(--bg-panel);
+		border-bottom: 1px solid var(--border-dim);
+		transition: background 0.1s ease;
 		position: relative;
-		overflow: hidden;
 	}
 
 	.item:hover {
-		background: rgba(0, 243, 255, 0.05);
-		border-color: var(--neon-cyan);
-		box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.1);
-		transform: translateX(4px);
+		background: var(--text-main);
+		color: var(--bg-dark);
 	}
 
-	.status-indicator {
-		width: 2px;
-		height: 30px;
-		background: var(--text-muted);
-		transition: all 0.3s;
+	.item:hover .artist,
+	.item:hover .track,
+	.item:hover .tier-tag,
+	.item:hover .entry-id,
+	.item:hover .plays-badge .label,
+	.item:hover .plays-badge .count,
+	.item:hover .cooldown-tag {
+		color: var(--bg-dark);
 	}
-	.item:hover .status-indicator {
-		background: var(--neon-cyan);
-		box-shadow: 0 0 10px var(--neon-cyan);
-		height: 40px;
+	
+	.item:hover .thumb {
+		border-color: var(--bg-dark);
 	}
-	.item.silver .status-indicator { background: var(--tier-silver); }
-	.item.gold .status-indicator { background: var(--tier-gold); }
-	.item.platinum .status-indicator { background: var(--tier-platinum); }
 
 	.thumb-container {
 		position: relative;
-		width: 60px;
-		height: 45px;
+		width: 50px;
+		height: 38px;
 		flex-shrink: 0;
 	}
 	.thumb {
 		width: 100%;
 		height: 100%;
-		background: #000;
+		background: var(--bg-dark);
 		position: relative;
 		overflow: hidden;
-		border: 1px solid rgba(255, 255, 255, 0.1);
+		border: 1px solid var(--border-main);
 	}
 	.thumb img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
 		opacity: 0.8;
-		transition: opacity 0.3s;
+		filter: grayscale(1);
 	}
-	.item:hover img { opacity: 1; }
+	.item:hover img {
+		opacity: 1;
+		filter: grayscale(1) contrast(1.2);
+	}
 
 	.thumb .icon {
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		height: 100%;
-		font-family: var(--font-mono);
-		font-size: 0.4rem;
+		font-size: 0.5rem;
 		color: var(--text-muted);
 	}
 
 	.tier-tag {
 		position: absolute;
-		top: 0;
-		left: 0;
-		font-family: var(--font-pixel);
-		font-size: 0.4rem;
-		padding: 2px 4px;
-		background: rgba(0,0,0,0.8);
-		color: #fff;
+		bottom: -4px;
+		right: -4px;
+		font-size: 0.5rem;
+		font-weight: 800;
+		padding: 1px 3px;
+		background: var(--text-main);
+		color: var(--bg-dark);
+		border: 1px solid var(--bg-dark);
 		z-index: 10;
-		border-bottom-right-radius: 4px;
 	}
-	.tier-tag.silver { color: var(--tier-silver); }
-	.tier-tag.gold { color: var(--tier-gold); }
-	.tier-tag.platinum { color: var(--tier-platinum); }
-
-	.scanline {
-		position: absolute;
-		top: 0; left: 0; width: 100%; height: 100%;
-		background: linear-gradient(to bottom, transparent 50%, rgba(0,0,0,0.2) 50%);
-		background-size: 100% 4px;
-		pointer-events: none;
-		z-index: 5;
+	.item:hover .tier-tag {
+		background: var(--bg-dark);
+		color: var(--text-main);
+		border-color: var(--text-main);
 	}
 
 	.meta {
@@ -163,45 +150,30 @@
 		gap: 0.5rem;
 	}
 	.artist {
-		font-family: var(--font-mono);
-		font-size: 0.65rem;
+		font-size: 0.7rem;
 		color: var(--text-dim);
 		text-transform: uppercase;
-		letter-spacing: 0.05em;
-	}
-	.separator {
-		font-family: var(--font-mono);
-		font-size: 0.6rem;
-		color: var(--neon-cyan);
-		opacity: 0.5;
+		font-weight: 400;
 	}
 	.track {
-		font-family: var(--font-display);
-		font-size: 0.85rem;
-		font-weight: 600;
-		color: #fff;
+		font-size: 0.9rem;
+		font-weight: 700;
+		color: var(--text-main);
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		letter-spacing: 0.02em;
 	}
 
 	.cooldown-tag {
-		font-family: var(--font-pixel);
-		font-size: 0.4rem;
-		color: var(--neon-pink);
-		background: rgba(255, 0, 110, 0.1);
-		padding: 2px 4px;
-		border: 1px solid rgba(255, 0, 110, 0.2);
-		animation: pulse 2s infinite;
+		font-size: 0.6rem;
+		font-weight: 800;
+		color: var(--text-muted);
+		border: 1px solid var(--border-main);
+		padding: 0 4px;
 	}
 
 	.item.cooldown {
-		opacity: 0.6;
-		filter: grayscale(0.5);
-	}
-	.item.cooldown img {
-		filter: brightness(0.5);
+		opacity: 0.5;
 	}
 
 	.stats {
@@ -214,28 +186,22 @@
 		display: flex;
 		align-items: center;
 		gap: 4px;
-		background: rgba(0,0,0,0.4);
-		padding: 2px 6px;
-		border: 1px solid rgba(255,255,255,0.05);
 	}
 	.plays-badge .label {
-		font-family: var(--font-mono);
-		font-size: 0.5rem;
+		font-size: 0.6rem;
 		color: var(--text-muted);
 	}
 	.plays-badge .count {
-		font-family: var(--font-pixel);
-		font-size: 0.5rem;
-		color: var(--neon-green);
+		font-size: 0.7rem;
+		font-weight: 800;
+		color: var(--text-dim);
 	}
 	.entry-id {
-		font-family: var(--font-mono);
-		font-size: 0.5rem;
+		font-size: 0.6rem;
 		color: var(--text-muted);
-		opacity: 0.5;
 	}
 
 	/* Tier specific accents */
-	.item.platinum { background: linear-gradient(90deg, rgba(188, 19, 254, 0.05) 0%, transparent 100%); }
-	.item.gold { background: linear-gradient(90deg, rgba(251, 191, 36, 0.05) 0%, transparent 100%); }
+	.item.platinum .track { text-decoration: underline; }
+	.item.gold .track { font-style: italic; }
 </style>

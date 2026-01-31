@@ -4,29 +4,30 @@
 
 <div class="toast {level}">
 	<div class="toast-content">
-		<span class="indicator"></span>
+		<span class="level-tag">[{level.toUpperCase()}]</span>
 		<span class="message">{message}</span>
 	</div>
 </div>
 
 <style>
 	.toast {
-		background: rgba(0, 0, 0, 0.9);
-		border-left: 3px solid var(--neon-cyan);
-		color: #fff;
-		padding: 0.75rem 1.25rem;
+		background: var(--text-main);
+		color: var(--bg-dark);
+		padding: 0.75rem 1rem;
 		font-family: var(--font-mono);
 		font-size: 0.8rem;
-		box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-		animation: slide-in 0.3s ease-out;
-		min-width: 200px;
+		font-weight: 600;
+		animation: slide-in 0.2s ease-out;
+		min-width: 250px;
 		pointer-events: auto;
-		border: 1px solid var(--glass-border);
+		border: 1px solid var(--bg-dark);
 	}
 
-	.toast.success { border-left-color: var(--neon-green); }
-	.toast.warn { border-left-color: var(--tier-gold); }
-	.toast.error { border-left-color: var(--neon-pink); }
+	.toast.error {
+		background: #000;
+		color: #ff4444;
+		border: 1px solid #ff4444;
+	}
 
 	.toast-content {
 		display: flex;
@@ -34,19 +35,13 @@
 		gap: 0.75rem;
 	}
 
-	.indicator {
-		width: 6px;
-		height: 6px;
-		background: var(--neon-cyan);
-		border-radius: 50%;
-		box-shadow: 0 0 8px var(--neon-cyan);
+	.level-tag {
+		font-weight: 800;
+		font-size: 0.7rem;
 	}
-	.success .indicator { background: var(--neon-green); box-shadow: 0 0 8px var(--neon-green); }
-	.warn .indicator { background: var(--tier-gold); box-shadow: 0 0 8px var(--tier-gold); }
-	.error .indicator { background: var(--neon-pink); box-shadow: 0 0 8px var(--neon-pink); }
 
 	@keyframes slide-in {
-		from { transform: translateX(100%); opacity: 0; }
+		from { transform: translateX(20px); opacity: 0; }
 		to { transform: translateX(0); opacity: 1; }
 	}
 </style>
