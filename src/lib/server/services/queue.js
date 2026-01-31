@@ -24,6 +24,8 @@ function queue_plays_count_helper() {
  */
 export async function getQueue() {
 	const currentTurn = await getGlobalTurn();
+	const playback = getPlaybackState();
+	const currentQueueId = playback?.currentQueueId;
 
 	// Fetch queue joined with songs
 	const results = await db.select({
@@ -44,6 +46,12 @@ export async function getQueue() {
 
 	// Sort by fair-share logic
 	rows.sort((a, b) => {
+		// 0. Pin currently playing song to top
+		if (currentQueueId) {
+			if (a.id === currentQueueId) return -1;
+			if (b.id === currentQueueId) return 1;
+		}
+
 		const configA = getTierConfig(a.tier);
 		const configB = getTierConfig(b.tier);
 

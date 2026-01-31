@@ -14,6 +14,7 @@
 - [x] Bug Fixes / Minor Improvements
     - [x] Enabled premium tier selection in UI
     - [x] Fixed metadata fetching (black thumbnails/unknown titles)
+    - [x] Fixed queue interruption bug where high-tier songs skipped current playback
 
 ## Next Steps (Optimizations & Reworks)
 - [x] Optimize Database Queries (SQL Joins)
