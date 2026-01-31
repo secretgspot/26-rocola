@@ -44,6 +44,11 @@ export async function getQueue() {
 	
 	let rows = results.map(r => ({ ...r.queue, song: r.song }));
 
+	// If a song is currently playing, we want to show the queue as it WILL be
+	// when that song finishes (Turn N+1). This ensures B vs C comparisons
+	// match what advanceQueue will decide.
+	const effectiveBaseTurn = currentQueueId ? currentTurn + 1 : currentTurn;
+
 	// Sort by fair-share logic
 	rows.sort((a, b) => {
 		// 0. Pin currently playing song to top
@@ -58,8 +63,9 @@ export async function getQueue() {
 		const nextEligibleA = (a.lastPlayedTurn || 0) + configA.gap;
 		const nextEligibleB = (b.lastPlayedTurn || 0) + configB.gap;
 
-		const effectiveTurnA = Math.max(currentTurn, nextEligibleA);
-		const effectiveTurnB = Math.max(currentTurn, nextEligibleB);
+		// Use effectiveBaseTurn for calculations
+		const effectiveTurnA = Math.max(effectiveBaseTurn, nextEligibleA);
+		const effectiveTurnB = Math.max(effectiveBaseTurn, nextEligibleB);
 
 		// 1. Primary: Effective Turn
 		if (effectiveTurnA !== effectiveTurnB) {

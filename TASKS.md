@@ -16,6 +16,7 @@
     - [x] Fixed metadata fetching (black thumbnails/unknown titles)
     - [x] Fixed queue interruption bug where high-tier songs skipped current playback
     - [x] UI: Simplified header (ROCOLA) and added real-time WebSocket client counter
+    - [x] Fix queue order inconsistency: displayed queue (N) vs selection logic (N+1)
 
 ## Next Steps (Optimizations & Reworks)
 - [x] Optimize Database Queries (SQL Joins)
