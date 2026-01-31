@@ -20,6 +20,7 @@
 - [x] Refactor WebSocket Initialization (Move out of `db/index.js`)
 - [x] UI/UX: Add "Cooldown" status indicators to Queue items
 - [x] Code Structure: Centralize Tier configuration (Price, Plays, Gap)
+- [x] UI/UX: Refactor video progress indicator to stay synced with server time even when paused
 
 ## Future Phases
 - [ ] Phase 3: Payments (Lemon Squeezy integration)

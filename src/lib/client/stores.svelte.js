@@ -11,6 +11,7 @@ import { connectWebSocket } from '$lib/client/websocket.js';
  * @property {string} thumbnail
  * @property {number} playsRemainingToday
  * @property {string} tier
+ * @property {number} [duration]
  * @property {number} [startedAt]
  * @property {number} [lastPlayedTurn]
  */
@@ -59,6 +60,7 @@ export function normalizeQueueItem(item) {
 		thumbnail: left.thumbnail ?? song?.thumbnail ?? '',
 		playsRemainingToday: left.playsRemainingToday ?? 1,
 		tier: left.tier ?? 'free',
+		duration: left.duration ?? song?.duration ?? 0,
 		startedAt: left.startedAt ?? item.startedAt ?? null,
 		lastPlayedTurn: left.lastPlayedTurn ?? 0,
 		song: song

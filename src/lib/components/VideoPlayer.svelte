@@ -15,9 +15,10 @@
 	/** @type {number | null} */
 	let lastStartedAt = $state(null);
 
-	function getInitialSeek() {
+	// Get the "official" server-side elapsed time
+	function getServerElapsed() {
 		if (playerState.currentSong?.startedAt) {
-			const now = Math.floor(Date.now() / 1000);
+			const now = Date.now() / 1000;
 			const elapsed = now - playerState.currentSong.startedAt;
 			return elapsed > 0 ? elapsed : 0;
 		}
@@ -30,12 +31,25 @@
 		/** @type {any} */
 		let p;
 		const initialVideoId = untrack(() => playerState.currentSong?.videoId);
-		const seekTo = untrack(() => getInitialSeek());
+		const seekTo = untrack(() => getServerElapsed());
 		
 		createPlayer(el.id, { 
 			videoId: initialVideoId,
 			onStateChange: (e) => {
-				if (e.data === 0) onnext?.();
+				// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
+				if (e.data === 0) {
+					// Native player end - strictly fallback, we rely on server time mostly
+					onnext?.();
+				}
+				if (e.data === 1) {
+					// When switching to Playing, sync if we drifted too much or were paused
+					const current = p.getCurrentTime();
+					const correct = getServerElapsed();
+					if (Math.abs(current - correct) > 2) {
+						console.log('[VideoPlayer] Syncing playback to server time', { current, correct });
+						p.seek(correct);
+					}
+				}
 			},
 			onError: (e) => {
 				addToast({ message: `ERROR: PLAYBACK_FAILED`, level: 'error' });
@@ -63,11 +77,12 @@
 		const isNewStart = current.startedAt && current.startedAt !== lastStartedAt;
 
 		if (isNewVideo || isNewStart) {
-			const seekTo = getInitialSeek();
+			const seekTo = getServerElapsed();
 			if (isNewVideo) {
 				player.load(current.videoId, true);
 				if (seekTo > 2) player.seek(seekTo);
 			} else if (isNewStart) {
+				// Song restarted or time shifted
 				player.seek(seekTo);
 				player.play();
 			}
@@ -78,18 +93,39 @@
 	});
 
 	$effect(() => {
-		if (!player) return;
+		// Main loop: Update progress bar based on SERVER time, not player time
+		// This ensures bar keeps moving even if paused.
 		const interval = setInterval(() => {
+			if (!player || !playerState.currentSong) return;
+
+			// Determine duration: Player is most accurate, fallback to metadata
+			let duration = 0;
 			const raw = player._raw;
-			if (raw && typeof raw.getCurrentTime === 'function') {
-				const currentTime = raw.getCurrentTime();
-				const duration = raw.getDuration() || 0;
-				if (duration > 0) {
-					playbackProgress = (currentTime / duration) * 100;
-					ontimeupdate?.({ progress: playbackProgress });
+			if (raw && typeof raw.getDuration === 'function') {
+				duration = raw.getDuration();
+			}
+			if ((!duration || duration === 0) && playerState.currentSong.duration) {
+				duration = playerState.currentSong.duration;
+			}
+
+			if (duration > 0) {
+				const elapsed = getServerElapsed();
+				playbackProgress = (elapsed / duration) * 100;
+				
+				// Clamp to 100%
+				if (playbackProgress > 100) playbackProgress = 100;
+				
+				ontimeupdate?.({ progress: playbackProgress });
+
+				// Auto-advance if we've exceeded duration (Server-side logic simulation)
+				if (elapsed >= duration) {
+					console.log('[VideoPlayer] Song duration exceeded (server time), requesting next...');
+					// Avoid spamming next if already ending?
+					// The parent handles caching/dedup via onnext if needed, or we just call it.
+					onnext?.();
 				}
 			}
-		}, 500);
+		}, 200); // Faster update for smoother UI
 		return () => clearInterval(interval);
 	});
 </script>

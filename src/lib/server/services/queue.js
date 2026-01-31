@@ -71,11 +71,26 @@ export async function getQueue() {
 }
 
 /**
+ * Helper to parse ISO 8601 duration (PT#M#S) to seconds.
+ */
+function parseDuration(duration) {
+	if (!duration) return 0;
+	if (typeof duration === 'number') return duration;
+	const match = duration.match(/PT(\d+H)?(\d+M)?(\d+S)?/);
+	if (!match) return 0;
+	const hours = (parseInt(match[1]) || 0);
+	const minutes = (parseInt(match[2]) || 0);
+	const seconds = (parseInt(match[3]) || 0);
+	return hours * 3600 + minutes * 60 + seconds;
+}
+
+/**
  * Add a song to the queue.
  * Optimized: specific lookup for videoId instead of fetching all songs.
  */
 export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	const { videoId, title, thumbnail, channelTitle, metadata } = songData;
+	const duration = parseDuration(songData.duration || metadata?.duration);
 
 	// Targeted lookup for existing song
 	const existingSongs = await db.select().from(songs).where(eq(songs.videoId, videoId)).limit(1);
@@ -83,14 +98,17 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 
 	if (song) {
 		// Update metadata if provided
-		if (title || thumbnail) {
-			await db.update(songs).set({
-				title: title || song.title,
-				thumbnail: thumbnail || song.thumbnail,
-				channelTitle: channelTitle || song.channelTitle,
+		if (title || thumbnail || duration > 0) {
+			const updateData = {
 				metadata: JSON.stringify(metadata || {})
-			}).where(eq(songs.id, song.id));
-			song = { ...song, ...songData };
+			};
+			if (title) updateData.title = title;
+			if (thumbnail) updateData.thumbnail = thumbnail;
+			if (channelTitle) updateData.channelTitle = channelTitle;
+			if (duration > 0) updateData.duration = duration;
+
+			await db.update(songs).set(updateData).where(eq(songs.id, song.id));
+			song = { ...song, ...songData, duration: duration > 0 ? duration : song.duration };
 		}
 	} else {
 		const id = crypto.randomUUID();
@@ -102,12 +120,13 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 			thumbnail: thumbnail || null,
 			channelTitle: channelTitle || null,
 			metadata: JSON.stringify(metadata || {}),
+			duration,
 			submittedBy: ipAddress,
 			createdAt: now,
 			isAvailable: 1,
 			totalPlays: 0
 		});
-		song = { id, videoId, title, thumbnail, channelTitle };
+		song = { id, videoId, title, thumbnail, channelTitle, duration };
 	}
 
 	// Add to queue
