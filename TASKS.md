@@ -18,6 +18,8 @@
     - [x] UI: Simplified header (ROCOLA) and added real-time WebSocket client counter
     - [x] Fix queue order inconsistency: displayed queue (N) vs selection logic (N+1)
     - [x] UI: Clarified Tier descriptions (Play counts + Gap logic) in INJECT_SEQUENCE dialog
+    - [x] CSS: Refactored entire UI to use Open Props tokens for spacing, borders, and typography
+    - [x] Queue: Implemented balanced rotation logic (Gap: 3/6/9) and Round Robin tiebreaking to prevent premium song clustering
 
 ## Next Steps (Optimizations & Reworks)
 - [x] Optimize Database Queries (SQL Joins)

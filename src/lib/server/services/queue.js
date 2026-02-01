@@ -67,7 +67,7 @@ export async function getQueue() {
 		const effectiveTurnA = Math.max(effectiveBaseTurn, nextEligibleA);
 		const effectiveTurnB = Math.max(effectiveBaseTurn, nextEligibleB);
 
-		// 1. Primary: Effective Turn
+		// 1. Primary: Effective Turn (Bucket those eligible "now" together)
 		if (effectiveTurnA !== effectiveTurnB) {
 			return effectiveTurnA - effectiveTurnB;
 		}
@@ -77,7 +77,12 @@ export async function getQueue() {
 			return configB.priority - configA.priority;
 		}
 
-		// 3. Tertiary: Submission Time
+		// 3. Tertiary: Rotation (Who played longest ago wins the tie)
+		if (a.lastPlayedTurn !== b.lastPlayedTurn) {
+			return (a.lastPlayedTurn || 0) - (b.lastPlayedTurn || 0);
+		}
+
+		// 4. Quaternary: Submission Time
 		return a.baseRank - b.baseRank;
 	});
 
@@ -150,22 +155,27 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	
 	const tierConfig = getTierConfig(tier);
 	const playsRemainingToday = tierConfig.dailyPlays;
+	const currentTurn = await getGlobalTurn();
+	
+	// Initialize lastPlayedTurn such that it's eligible "now" 
+	// but at the back of the rotation for its tier.
+	const initialLastPlayed = currentTurn - tierConfig.gap;
 
 	await db.insert(queue).values({
 		id: qId,
 		songId: song.id,
 		tier,
 		baseRank,
-		rankBoost: 0, // rankBoost is currently handled by the gap logic in sorting
+		rankBoost: 0,
 		playsRemainingToday,
-		lastPlayedTurn: 0,
+		lastPlayedTurn: initialLastPlayed,
 		promotionExpiresAt: null,
 		createdAt,
 		updatedAt: createdAt
 	});
 
 	// Broadcast updates
-	const { queue: snapshot, currentTurn } = await getQueue();
+	const { queue: snapshot } = await getQueue();
 	broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
 	broadcast('queue_changed', { queue: snapshot, currentTurn });
 

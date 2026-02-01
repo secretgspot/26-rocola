@@ -168,7 +168,7 @@
 				<button onclick={() => { 
 					if (!player || !playerState.currentSong) return;
 					player.play(); 
-					const seekTo = getInitialSeek();
+					const seekTo = getServerElapsed();
 					if (seekTo > 0) player.seek(seekTo);
 					lastLoadedVideoId = playerState.currentSong.videoId; 
 					lastStartedAt = playerState.currentSong.startedAt ?? null;

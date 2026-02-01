@@ -184,9 +184,9 @@ export const sessions = sqliteTable('sessions', {
 | Tier | Price | Daily Plays | Gap | Priority | Notes |
 |------|-------|-------------|-----|----------|-------|
 | **Free** | $0 | 1 play/day | N/A | 0 | Standard rotation |
-| **Silver** | $2 | 3 plays/day | 5th turn | 1 | Plays once every 5 songs |
-| **Gold** | $5 | 7 plays/day | 3rd turn | 2 | Plays once every 3 songs |
-| **Platinum** | $10 | 15 plays/day | 2nd turn | 3 | Plays once every 2 songs |
+| **Silver** | $2 | 3 plays/day | 9th turn | 1 | Plays once every 9 songs |
+| **Gold** | $5 | 7 plays/day | 6th turn | 2 | Plays once every 6 songs |
+| **Platinum** | $10 | 15 plays/day | 3rd turn | 3 | Plays once every 3 songs |
 
 ---
 
