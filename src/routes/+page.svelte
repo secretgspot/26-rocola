@@ -6,22 +6,20 @@
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 
 	let bitrate = $state(4820);
-	let latency = $state(32);
 	let buffer = $state(100);
 	let playbackProgress = $state(0);
 
 	$effect(() => {
 		initRealtime();
-		const statsInterval = setInterval(() => {
-			bitrate = 4200 + Math.floor(Math.random() * 800);
-			latency = 28 + Math.floor(Math.random() * 12);
-			buffer = 98 + Math.floor(Math.random() * 2);
-		}, 3000);
-		return () => clearInterval(statsInterval);
 	});
 
 	function handleTimeUpdate(e) {
 		playbackProgress = e.progress;
+	}
+
+	function handleStatsUpdate(e) {
+		if (e.bitrate) bitrate = e.bitrate;
+		if (e.buffer !== undefined) buffer = e.buffer;
 	}
 
 	async function advance() {
@@ -66,7 +64,7 @@
 		<main class="player-zone border-r min-w-0">
 			{#if playerState.currentSong}
 				<div class="video-container">
-					<VideoPlayer onnext={advance} ontimeupdate={handleTimeUpdate} />
+					<VideoPlayer onnext={advance} ontimeupdate={handleTimeUpdate} onstatsupdate={handleStatsUpdate} />
 				</div>
 				<div class="metadata-tray border-t">
 					<div class="meta-main min-w-0">
@@ -82,10 +80,6 @@
 						<div class="stat">
 							<span class="s-label">BTR</span>
 							<span class="s-val">{bitrate}</span>
-						</div>
-						<div class="stat">
-							<span class="s-label">LAT</span>
-							<span class="s-val">{latency}MS</span>
 						</div>
 						<div class="stat">
 							<span class="s-label">BUF</span>

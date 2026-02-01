@@ -23,8 +23,8 @@
 - [x] Refactor WebSocket Initialization (Move out of `db/index.js`)
 - [x] UI/UX: Add "Cooldown" status indicators to Queue items
 - [x] Code Structure: Centralize Tier configuration (Price, Plays, Gap)
-- [x] UI/UX: Refactor video progress indicator to stay synced with server time even when paused
+    - [x] UI/UX: Refactor video progress indicator to stay synced with server time even when paused
+    - [x] UI/UX: Integrated real YouTube player metrics (BTR/BUF) and removed simulated LAT stats
 
-## Future Phases
-- [ ] Phase 3: Payments (Lemon Squeezy integration)
+## Future Phases- [ ] Phase 3: Payments (Lemon Squeezy integration)
 - [ ] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)

@@ -63,6 +63,8 @@ export async function createPlayer(elementId, options = {}) {
             seek: (t) => player.seekTo(t, true),
             getState: () => player.getPlayerState(),
             getCurrentTime: () => (typeof player.getCurrentTime === 'function' ? player.getCurrentTime() : 0),
+            getLoadedFraction: () => (typeof player.getVideoLoadedFraction === 'function' ? player.getVideoLoadedFraction() : 0),
+            getPlaybackQuality: () => (typeof player.getPlaybackQuality === 'function' ? player.getPlaybackQuality() : 'unknown'),
             setVolume: (v) => player.setVolume(v),
             destroy: () => player.destroy(),
             _raw: player
