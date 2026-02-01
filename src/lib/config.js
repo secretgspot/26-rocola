@@ -11,7 +11,7 @@ export const TIER_CONFIG = {
 		gap: 2, // Every 2nd turn
 		priority: 3,
 		color: 'var(--tier-platinum)',
-		description: 'Force system takeover'
+		description: '15 plays • Every 2nd turn'
 	},
 	gold: {
 		id: 'gold',
@@ -21,7 +21,7 @@ export const TIER_CONFIG = {
 		gap: 3, // Every 3rd turn
 		priority: 2,
 		color: 'var(--tier-gold)',
-		description: 'Instant playback*'
+		description: '7 plays • Every 3rd turn'
 	},
 	silver: {
 		id: 'silver',
@@ -31,7 +31,7 @@ export const TIER_CONFIG = {
 		gap: 5, // Every 5th turn
 		priority: 1,
 		color: 'var(--tier-silver)',
-		description: 'Priority injection'
+		description: '3 plays • Every 5th turn'
 	},
 	free: {
 		id: 'free',
@@ -41,7 +41,7 @@ export const TIER_CONFIG = {
 		gap: 0,
 		priority: 0,
 		color: 'var(--text-dim)',
-		description: 'Standard priority queue'
+		description: '1 play • Standard rotation'
 	}
 };
 

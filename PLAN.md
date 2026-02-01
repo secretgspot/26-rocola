@@ -181,12 +181,12 @@ export const sessions = sqliteTable('sessions', {
 
 ## Payment Tiers & Frequency Control
 
-| Tier | Price | Daily Plays | Promotion Duration | Rank Boost | Notes |
-|------|-------|-------------|-------------------|------------|-------|
-| **Free** | $0 | 1 play/day | N/A (base queue) | +0 | One submission per IP per day |
-| **Silver** | $2 | 3 plays/day | 3 days | +5 rank points | After payment |
-| **Gold** | $5 | 7 plays/day | 7 days | +10 rank points | After payment |
-| **Platinum** | $10 | 15 plays/day | 14 days | +20 rank points + top-5 lock | After payment |
+| Tier | Price | Daily Plays | Gap | Priority | Notes |
+|------|-------|-------------|-----|----------|-------|
+| **Free** | $0 | 1 play/day | N/A | 0 | Standard rotation |
+| **Silver** | $2 | 3 plays/day | 5th turn | 1 | Plays once every 5 songs |
+| **Gold** | $5 | 7 plays/day | 3rd turn | 2 | Plays once every 3 songs |
+| **Platinum** | $10 | 15 plays/day | 2nd turn | 3 | Plays once every 2 songs |
 
 ---
 
@@ -200,18 +200,19 @@ export const sessions = sqliteTable('sessions', {
    - Song title, duration overlay
 
 2. **Queue list below player** (~30% height)
-   - Shows next 5 songs with rank badges
+   - Shows next 5 songs with tier badges
    - Color-coded by tier (gray=free, blue=silver, yellow=gold, purple=platinum)
-   - Song title, channel, remaining plays today
+   - Song title, channel, cooldown status
 
 3. **Floating plus icon** (bottom-right, semi-transparent)
-   - Click to open add-to-queue overlay
+   - Click to open add-to-queue overlay (INJECT_SEQUENCE)
    - Or auto-open on paste detection
 
-### Add-to-Queue Overlay
+### Add-to-Queue Overlay (INJECT_SEQUENCE)
 
 - **Video metadata** — Thumbnail, title, channel, duration
-- **Tier selection buttons** — Free, Silver, Gold, Platinum (with prices)
+- **Tier selection buttons** — FREE_LOAD, SILVER_BOOST, GOLD_STRIKE, ULTRA_VOID
+- **Tier descriptions** — e.g., "15 plays • Every 2nd turn"
 - **Action button** — "Submit" for free, "Pay $X" for premium
 - **Paste detection** — Auto-prefill form when YouTube link pasted
 
@@ -221,30 +222,24 @@ export const sessions = sqliteTable('sessions', {
 
 ### Song Lifecycle
 
-1. **On page load** — Fetch highest-ranked available song from queue
+1. **On page load** — Fetch highest-ranked eligible song from queue
 2. **Load into iframe** — YouTube embed with `onYouTubeIframeAPIReady`
 3. **Monitor state** — Listen to `onPlayerStateChange` event
-4. **Song ends** (state: 0) — Mark as played, check remaining plays
-5. **Auto-advance** — Load next highest-ranked song; filter by:
-   - `isAvailable === 1`
-   - `playsRemainingToday > 0` (decrement on each play)
+4. **Song ends** (state: 0) — Mark as played, check remaining plays, update `lastPlayedTurn`
+5. **Auto-advance** — Load next eligible song based on Gap logic
 6. **Broadcast update** — WebSocket emits `queue_changed` to all clients
 
-### Queue Ranking Formula
+### Queue Ranking Formula (Gap Enforcement)
 
-```
-visible_rank = (tier_rank_boost)
-             + (base_rank / 1000)     // tiebreaker
-             - (minutes_since_played)  // cycle old songs back down
-```
+The system uses a **Global Turn Counter** and **Gap Enforcement** to ensure variety.
 
-**Sort order:**
+**Sorting Priority:**
 
-1. Platinum tier songs first (top-5 lock)
-2. Gold tier (if plays remaining)
-3. Silver tier (if plays remaining)
-4. Free tier (if plays remaining)
-5. By base_rank as tiebreaker
+1.  **Effective Turn** (ASC): `max(GlobalTurn, LastPlayedTurn + Gap)`
+2.  **Tier Priority** (DESC): Platinum (3) > Gold (2) > Silver (1) > Free (0)
+3.  **Base Rank** (ASC): Original submission timestamp
+
+This ensures that even a Platinum song must wait for its "Gap" to pass before playing again, unless no other eligible songs are in the queue.
 
 ### Daily Reset (UTC Midnight)
 

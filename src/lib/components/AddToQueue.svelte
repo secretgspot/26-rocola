@@ -223,7 +223,7 @@
 	.tier-header { display: flex; justify-content: space-between; align-items: center; }
 	.tier-name { font-size: 0.6rem; font-weight: 800; color: var(--text-dim); }
 	.tier-price { font-size: 0.8rem; font-weight: 700; color: var(--text-main); }
-	.tier-desc { font-size: 0.55rem; color: var(--text-muted); }
+	.tier-desc { font-size: 0.65rem; color: var(--text-muted); }
 
 	.modal-footer { padding: 0.6rem 1rem; background: var(--bg-dark); border-top: 1px solid var(--border-main); }
 	.system-logs { font-size: 0.55rem; display: flex; flex-direction: column; gap: 1px; }

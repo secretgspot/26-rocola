@@ -1,5 +1,10 @@
 <script>
-	import { playerState, initRealtime, addToast, refreshQueue } from '$lib/client/stores.svelte.js';
+	import {
+		playerState,
+		initRealtime,
+		addToast,
+		refreshQueue,
+	} from '$lib/client/stores.svelte.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
@@ -23,11 +28,12 @@
 	}
 
 	async function advance() {
-		const currentQueueId = playerState.currentSong?.queueId || playerState.currentSong?.id;
-		const res = await fetch('/api/queue/next', { 
+		const currentQueueId =
+			playerState.currentSong?.queueId || playerState.currentSong?.id;
+		const res = await fetch('/api/queue/next', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ fromQueueId: currentQueueId })
+			body: JSON.stringify({ fromQueueId: currentQueueId }),
 		});
 		const data = await res.json();
 		if (data.ok && data.next) {
@@ -64,7 +70,10 @@
 		<main class="player-zone border-r min-w-0">
 			{#if playerState.currentSong}
 				<div class="video-container">
-					<VideoPlayer onnext={advance} ontimeupdate={handleTimeUpdate} onstatsupdate={handleStatsUpdate} />
+					<VideoPlayer
+						onnext={advance}
+						ontimeupdate={handleTimeUpdate}
+						onstatsupdate={handleStatsUpdate} />
 				</div>
 				<div class="metadata-tray border-t">
 					<div class="meta-main min-w-0">
@@ -93,7 +102,6 @@
 			{:else}
 				<div class="empty-state">
 					<h1 class="blink">SYSTEM_IDLE</h1>
-					<p class="text-dim">AWAITING_INPUT_SIGNAL...</p>
 				</div>
 			{/if}
 		</main>
@@ -101,7 +109,8 @@
 		<aside class="queue-zone min-w-0">
 			<div class="queue-header border-b">
 				<h3>SEQUENCE_QUEUE</h3>
-				<span class="count">[{playerState.queue.length.toString().padStart(2, '0')}]</span>
+				<span class="count"
+					>[{playerState.queue.length.toString().padStart(2, '0')}]</span>
 			</div>
 			<div class="queue-content overflow-hidden">
 				<Queue />
@@ -134,13 +143,40 @@
 		background: var(--bg-dark);
 		z-index: 20;
 	}
-	.logo { display: flex; align-items: baseline; gap: 0.75rem; }
-	.logo-text { font-size: 1.25rem; font-weight: 900; }
-	.version { font-size: 0.65rem; font-weight: 700; }
-	.header-meta { display: flex; align-items: center; gap: 1rem; }
-	.status { font-size: 0.7rem; font-weight: 800; display: flex; align-items: center; gap: 0.5rem; color: var(--text-dim); white-space: nowrap; }
-	.live-dot { width: 8px; height: 8px; background: var(--text-main); animation: pulse 2s infinite; }
-	.btn-skip { font-size: 0.6rem; padding: 4px 6px; white-space: nowrap; }
+	.logo {
+		display: flex;
+		align-items: baseline;
+		gap: 0.75rem;
+	}
+	.logo-text {
+		font-size: 1.25rem;
+		font-weight: 900;
+	}
+	.header-meta {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+	.status {
+		font-size: 0.7rem;
+		font-weight: 800;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		color: var(--text-dim);
+		white-space: nowrap;
+	}
+	.live-dot {
+		width: 8px;
+		height: 8px;
+		background: var(--text-main);
+		animation: pulse 2s infinite;
+	}
+	.btn-skip {
+		font-size: 0.6rem;
+		padding: 4px 6px;
+		white-space: nowrap;
+	}
 
 	.main-layout {
 		flex: 1;
@@ -155,8 +191,13 @@
 		background: var(--bg-dark);
 		min-width: 0;
 	}
-	.video-container { flex: 1; background: #000; position: relative; min-height: 0; }
-	
+	.video-container {
+		flex: 1;
+		background: #000;
+		position: relative;
+		min-height: 0;
+	}
+
 	.metadata-tray {
 		padding: 1.25rem;
 		flex-shrink: 0;
@@ -166,24 +207,96 @@
 		background: var(--bg-dark);
 		gap: 1.5rem;
 	}
-	.meta-main { flex: 1; min-width: 0; }
-	.meta-main .label { font-size: 0.6rem; font-weight: 800; display: block; margin-bottom: 0.25rem; }
-	.meta-main .title { font-size: 1.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 0.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-	.meta-footer { font-size: 0.7rem; font-weight: 700; display: flex; gap: 0.75rem; overflow: hidden; }
-	.meta-footer span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.meta-main {
+		flex: 1;
+		min-width: 0;
+	}
+	.meta-main .label {
+		font-size: 0.6rem;
+		font-weight: 800;
+		display: block;
+		margin-bottom: 0.25rem;
+	}
+	.meta-main .title {
+		font-size: 1.5rem;
+		font-weight: 900;
+		line-height: 1.1;
+		margin-bottom: 0.5rem;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.meta-footer {
+		font-size: 0.7rem;
+		font-weight: 700;
+		display: flex;
+		gap: 0.75rem;
+		overflow: hidden;
+	}
+	.meta-footer span {
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
 
-	.meta-stats { display: flex; gap: 1rem; flex-shrink: 0; }
-	.stat { display: flex; flex-direction: column; align-items: flex-end; }
-	.s-label { font-size: 0.5rem; color: var(--text-muted); font-weight: 900; }
-	.s-val { font-size: 0.8rem; font-weight: 800; }
+	.meta-stats {
+		display: flex;
+		gap: 1rem;
+		flex-shrink: 0;
+	}
+	.stat {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+	}
+	.s-label {
+		font-size: 0.5rem;
+		color: var(--text-muted);
+		font-weight: 900;
+	}
+	.s-val {
+		font-size: 0.8rem;
+		font-weight: 800;
+	}
 
-	.progress-bar { height: 6px; background: var(--border-dim); width: 100%; flex-shrink: 0; }
-	.progress-bar .fill { height: 100%; background: var(--text-main); }
+	.progress-bar {
+		height: 6px;
+		background: var(--border-dim);
+		width: 100%;
+		flex-shrink: 0;
+	}
+	.progress-bar .fill {
+		height: 100%;
+		background: var(--text-main);
+	}
 
-	.empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; }
-	.blink { animation: blink 1s steps(2) infinite; }
-	@keyframes blink { 0% { opacity: 0; } }
-	@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+	.empty-state {
+		flex: 1;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 1rem;
+	}
+	.blink {
+		animation: blink 1s steps(2) infinite;
+	}
+	@keyframes blink {
+		0% {
+			opacity: 0;
+		}
+	}
+	@keyframes pulse {
+		0% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.3;
+		}
+		100% {
+			opacity: 1;
+		}
+	}
 
 	.queue-zone {
 		width: 400px;
@@ -193,25 +306,80 @@
 		background: var(--bg-dark);
 		min-width: 0;
 	}
-	.queue-header { padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; background: var(--bg-dark); flex-shrink: 0; }
-	.queue-header h3 { font-size: 0.85rem; font-weight: 900; margin: 0; }
-	.queue-header .count { font-weight: 900; }
-	.queue-content { flex: 1; overflow-y: auto; overflow-x: hidden; }
+	.queue-header {
+		padding: 1.25rem;
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		background: var(--bg-dark);
+		flex-shrink: 0;
+	}
+	.queue-header h3 {
+		font-size: 0.85rem;
+		font-weight: 900;
+		margin: 0;
+	}
+	.queue-header .count {
+		font-weight: 900;
+	}
+	.queue-content {
+		flex: 1;
+		overflow-y: auto;
+		overflow-x: hidden;
+	}
 
-	.toasts-layer { position: fixed; top: 0; right: 0; z-index: 2000; padding: 1rem; display: flex; flex-direction: column; gap: 2px; pointer-events: none; }
-	.fab-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 1000; }
+	.toasts-layer {
+		position: fixed;
+		top: 0;
+		right: 0;
+		z-index: 2000;
+		padding: 1rem;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+		pointer-events: none;
+	}
+	.fab-container {
+		position: fixed;
+		bottom: 2rem;
+		right: 2rem;
+		z-index: 1000;
+	}
 
 	@media (max-width: 1023px) {
-		.main-layout { flex-direction: column; }
-		.queue-zone { width: 100%; height: 40%; border-left: 0; border-top: 1px solid var(--border-main); }
-		.player-zone { border-right: 0; }
-		.meta-main .title { font-size: 1.25rem; }
+		.main-layout {
+			flex-direction: column;
+		}
+		.queue-zone {
+			width: 100%;
+			height: 40%;
+			border-left: 0;
+			border-top: 1px solid var(--border-main);
+		}
+		.player-zone {
+			border-right: 0;
+		}
+		.meta-main .title {
+			font-size: 1.25rem;
+		}
 	}
 
 	@media (max-width: 480px) {
-		.metadata-tray { padding: 0.75rem; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
-		.meta-stats { width: 100%; justify-content: space-between; }
-		.top-bar { padding: 0 0.75rem; }
-		.logo-text { font-size: 1rem; }
+		.metadata-tray {
+			padding: 0.75rem;
+			flex-direction: column;
+			align-items: flex-start;
+			gap: 0.75rem;
+		}
+		.meta-stats {
+			width: 100%;
+			justify-content: space-between;
+		}
+		.top-bar {
+			padding: 0 0.75rem;
+		}
+		.logo-text {
+			font-size: 1rem;
+		}
 	}
 </style>
