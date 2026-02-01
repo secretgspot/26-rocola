@@ -192,18 +192,18 @@
 	.yt-embed { width: 100%; height: 100%; transform: scale(1.02); filter: grayscale(1) contrast(1.1); }
 	.video-container:hover .yt-embed { filter: none; }
 
-	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: 100; }
-	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
-	.overlay-content p { color: var(--text-muted); font-size: 0.8rem; font-weight: 800; }
+	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: var(--layer-important); }
+	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: var(--size-3); }
+	.overlay-content p { color: var(--text-muted); font-size: var(--font-size-1); font-weight: var(--font-weight-8); }
 	
 	.autoplay-overlay button { 
 		background: var(--text-main); 
 		color: var(--bg-dark); 
-		padding: 1rem 2rem; 
-		font-weight: 800; 
-		font-size: 1rem; 
+		padding: var(--size-3) var(--size-5); 
+		font-weight: var(--font-weight-8); 
+		font-size: var(--font-size-2); 
 		cursor: pointer; 
-		border: 1px solid var(--bg-dark);
+		border: var(--border-size-1) solid var(--bg-dark);
 		font-family: var(--font-mono);
 	}
 	.autoplay-overlay button:hover { 
@@ -212,10 +212,10 @@
 		border-color: var(--text-main);
 	}
 
-	.frame-accents { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
-	.frame-accents .accent { position: absolute; width: 10px; height: 10px; border: 1px solid var(--text-muted); opacity: 0.5; }
-	.tl { top: 10px; left: 10px; border-right: 0; border-bottom: 0; }
-	.tr { top: 10px; right: 10px; border-left: 0; border-bottom: 0; }
-	.bl { bottom: 10px; left: 10px; border-right: 0; border-top: 0; }
-	.br { bottom: 10px; right: 10px; border-left: 0; border-top: 0; }
+	.frame-accents { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: var(--layer-1); }
+	.frame-accents .accent { position: absolute; width: var(--size-3); height: var(--size-3); border: var(--border-size-1) solid var(--text-muted); opacity: 0.5; }
+	.tl { top: var(--size-3); left: var(--size-3); border-right: 0; border-bottom: 0; }
+	.tr { top: var(--size-3); right: var(--size-3); border-left: 0; border-bottom: 0; }
+	.bl { bottom: var(--size-3); left: var(--size-3); border-right: 0; border-top: 0; }
+	.br { bottom: var(--size-3); right: var(--size-3); border-left: 0; border-top: 0; }
 </style>

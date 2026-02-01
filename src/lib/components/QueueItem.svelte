@@ -5,12 +5,20 @@
 
 	// Determine tier for styling
 	let tier = $derived((item.tier || item.tierName || 'free').toLowerCase());
-	
+
 	// Format title: if it contains " - ", split it for better hierarchy
 	let displayTitle = $derived(item.title || item.song?.title || 'Untitled');
-	let titleParts = $derived(displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle]);
-	let artist = $derived(titleParts.length > 1 ? titleParts[0] : (item.channelTitle || item.song?.channelTitle || 'Unknown Artist'));
-	let track = $derived(titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle);
+	let titleParts = $derived(
+		displayTitle.includes(' - ') ? displayTitle.split(' - ') : [displayTitle],
+	);
+	let artist = $derived(
+		titleParts.length > 1
+			? titleParts[0]
+			: item.channelTitle || item.song?.channelTitle || 'Unknown Artist',
+	);
+	let track = $derived(
+		titleParts.length > 1 ? titleParts.slice(1).join(' - ') : displayTitle,
+	);
 
 	// Cooldown logic
 	let tierConfig = $derived(getTierConfig(tier));
@@ -31,7 +39,7 @@
 		</div>
 		<div class="tier-tag">{tier.toUpperCase()}</div>
 	</div>
-	
+
 	<div class="meta">
 		<div class="artist-row">
 			<span class="artist">{artist}</span>
@@ -57,11 +65,11 @@
 	.item {
 		display: flex;
 		align-items: center;
-		gap: 1rem;
-		padding: 0.75rem;
+		gap: var(--size-3);
+		padding: var(--size-2) var(--size-3);
 		background: var(--bg-panel);
-		border-bottom: 1px solid var(--border-dim);
-		transition: background 0.1s ease;
+		border-bottom: var(--border-size-1) solid var(--border-dim);
+		transition: background var(--transition-duration-1) ease;
 		position: relative;
 	}
 
@@ -79,7 +87,7 @@
 	.item:hover .cooldown-tag {
 		color: var(--bg-dark);
 	}
-	
+
 	.item:hover .thumb {
 		border-color: var(--bg-dark);
 	}
@@ -96,7 +104,7 @@
 		background: var(--bg-dark);
 		position: relative;
 		overflow: hidden;
-		border: 1px solid var(--border-main);
+		border: var(--border-size-1) solid var(--border-main);
 	}
 	.thumb img {
 		width: 100%;
@@ -115,7 +123,7 @@
 		align-items: center;
 		justify-content: center;
 		height: 100%;
-		font-size: 0.5rem;
+		font-size: var(--font-size-00);
 		color: var(--text-muted);
 	}
 
@@ -123,13 +131,13 @@
 		position: absolute;
 		bottom: -4px;
 		right: -4px;
-		font-size: 0.5rem;
-		font-weight: 800;
-		padding: 1px 3px;
+		font-size: var(--font-size-00);
+		font-weight: var(--font-weight-9);
+		padding: 1px var(--size-1);
 		background: var(--text-main);
 		color: var(--bg-dark);
-		border: 1px solid var(--bg-dark);
-		z-index: 10;
+		border: var(--border-size-1) solid var(--bg-dark);
+		z-index: var(--layer-1);
 	}
 	.item:hover .tier-tag {
 		background: var(--bg-dark);
@@ -147,17 +155,17 @@
 	.artist-row {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: var(--size-2);
 	}
 	.artist {
-		font-size: 0.7rem;
+		font-size: var(--font-size-0);
 		color: var(--text-dim);
 		text-transform: uppercase;
-		font-weight: 400;
+		font-weight: var(--font-weight-4);
 	}
 	.track {
-		font-size: 0.9rem;
-		font-weight: 700;
+		font-size: var(--font-size-1);
+		font-weight: var(--font-weight-7);
 		color: var(--text-main);
 		white-space: nowrap;
 		overflow: hidden;
@@ -165,11 +173,11 @@
 	}
 
 	.cooldown-tag {
-		font-size: 0.6rem;
-		font-weight: 800;
+		font-size: var(--font-size-00);
+		font-weight: var(--font-weight-8);
 		color: var(--text-muted);
-		border: 1px solid var(--border-main);
-		padding: 0 4px;
+		border: var(--border-size-1) solid var(--border-main);
+		padding: 0 var(--size-1);
 	}
 
 	.item.cooldown {
@@ -180,28 +188,37 @@
 		display: flex;
 		flex-direction: column;
 		align-items: flex-end;
-		gap: 4px;
+		gap: var(--size-1);
 	}
 	.plays-badge {
 		display: flex;
 		align-items: center;
-		gap: 4px;
+		gap: var(--size-1);
 	}
 	.plays-badge .label {
-		font-size: 0.6rem;
+		font-size: var(--font-size-00);
 		color: var(--text-muted);
 	}
 	.plays-badge .count {
-		font-size: 0.7rem;
-		font-weight: 800;
+		font-size: var(--font-size-0);
+		font-weight: var(--font-weight-8);
 		color: var(--text-dim);
 	}
 	.entry-id {
-		font-size: 0.6rem;
+		font-size: var(--font-size-00);
 		color: var(--text-muted);
 	}
 
 	/* Tier specific accents */
-	.item.platinum .track { text-decoration: underline; }
-	.item.gold .track { font-style: italic; }
+	.item.platinum .track {
+		text-decoration: underline;
+		color: var(--tier-platinum);
+	}
+	.item.gold .track {
+		font-style: italic;
+		color: var(--tier-gold);
+	}
+	.item.silver .track {
+		color: var(--tier-silver);
+	}
 </style>

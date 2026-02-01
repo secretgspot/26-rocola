@@ -20,14 +20,14 @@
 	.list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--size-2);
 	}
 	.empty-queue {
 		text-align: center;
-		padding: 2rem;
+		padding: var(--size-5);
 		color: var(--text-dim);
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
+		font-size: var(--font-size-1);
 		opacity: 0.7;
 	}
 </style>

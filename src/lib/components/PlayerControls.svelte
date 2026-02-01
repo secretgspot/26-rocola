@@ -39,18 +39,20 @@
 </script>
 
 <style>
-	.controls { display:flex; gap:.5rem; align-items:center }
-	button { padding:.5rem .65rem; border-radius:6px; border:0; color:#fff; cursor: pointer; }
-	button.ghost { background:transparent; border:1px solid rgba(255,255,255,0.06); color:inherit }
+	.controls { display:flex; gap: var(--size-2); align-items:center; padding: var(--size-2); }
+	button { padding: var(--size-2) var(--size-3); border-radius: 0; border: var(--border-size-1) solid var(--border-main); background: var(--bg-dark); color: var(--text-main); cursor: pointer; font-size: var(--font-size-0); font-weight: var(--font-weight-7); }
+	button:hover { background: var(--text-main); color: var(--bg-dark); border-color: var(--text-main); }
+	button.ghost { background:transparent; border: var(--border-size-1) solid var(--border-dim); color: var(--text-dim); }
+	button.ghost:hover { color: var(--text-main); border-color: var(--text-main); }
 </style>
 
 <div>
-	<div bind:this={playerEl} id="yt-player-controls" style="width:100%; max-width:720px; height:360px; margin-bottom:.6rem"></div>
+	<div bind:this={playerEl} id="yt-player-controls" style="width:100%; max-width:720px; height:360px; margin-bottom: var(--size-2); border: var(--border-size-1) solid var(--border-main);"></div>
 	<div class="controls">
-		<button onclick={play}>▶ Play</button>
-		<button onclick={pause} class="ghost">⏸ Pause</button>
-		<button onclick={() => seek(-10)} class="ghost">⏪ -10s</button>
-		<button onclick={() => seek(10)} class="ghost">+10s ⏩</button>
-		<button onclick={next} style="margin-left:auto">Next ⏭</button>
+		<button onclick={play}>▶ PLAY</button>
+		<button onclick={pause} class="ghost">⏸ PAUSE</button>
+		<button onclick={() => seek(-10)} class="ghost">⏪ -10S</button>
+		<button onclick={() => seek(10)} class="ghost">+10S ⏩</button>
+		<button onclick={next} style="margin-left:auto">NEXT ⏭</button>
 	</div>
 </div>

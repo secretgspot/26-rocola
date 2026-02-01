@@ -13,35 +13,30 @@
 	.toast {
 		background: var(--text-main);
 		color: var(--bg-dark);
-		padding: 0.75rem 1rem;
+		padding: var(--size-2) var(--size-3);
 		font-family: var(--font-mono);
-		font-size: 0.8rem;
-		font-weight: 600;
-		animation: slide-in 0.2s ease-out;
+		font-size: var(--font-size-1);
+		font-weight: var(--font-weight-6);
+		animation: var(--animation-slide-in-right);
 		min-width: 250px;
 		pointer-events: auto;
-		border: 1px solid var(--bg-dark);
+		border: var(--border-size-1) solid var(--bg-dark);
 	}
 
 	.toast.error {
 		background: #000;
 		color: #ff4444;
-		border: 1px solid #ff4444;
+		border: var(--border-size-1) solid #ff4444;
 	}
 
 	.toast-content {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
+		gap: var(--size-3);
 	}
 
 	.level-tag {
-		font-weight: 800;
-		font-size: 0.7rem;
-	}
-
-	@keyframes slide-in {
-		from { transform: translateX(20px); opacity: 0; }
-		to { transform: translateX(0); opacity: 1; }
+		font-weight: var(--font-weight-8);
+		font-size: var(--font-size-0);
 	}
 </style>
