@@ -20,6 +20,9 @@
     - [x] UI: Clarified Tier descriptions (Play counts + Gap logic) in INJECT_SEQUENCE dialog
     - [x] CSS: Refactored entire UI to use Open Props tokens for spacing, borders, and typography
     - [x] Queue: Implemented balanced rotation logic (Gap: 3/6/9) and Round Robin tiebreaking to prevent premium song clustering
+- [x] Dev Experience
+    - [x] UI: Added `[FORCE_NEXT]` and `[SEED]` buttons to header (Dev-only)
+    - [x] API: Refactored `/api/debug/seed` to read from `docs/queue.txt` with 90/10 tier distribution
 
 ## Next Steps (Optimizations & Reworks)
 - [x] Optimize Database Queries (SQL Joins)

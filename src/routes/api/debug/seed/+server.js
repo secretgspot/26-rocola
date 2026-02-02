@@ -1,83 +1,117 @@
 import { json } from '@sveltejs/kit';
-import { db } from '$lib/server/db/index.js';
-import { queue, songs } from '$lib/server/db/schema.js';
-import { broadcast } from '$lib/server/ws.js';
-import Database from 'better-sqlite3';
+import { addToQueue } from '$lib/server/services/queue.js';
 import { env } from '$env/dynamic/private';
+import fs from 'node:fs';
+import path from 'node:path';
 
-const SEED_DATA = [
-	{ 
-		id: 'wn1OPI6lwnY', 
-		title: 'Nirvana - Smells Like Teen Spirit', 
-		channel: 'Nirvana', 
-		thumb: 'https://i.ytimg.com/vi/wn1OPI6lwnY/hqdefault.jpg' 
-	},
-	{ 
-		id: 'S-Z7IuPC1Wo', 
-		title: "Guns N' Roses - Sweet Child O' Mine", 
-		channel: "Guns N' Roses", 
-		thumb: 'https://i.ytimg.com/vi/S-Z7IuPC1Wo/hqdefault.jpg' 
-	},
-	{ 
-		id: 'dytoUhPxMd0', 
-		title: 'Rick Astley - Never Gonna Give You Up', 
-		channel: 'Rick Astley', 
-		thumb: 'https://i.ytimg.com/vi/dytoUhPxMd0/hqdefault.jpg' 
-	},
-	{ 
-		id: 'd1ln5Pqbh5c', 
-		title: 'Queen – Bohemian Rhapsody', 
-		channel: 'Queen Official', 
-		thumb: 'https://i.ytimg.com/vi/d1ln5Pqbh5c/hqdefault.jpg' 
+function extractVideoId(urlOrId) {
+	if (!urlOrId) return null;
+	if (/^[A-Za-z0-9_-]{11,}$/.test(urlOrId)) return urlOrId;
+	const regex = /(?:v=|\/embed\/|\.be\/)([A-Za-z0-9_-]{11,})/;
+	const m = urlOrId.match(regex);
+	return m ? m[1] : null;
+}
+
+async function fetchMetadata(id) {
+	// 1. Try YouTube Data API
+	if (env.YOUTUBE_API_KEY) {
+		try {
+			const res = await fetch(
+				`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${id}&key=${env.YOUTUBE_API_KEY}`
+			);
+			if (res.ok) {
+				const data = await res.json();
+				if (data.items && data.items.length > 0) {
+					const item = data.items[0];
+					return {
+						title: item.snippet.title,
+						thumbnail: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url,
+						channelTitle: item.snippet.channelTitle,
+						duration: item.contentDetails?.duration
+					};
+				}
+			}
+		} catch (err) {
+			console.error('YouTube API fetch failed for seed', err);
+		}
 	}
-];
+
+	// 2. Fallback: oEmbed
+	try {
+		const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+		if (oembedRes.ok) {
+			const oembedData = await oembedRes.json();
+			return {
+				title: oembedData.title,
+				thumbnail: oembedData.thumbnail_url,
+				channelTitle: oembedData.author_name,
+				duration: null
+			};
+		}
+	} catch (e) {
+		console.warn('oEmbed fetch failed for seed', e);
+	}
+
+	return {
+		title: `Video ${id}`,
+		thumbnail: null,
+		channelTitle: 'Unknown',
+		duration: null
+	};
+}
 
 export async function POST() {
-	if (env.NODE_ENV !== 'development') return json({ ok: false, error: 'Not allowed' }, { status: 403 });
+	if (env.NODE_ENV !== 'development') {
+		return json({ ok: false, error: 'Not allowed in production' }, { status: 403 });
+	}
 
-	let rawDb;
 	try {
-		rawDb = new Database(env.DATABASE_URL);
-
-		// Seed logic: Just add the seeds, don't delete user songs
-		const now = Math.floor(Date.now() / 1000);
-		let rank = Date.now();
-		
-		for (const data of SEED_DATA) {
-			let song = rawDb.prepare('SELECT * FROM songs WHERE videoId = ?').get(data.id);
-			let songId;
-			
-			if (song) {
-				songId = song.id;
-				// Repair metadata
-				rawDb.prepare('UPDATE songs SET title = ?, channelTitle = ?, thumbnail = ? WHERE id = ?')
-					.run(data.title, data.channel, data.thumb, songId);
-			} else {
-				songId = crypto.randomUUID();
-				rawDb.prepare('INSERT INTO songs (id, videoId, title, thumbnail, duration, channelTitle, metadata, submittedBy, createdAt, isAvailable, totalPlays) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').run(songId, data.id, data.title, data.thumb, 180, data.channel, JSON.stringify({ title: data.title, channelTitle: data.channel, thumbnail: data.thumb }), 'seed', now, 1, 0);
-			}
-			
-			// Check if already in queue
-			let inQueue = rawDb.prepare('SELECT * FROM queue WHERE songId = ? AND playsRemainingToday > 0').get(songId);
-			if (!inQueue) {
-				rawDb.prepare('INSERT INTO queue (id, songId, tier, baseRank, rankBoost, playsRemainingToday, promotionExpiresAt, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)').run(crypto.randomUUID(), songId, 'seed', rank, 0, 1, null, now, now);
-				rank += 10;
-			}
+		const filePath = path.join(process.cwd(), 'docs', 'queue.txt');
+		if (!fs.existsSync(filePath)) {
+			return json({ ok: false, error: 'docs/queue.txt not found' }, { status: 404 });
 		}
 
-		rawDb.close();
+		const fileContent = fs.readFileSync(filePath, 'utf-8');
+		const lines = fileContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-		// Broadcast fresh state
-		const qRows = await db.select().from(queue).orderBy(queue.baseRank).limit(100);
-		const sAll = await db.select().from(songs);
-		const sMap = new Map(sAll.map((s) => [s.id, s]));
-		const snapshot = qRows.map((q) => ({ ...q, song: sMap.get(q.songId) || null }));
-		broadcast('queue_changed', { queue: snapshot });
+		const added = [];
 
-		return json({ ok: true, message: 'Seeded items added/repaired.' });
+		for (const line of lines) {
+			const videoId = extractVideoId(line);
+			if (!videoId) continue;
+
+			// Check if already processed in this batch to avoid dupes (optional, but good)
+			// But addToQueue handles existing song logic.
+
+			const metadata = await fetchMetadata(videoId);
+			
+			// 90% Free, 10% Premium
+			const isPremium = Math.random() > 0.9;
+			let tier = 'free';
+			if (isPremium) {
+				const r = Math.random();
+				if (r < 0.33) tier = 'silver';
+				else if (r < 0.66) tier = 'gold';
+				else tier = 'platinum';
+			}
+
+			const songData = {
+				videoId,
+				title: metadata.title,
+				thumbnail: metadata.thumbnail,
+				channelTitle: metadata.channelTitle,
+				duration: metadata.duration,
+				metadata
+			};
+
+			const result = await addToQueue(songData, tier, 'seed-script');
+			added.push({ videoId, title: metadata.title, tier });
+		}
+
+		return json({ ok: true, message: `Seeded ${added.length} songs`, added });
+
 	} catch (err) {
 		console.error('Seed error', err);
-		if (rawDb) rawDb.close();
-		return json({ ok: false, error: err.message });
+		return json({ ok: false, error: err.message }, { status: 500 });
 	}
 }

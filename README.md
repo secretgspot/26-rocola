@@ -23,7 +23,17 @@ bun run dev -- --open
 
 2. Open http://localhost:5173
 
-3. Use the **Seed queue (dev)** button in the Add-to-Queue control to pre-populate the queue (DEV only)
+3. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
+
+---
+
+## Developer-Only Features 🛠️
+
+The following features are available only when `NODE_ENV === 'development'` (or when running `npm run dev`):
+
+- **[SEED] Button**: Reads `docs/queue.txt`, fetches metadata, and populates the queue with a 90% Free / 10% Premium distribution.
+- **[FORCE_NEXT] Button**: Immediately advances the queue to the next song, bypassing the current playback.
+- **API Endpoint**: `POST /api/debug/seed` — The backend logic for the SEED button.
 
 ---
 
@@ -41,7 +51,6 @@ bun run dev -- --open
 - `scripts/seed_queue.mjs` — offline seed script to insert songs & queue rows.
 - `scripts/check_db.mjs` — prints DB table samples and diagnostics.
 - `scripts/ws_client2.mjs` — simple WS client useful for debugging broadcasts.
-- Dev-only server endpoint: `POST /api/debug/seed` — wipes queue & analytics and inserts the canonical seed set. **Guarded** (development only).
 
 ---
 

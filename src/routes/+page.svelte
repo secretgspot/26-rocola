@@ -58,6 +58,16 @@
 		<div class="header-meta">
 			{#if import.meta.env.DEV}
 				<button class="btn-skip" onclick={advance} aria-label="Force advance to next song">[FORCE_NEXT]</button>
+				<button class="btn-skip" onclick={async () => {
+					const res = await fetch('/api/debug/seed', { method: 'POST' });
+					const data = await res.json();
+					if (data.ok) {
+						addToast({ message: `Seeded ${data.added.length} songs`, level: 'success' });
+						await refreshQueue();
+					} else {
+						addToast({ message: `Seed failed: ${data.error}`, level: 'error' });
+					}
+				}} aria-label="Seed queue with test data">[SEED]</button>
 			{/if}
 			<div class="status">
 				<div class="live-dot" aria-hidden="true"></div>
