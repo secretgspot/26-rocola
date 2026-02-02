@@ -95,66 +95,75 @@
 	$effect(() => {
 		// Main loop: Update progress bar based on SERVER time, not player time
 		// This ensures bar keeps moving even if paused.
-		const interval = setInterval(() => {
-			if (!player || !playerState.currentSong) return;
+		let frame;
+		let lastUpdate = 0;
 
-			// Determine duration: Player is most accurate, fallback to metadata
-			let duration = 0;
-			const raw = player._raw;
-			if (raw && typeof raw.getDuration === 'function') {
-				duration = raw.getDuration();
-			}
-			if ((!duration || duration === 0) && playerState.currentSong.duration) {
-				duration = playerState.currentSong.duration;
-			}
+		const update = (time) => {
+			// Update at ~5fps is enough for the progress bar but we can go faster for smoothness
+			// requestAnimationFrame runs at 60fps usually.
+			if (time - lastUpdate > 100) {
+				lastUpdate = time;
+				if (player && playerState.currentSong) {
+					// Determine duration: Player is most accurate, fallback to metadata
+					let duration = 0;
+					const raw = player._raw;
+					if (raw && typeof raw.getDuration === 'function') {
+						duration = raw.getDuration();
+					}
+					if ((!duration || duration === 0) && playerState.currentSong.duration) {
+						duration = playerState.currentSong.duration;
+					}
 
-			if (duration > 0) {
-				const elapsed = getServerElapsed();
-				playbackProgress = (elapsed / duration) * 100;
-				
-				// Clamp to 100%
-				if (playbackProgress > 100) playbackProgress = 100;
-				
-				ontimeupdate?.({ progress: playbackProgress });
+					if (duration > 0) {
+						const elapsed = getServerElapsed();
+						playbackProgress = (elapsed / duration) * 100;
 
-				// Emit real stats
-				if (typeof player.getLoadedFraction === 'function') {
-					const loaded = Math.round(player.getLoadedFraction() * 100);
-					const quality = player.getPlaybackQuality();
-					
-					// Map quality to approximate bitrate (kbps)
-					const qualityMap = {
-						'highres': 35000,
-						'hd2160': 25000,
-						'hd1440': 12000,
-						'hd1080': 5000,
-						'hd720': 2500,
-						'large': 1500,
-						'medium': 800,
-						'small': 400,
-						'tiny': 200,
-						'default': 1500
-					};
-					const baseBtr = qualityMap[quality] || 1500;
-					// Add a little jitter for realism
-					const btr = baseBtr + Math.floor(Math.random() * (baseBtr * 0.1));
-					
-					onstatsupdate?.({
-						buffer: loaded,
-						bitrate: btr
-					});
+						// Clamp to 100%
+						if (playbackProgress > 100) playbackProgress = 100;
+
+						ontimeupdate?.({ progress: playbackProgress });
+
+						// Emit real stats
+						if (typeof player.getLoadedFraction === 'function') {
+							const loaded = Math.round(player.getLoadedFraction() * 100);
+							const quality = player.getPlaybackQuality();
+
+							// Map quality to approximate bitrate (kbps)
+							const qualityMap = {
+								'highres': 35000,
+								'hd2160': 25000,
+								'hd1440': 12000,
+								'hd1080': 5000,
+								'hd720': 2500,
+								'large': 1500,
+								'medium': 800,
+								'small': 400,
+								'tiny': 200,
+								'default': 1500
+							};
+							const baseBtr = qualityMap[quality] || 1500;
+							// Add a little jitter for realism
+							const btr = baseBtr + Math.floor(Math.random() * (baseBtr * 0.1));
+
+							onstatsupdate?.({
+								buffer: loaded,
+								bitrate: btr
+							});
+						}
+
+						// Auto-advance if we've exceeded duration (Server-side logic simulation)
+						if (elapsed >= duration) {
+							console.log('[VideoPlayer] Song duration exceeded (server time), requesting next...');
+							onnext?.();
+						}
+					}
 				}
-
-				// Auto-advance if we've exceeded duration (Server-side logic simulation)
-				if (elapsed >= duration) {
-					console.log('[VideoPlayer] Song duration exceeded (server time), requesting next...');
-					// Avoid spamming next if already ending?
-					// The parent handles caching/dedup via onnext if needed, or we just call it.
-					onnext?.();
-				}
 			}
-		}, 200); // Faster update for smoother UI
-		return () => clearInterval(interval);
+			frame = requestAnimationFrame(update);
+		};
+
+		frame = requestAnimationFrame(update);
+		return () => cancelAnimationFrame(frame);
 	});
 </script>
 

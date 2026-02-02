@@ -57,10 +57,10 @@
 		</div>
 		<div class="header-meta">
 			{#if import.meta.env.DEV}
-				<button class="btn-skip" onclick={advance}>[FORCE_NEXT]</button>
+				<button class="btn-skip" onclick={advance} aria-label="Force advance to next song">[FORCE_NEXT]</button>
 			{/if}
 			<div class="status">
-				<div class="live-dot"></div>
+				<div class="live-dot" aria-hidden="true"></div>
 				<span>SYS_ACTIVE [{playerState.clientCount.toString().padStart(2, '0')}]</span>
 			</div>
 		</div>
@@ -70,10 +70,19 @@
 		<main class="player-zone border-r min-w-0">
 			{#if playerState.currentSong}
 				<div class="video-container">
-					<VideoPlayer
-						onnext={advance}
-						ontimeupdate={handleTimeUpdate}
-						onstatsupdate={handleStatsUpdate} />
+					<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
+						{#snippet failed(error, reset)}
+							<div class="empty-state">
+								<p class="text-muted">// ERROR: PLAYER_CRASHED</p>
+								<button onclick={reset}>[REBOOT_PLAYER]</button>
+								<button onclick={advance}>[FORCE_SKIP]</button>
+							</div>
+						{/snippet}
+						<VideoPlayer
+							onnext={advance}
+							ontimeupdate={handleTimeUpdate}
+							onstatsupdate={handleStatsUpdate} />
+					</svelte:boundary>
 				</div>
 				<div class="metadata-tray border-t">
 					<div class="meta-main min-w-0">
@@ -128,6 +137,7 @@
 		display: flex;
 		flex-direction: column;
 		height: 100vh;
+		height: 100dvh;
 		width: 100vw;
 		background: var(--bg-dark);
 		overflow: hidden;

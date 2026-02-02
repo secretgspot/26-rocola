@@ -29,5 +29,15 @@
     - [x] UI/UX: Refactor video progress indicator to stay synced with server time even when paused
     - [x] UI/UX: Integrated real YouTube player metrics (BTR/BUF) and removed simulated LAT stats
 
+## Post-Review Optimizations (SEO, Perf, UX)
+- [x] SEO: Add base meta tags to `app.html` (Title, Description, OG)
+- [x] SEO: Implement dynamic `<title>` updates for current song in `+layout.svelte`
+- [x] SEO: Add JSON-LD Structured Data for currently playing video
+- [x] Perf: Replace CDN Open Props with local import to reduce FCP latency
+- [x] Perf: Refactor progress bar loop to use `requestAnimationFrame` for smoother UI
+- [x] UX: Update layout height to `100dvh` in `+page.svelte` for mobile browser compatibility
+- [x] A11y: Add `aria-labels` to skip buttons and `aria-hidden` to decorative elements
+- [x] Svelte 5: Implement `<svelte:boundary>` around `VideoPlayer` for graceful error handling
+
 ## Future Phases- [ ] Phase 3: Payments (Lemon Squeezy integration)
 - [ ] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)
