@@ -59,6 +59,7 @@ The solution relies on a "Global Turn Counter" and a "Last Played Turn" tracker 
 ### Phased Rollout
 - **Phase 1 (Current)**: Implement the Gap Logic.
 - **Phase 2 (Future)**: Visual indicators in UI showing "Next Play" or "Cooling Down" status.
+- **Phase 3**: Payments (Stripe integration).
 
 ### Technical Risks
 - **Queue Stalling**: If *all* songs are in cooldown (e.g., only 1 Platinum song in queue), the system must still play it.

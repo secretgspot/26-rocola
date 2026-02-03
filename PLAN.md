@@ -13,7 +13,7 @@ A no-registration YouTube-based music queue where users get one free song slot p
 | **Framework** | SvelteKit 2.x + Svelte 5 (Runes) | Modern, performant, built-in SSR |
 | **Database** | SQLite + better-sqlite3 + Drizzle ORM | Local, no hosted dependencies, type-safe |
 | **Video Source** | YouTube Data API v3 + iframe embed | Simple, no authentication required |
-| **Payments** | Lemon Squeezy REST API | Minimal friction, webhook support |
+| **Payments** | Stripe Checkout & Webhooks | Standard, robust, easy integration |
 | **Real-time** | WebSocket (Socket.io or native) | Queue sync across clients |
 | **Sessions** | httpOnly Cookies + IP tracking | Anonymous user support, secure |
 | **Deployment** | adapter-node | Full Node.js control |
@@ -32,7 +32,7 @@ rocola/
 │   │   │   ├── database.ts      # Drizzle DB connection
 │   │   │   ├── schema.ts        # Database schema definitions
 │   │   │   ├── youtube.ts       # YouTube API client
-│   │   │   ├── lemonsqueezy.ts  # Lemon Squeezy API client
+│   │   │   ├── stripe.ts        # Stripe API client
 │   │   │   └── queue.ts         # Queue logic (ranking, play counts)
 │   │   ├── client/
 │   │   │   ├── youtube-player.ts   # YouTube iframe control
@@ -44,7 +44,7 @@ rocola/
 │   │   ├── +layout.svelte
 │   │   ├── auth/
 │   │   │   └── callback/
-│   │   │       └── +server.ts   # Lemon Squeezy payment callback
+│   │   │       └── +server.ts   # Stripe payment callback
 │   │   ├── api/
 │   │   │   ├── youtube/
 │   │   │   │   └── validate/
@@ -54,9 +54,9 @@ rocola/
 │   │   │   │   └── next/
 │   │   │   │       └── +server.ts   # Advance to next song
 │   │   │   ├── checkout/
-│   │   │   │   └── +server.ts       # Create Lemon Squeezy checkout
+│   │   │   │   └── +server.ts       # Create Stripe checkout session
 │   │   │   └── webhooks/
-│   │   │       └── lemonsqueezy/
+│   │   │       └── stripe/
 │   │   │           └── +server.ts   # Payment webhook handler
 │   │   └── account/
 │   │       └── +page.svelte     # User dashboard (credits, history)
@@ -152,13 +152,13 @@ export const freeSubmissions = sqliteTable('free_submissions', {
 ```typescript
 export const orders = sqliteTable('orders', {
   id: text().primaryKey(), // UUID
-  lemonsqueezyOrderId: text().notNull().unique(),
+  stripeSessionId: text().notNull().unique(),
   queueId: text().notNull().references(() => queue.id),
   tier: text().notNull(), // 'silver' | 'gold' | 'platinum'
   amount: integer().notNull(), // cents (e.g., 200 = $2.00)
   currency: text().default('USD'),
   status: text().notNull(), // 'pending' | 'completed' | 'failed'
-  lemonsqueezyCheckoutUrl: text(),
+  stripeCheckoutUrl: text(),
   ipAddress: text().notNull(), // for analytics
   createdAt: integer().notNull(),
   completedAt: integer(), // when payment succeeded
@@ -272,30 +272,29 @@ This ensures that even a Platinum song must wait for its "Gap" to pass before pl
 
 ---
 
-## Payment Integration (Lemon Squeezy)
+## Payment Integration (Stripe)
 
 ### Checkout Flow
 
 1. **User selects tier** — Silver ($2), Gold ($5), or Platinum ($10)
 2. **POST to `/api/checkout`** — Send song ID + tier
-3. **Create checkout link** — Call Lemon Squeezy API to generate link
-4. **Redirect to checkout** — Lemon Squeezy hosted page
-5. **User completes payment** — Lemon Squeezy processes
-6. **Webhook callback** — POST to `/api/webhooks/lemonsqueezy`
+3. **Create checkout session** — Call Stripe API to create Checkout Session
+4. **Redirect to checkout** — Stripe hosted page
+5. **User completes payment** — Stripe processes
+6. **Webhook callback** — POST to `/api/webhooks/stripe`
 7. **Update queue** — Set promotion tier, rank boost, plays limit, expiry
 8. **Broadcast to clients** — WebSocket emits queue update
 
 ### Webhook Verification
 
-- Verify HMAC-SHA256 signature from `X-Signature` header
-- Use `sha256(raw_body, LEMONSQUEEZY_WEBHOOK_SECRET)`
+- Verify signature from `Stripe-Signature` header
+- Use `stripe.webhooks.constructEvent(body, signature, secret)`
 - Reject if signature doesn't match
 
 ### Events to Handle
 
-- `order.completed` — Payment successful, grant tier to queue item
-- `order.failed` — Payment failed, notify user (optional)
-- `order.refunded` — Refund processed, downgrade tier back to free
+- `checkout.session.completed` — Payment successful, grant tier to queue item
+- `payment_intent.payment_failed` — Payment failed, notify user (optional)
 
 ---
 
@@ -402,7 +401,7 @@ event.cookies.set('session_id', sessionId, {
 
 ### Phase 3: Payments
 
-1. Integrate Lemon Squeezy API
+1. Integrate Stripe API
 2. Create checkout flow
 3. Implement webhook handler + signature verification
 4. Update queue on payment success
@@ -422,9 +421,9 @@ event.cookies.set('session_id', sessionId, {
 
 ```
 YOUTUBE_API_KEY=your_youtube_data_api_key
-LEMONSQUEEZY_API_KEY=your_lemon_squeezy_api_key
-LEMONSQUEEZY_WEBHOOK_SECRET=your_webhook_secret
-LEMONSQUEEZY_STORE_ID=your_store_id
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
+STRIPE_PUBLIC_KEY=your_stripe_public_key
 DATABASE_URL=file:./data/jukebox.db
 WS_URL=http://localhost:5173
 NODE_ENV=development
@@ -461,12 +460,12 @@ NODE_ENV=development
 - [ ] One free song per IP per day enforced server-side
 - [ ] Tier-based play limits enforced (1/3/7/15 plays/day)
 - [ ] Real-time queue updates across all clients via WebSocket
-- [ ] Lemon Squeezy payments integrate and grant tiers immediately
+- [ ] Stripe payments integrate and grant tiers immediately
 - [ ] Videos unavailable gracefully skip to next song
 - [ ] Queue auto-advances after each song ends
 - [ ] Futuristic UI with neon colors and game-style design
 - [ ] No registration required—works anonymously
-- [ ] Minimal transaction friction (direct Lemon Squeezy checkout)
+- [ ] Minimal transaction friction (direct Stripe checkout)
 
 ---
 

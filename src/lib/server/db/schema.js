@@ -60,17 +60,17 @@ export const freeSubmissions = sqliteTable('free_submissions', {
 
 // Orders / payments
 export const orders = sqliteTable('orders', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	lemonsqueezyOrderId: text('lemonsqueezyOrderId').notNull().unique(),
-	queueId: text('queueId').notNull().references(() => queue.id),
+	id: text('id').primaryKey(),
+	stripeSessionId: text('stripeSessionId').notNull().unique(),
+	queueId: text('queue_id').notNull().references(() => queue.id),
 	tier: text('tier').notNull(),
 	amount: integer('amount').notNull(),
 	currency: text('currency').default('USD'),
 	status: text('status').notNull(),
-	lemonsqueezyCheckoutUrl: text('lemonsqueezyCheckoutUrl'),
-	ipAddress: text('ipAddress').notNull(),
-	createdAt: integer('createdAt').notNull(),
-	completedAt: integer('completedAt'),
+	stripeCheckoutUrl: text('stripeCheckoutUrl'),
+	ipAddress: text('ip_address').notNull(),
+	createdAt: integer('created_at').notNull(),
+	completedAt: integer('completed_at')
 });
 
 // Sessions / anonymous users

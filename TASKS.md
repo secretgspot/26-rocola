@@ -42,5 +42,8 @@
 - [x] A11y: Add `aria-labels` to skip buttons and `aria-hidden` to decorative elements
 - [x] Svelte 5: Implement `<svelte:boundary>` around `VideoPlayer` for graceful error handling
 
-## Future Phases- [ ] Phase 3: Payments (Lemon Squeezy integration)
+## Future Phases
+
+- [ ] Phase 3: Payments (Stripe integration)
+
 - [ ] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)
