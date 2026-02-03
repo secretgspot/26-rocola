@@ -105,6 +105,12 @@
 						</div>
 					</div>
 					<div class="meta-stats">
+						{#if playerState.currentSong.tier && playerState.currentSong.tier !== 'free'}
+							<div class="stat">
+								<span class="s-label">REM</span>
+								<span class="s-val">{playerState.currentSong.playsRemainingToday}</span>
+							</div>
+						{/if}
 						<div class="stat">
 							<span class="s-label">BTR</span>
 							<span class="s-val">{bitrate}</span>
