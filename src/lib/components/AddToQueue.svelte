@@ -1,7 +1,8 @@
 <script>
 	import { addToast } from '$lib/client/stores.svelte.js';
-	import { TIER_CONFIG } from '$lib/config.js';
+	import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 	import { fade, fly } from 'svelte/transition';
+	import StripeCheckout from './StripeCheckout.svelte';
 
 	let { onqueued } = $props();
 
@@ -11,6 +12,11 @@
 	let metadata = $state(null);
 	let error = $state('');
 	let isOpen = $state(false);
+	let stripeClientSecret = $state('');
+	let isProcessingPayment = $state(false);
+	let selectedTier = $state('');
+
+	let activeTierConfig = $derived(getTierConfig(selectedTier));
 
 	function open() { isOpen = true; }
 	function close() { isOpen = false; reset(); }
@@ -18,6 +24,15 @@
 		url = '';
 		metadata = null;
 		error = '';
+		stripeClientSecret = '';
+		isProcessingPayment = false;
+		selectedTier = '';
+	}
+
+	function cancelPayment() {
+		stripeClientSecret = '';
+		isProcessingPayment = false;
+		selectedTier = '';
 	}
 
 	async function validate() {
@@ -44,18 +59,43 @@
 	async function submit(tier = 'free') {
 		if (!metadata?.videoId) return;
 		
-		const res = await fetch('/api/queue', { 
-			method: 'POST', 
-			headers: { 'content-type': 'application/json' }, 
-			body: JSON.stringify({ videoId: metadata.videoId, metadata, tier }) 
-		});
+		error = '';
+		selectedTier = tier;
+		const isPaid = tier !== 'free';
 		
-		const data = await res.json();
-		if (data.ok) {
-			onqueued?.();
-			close();
+		if (isPaid) {
+			isProcessingPayment = true;
+			try {
+				const payRes = await fetch('/api/checkout', {
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ metadata, tier })
+				});
+				const payData = await payRes.json();
+				if (payData.clientSecret) {
+					stripeClientSecret = payData.clientSecret;
+				} else {
+					error = payData.error || 'Payment initialization failed';
+					isProcessingPayment = false;
+				}
+			} catch (e) {
+				error = 'Payment service unavailable';
+				isProcessingPayment = false;
+			}
 		} else {
-			error = data.error || 'Failed to add song';
+			const res = await fetch('/api/queue', { 
+				method: 'POST', 
+				headers: { 'content-type': 'application/json' }, 
+				body: JSON.stringify({ videoId: metadata.videoId, metadata, tier }) 
+			});
+			
+			const data = await res.json();
+			if (data.ok) {
+				onqueued?.();
+				close();
+			} else {
+				error = data.error || 'Failed to add song';
+			}
 		}
 	}
 </script>
@@ -79,25 +119,27 @@
 			</header>
 
 			<div class="modal-body">
-				<div class="input-container">
-					<div class="input-label">>> SOURCE_URL</div>
-					<div class="input-group">
-						<input 
-							type="text" 
-							placeholder="https://youtube.com/watch?v=..." 
-							bind:value={url} 
-							onkeydown={(e) => e.key === 'Enter' && validate()}
-						/>
-						<button class="btn-scan" onclick={validate} disabled={validating || !url}>
-							{validating ? 'SCANNING...' : 'SCAN'}
-						</button>
+				{#if !stripeClientSecret}
+					<div class="input-container">
+						<div class="input-label">>> SOURCE_URL</div>
+						<div class="input-group">
+							<input 
+								type="text" 
+								placeholder="https://youtube.com/watch?v=..." 
+								bind:value={url} 
+								onkeydown={(e) => e.key === 'Enter' && validate()}
+							/>
+							<button class="btn-scan" onclick={validate} disabled={validating || !url}>
+								{validating ? 'SCANNING...' : 'SCAN'}
+							</button>
+						</div>
 					</div>
-				</div>
 
-				{#if error}
-					<div class="error-msg">
-						<span class="err-tag">ERROR</span> {error}
-					</div>
+					{#if error}
+						<div class="error-msg">
+							<span class="err-tag">ERROR</span> {error}
+						</div>
+					{/if}
 				{/if}
 
 				{#if metadata}
@@ -114,15 +156,38 @@
 
 					<div class="tiers-grid">
 						{#each Object.values(TIER_CONFIG).sort((a, b) => a.priority - b.priority) as t}
-							<button class="tier-card {t.id}" onclick={() => submit(t.id)}>
+							<button 
+								class="tier-card {t.id}" 
+								class:active={selectedTier === t.id}
+								class:dimmed={selectedTier && selectedTier !== t.id}
+								onclick={() => submit(t.id)}
+								disabled={isProcessingPayment && selectedTier === t.id}
+							>
 								<div class="tier-header">
 									<span class="tier-name">[{t.label}]</span>
-									<span class="tier-price">${t.price}</span>
+									<span class="tier-price">{t.price > 0 ? `$${t.price}` : 'FREE'}</span>
 								</div>
 								<div class="tier-desc">{t.description}</div>
 							</button>
 						{/each}
 					</div>
+
+					{#if stripeClientSecret}
+						<div class="checkout-section" transition:fade>
+							<div class="section-divider">
+								<span>SECURE_PAYMENT_ZONE</span>
+								<button class="btn-cancel-pay" onclick={cancelPayment}>[CANCEL_PAYMENT]</button>
+							</div>
+							<StripeCheckout 
+								clientSecret={stripeClientSecret} 
+								oncomplete={() => {
+									onqueued?.();
+									close();
+								}}
+								oncancel={cancelPayment}
+							/>
+						</div>
+					{/if}
 				{/if}
 			</div>
 			
@@ -180,6 +245,7 @@
 		border: var(--border-size-1) solid var(--border-main);
 		display: flex;
 		flex-direction: column;
+		max-height: 90vh;
 	}
 
 	header {
@@ -189,6 +255,7 @@
 		padding: var(--size-3);
 		border-bottom: var(--border-size-1) solid var(--border-main);
 		background: var(--bg-alt);
+		flex-shrink: 0;
 	}
 	.header-main { display: flex; align-items: center; gap: var(--size-3); }
 	.icon-box { background: var(--text-main); color: var(--bg-dark); font-weight: var(--font-weight-8); font-size: var(--font-size-00); padding: 1px var(--size-1); }
@@ -196,7 +263,7 @@
 	.close-btn { background: none; border: none; color: var(--text-muted); font-size: var(--font-size-0); cursor: pointer; font-weight: var(--font-weight-7); }
 	.close-btn:hover { color: var(--text-main); }
 
-	.modal-body { padding: var(--size-4); display: flex; flex-direction: column; gap: var(--size-4); }
+	.modal-body { padding: var(--size-4); display: flex; flex-direction: column; gap: var(--size-4); overflow-y: auto; }
 	.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
 	.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-8); }
 	.input-group { display: flex; gap: var(--size-2); }
@@ -218,18 +285,42 @@
 
 	.tiers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--size-2); }
 	.tier-card { background: var(--bg-dark); border: var(--border-size-1) solid var(--border-main); padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
-	.tier-card:hover { background: var(--text-main); }
-	.tier-card:hover .tier-name, .tier-card:hover .tier-price, .tier-card:hover .tier-desc { color: var(--bg-dark); }
-	.tier-header { display: flex; justify-content: space-between; align-items: center; }
-	.tier-name { font-size: var(--font-size-00); font-weight: var(--font-weight-8); color: var(--text-dim); }
-	.tier-price { font-size: var(--font-size-1); font-weight: var(--font-weight-7); color: var(--text-main); }
-	.tier-card.platinum .tier-price { color: var(--tier-platinum); }
-	.tier-card.gold .tier-price { color: var(--tier-gold); }
-	.tier-card.silver .tier-price { color: var(--tier-silver); }
-	.tier-desc { font-size: 0.65rem; color: var(--text-muted); }
+	.tier-card.active { border-color: var(--text-main); background: var(--bg-alt); }
+	.tier-card.dimmed { opacity: 0.4; filter: grayscale(1); }
+	.tier-card:hover:not(.dimmed) { background: var(--text-main); }
+	.tier-card:hover:not(.dimmed) .tier-name, .tier-card:hover:not(.dimmed) .tier-price, .tier-card:hover:not(.dimmed) .tier-desc { color: var(--bg-dark); }
 
 	.modal-footer { padding: var(--size-2) var(--size-3); background: var(--bg-dark); border-top: var(--border-size-1) solid var(--border-main); }
 	.system-logs { font-size: var(--font-size-00); display: flex; flex-direction: column; gap: 1px; }
 	.log-line { color: var(--text-muted); }
 	.log-line.highlight { color: var(--text-dim); }
+
+	.checkout-section {
+		display: flex;
+		flex-direction: column;
+		gap: var(--size-3);
+		margin-top: var(--size-2);
+	}
+	.section-divider {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--size-3);
+		font-size: var(--font-size-00);
+		color: var(--text-muted);
+		font-weight: var(--font-weight-8);
+		border-bottom: var(--border-size-1) solid var(--border-dim);
+		padding-bottom: var(--size-1);
+	}
+	.btn-cancel-pay {
+		background: none;
+		border: none;
+		color: var(--text-muted);
+		font-size: var(--font-size-00);
+		cursor: pointer;
+		padding: 0;
+	}
+	.btn-cancel-pay:hover {
+		color: #ff4444;
+	}
 </style>

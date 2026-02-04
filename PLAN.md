@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-A no-registration YouTube-based music queue where users get one free song slot per day and can pay via Lemon Squeezy for higher visibility and play frequency. Features futuristic, game-style UI with automatic queue progression, real-time sync, and graceful video error handling.
+A no-registration YouTube-based music queue where users get one free song slot per day and can pay via Stripe for higher visibility and play frequency. Features futuristic, game-style UI with automatic queue progression, real-time sync, and graceful video error handling.
 
 ---
 

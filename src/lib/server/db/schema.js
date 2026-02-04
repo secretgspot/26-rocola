@@ -62,12 +62,13 @@ export const freeSubmissions = sqliteTable('free_submissions', {
 export const orders = sqliteTable('orders', {
 	id: text('id').primaryKey(),
 	stripeSessionId: text('stripeSessionId').notNull().unique(),
-	queueId: text('queue_id').notNull().references(() => queue.id),
+	queueId: text('queue_id').references(() => queue.id),
 	tier: text('tier').notNull(),
 	amount: integer('amount').notNull(),
 	currency: text('currency').default('USD'),
 	status: text('status').notNull(),
 	stripeCheckoutUrl: text('stripeCheckoutUrl'),
+	metadata: text('metadata'), // Store stringified song metadata
 	ipAddress: text('ip_address').notNull(),
 	createdAt: integer('created_at').notNull(),
 	completedAt: integer('completed_at')

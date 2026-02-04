@@ -23,7 +23,12 @@ bun run dev -- --open
 
 2. Open http://localhost:5173
 
-3. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
+3. (Payments) Start the Stripe Webhook listener in a separate terminal:
+```powershell
+npm run stripe:listen
+```
+
+4. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
 
 ---
 
