@@ -173,7 +173,7 @@
 					</div>
 
 					{#if stripeClientSecret}
-						<div class="checkout-section" transition:fade>
+						<div class="checkout-section">
 							<div class="section-divider">
 								<span>SECURE_PAYMENT_ZONE</span>
 								<button class="btn-cancel-pay" onclick={cancelPayment}>[CANCEL_PAYMENT]</button>
@@ -285,10 +285,11 @@
 
 	.tiers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--size-2); }
 	.tier-card { background: var(--bg-dark); border: var(--border-size-1) solid var(--border-main); padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
-	.tier-card.active { border-color: var(--text-main); background: var(--bg-alt); }
+	.tier-card.active { border-color: var(--text-main); background: var(--text-main); }
+	.tier-card.active .tier-name, .tier-card.active .tier-price, .tier-card.active .tier-desc { color: var(--bg-dark); }
 	.tier-card.dimmed { opacity: 0.4; filter: grayscale(1); }
-	.tier-card:hover:not(.dimmed) { background: var(--text-main); }
-	.tier-card:hover:not(.dimmed) .tier-name, .tier-card:hover:not(.dimmed) .tier-price, .tier-card:hover:not(.dimmed) .tier-desc { color: var(--bg-dark); }
+	.tier-card:hover { opacity: 1; filter: none; background: var(--text-main); border-color: var(--text-main); }
+	.tier-card:hover .tier-name, .tier-card:hover .tier-price, .tier-card:hover .tier-desc { color: var(--bg-dark); }
 
 	.modal-footer { padding: var(--size-2) var(--size-3); background: var(--bg-dark); border-top: var(--border-size-1) solid var(--border-main); }
 	.system-logs { font-size: var(--font-size-00); display: flex; flex-direction: column; gap: 1px; }

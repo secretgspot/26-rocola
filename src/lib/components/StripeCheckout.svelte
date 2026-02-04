@@ -1,71 +1,81 @@
 <script module>
-	// Shared singleton state across all component instances
-	let stripe = null;
-	let currentLock = Promise.resolve();
+	/** @type {any} */
+	let stripePromise = null;
+	let globalLock = Promise.resolve();
+	/** @type {any} */
 	let activeInstance = null;
 </script>
 
 <script>
-	import { onMount, onDestroy, tick } from 'svelte';
+	import { onDestroy, tick } from 'svelte';
 
 	/** @type {{ clientSecret: string, oncomplete: () => void, oncancel: () => void }} */
 	let { clientSecret, oncomplete, oncancel } = $props();
 
 	let isMounted = $state(false);
+	/** @type {string} */
+	let error = $state('');
 	let isDestroyed = false;
 	const uid = Math.random().toString(36).slice(2, 9);
+	/** @type {string | null} */
+	let lastSecret = null;
+	let currentGeneration = 0;
 
+	/**
+	 * @param {string} secret
+	 */
 	async function init(secret) {
-		if (!secret) return;
+		if (!secret || secret === lastSecret) return;
+		lastSecret = secret;
+		const myGeneration = ++currentGeneration;
 		
-		console.debug(`[Stripe] Init requested for ${uid}`);
+		console.debug(`[Stripe] Init request #${myGeneration} for ${uid}`);
 
-		// Acquire lock
-		const previous = currentLock;
-		let resolve;
-		currentLock = new Promise(r => resolve = r);
+		// Serialized global queue
+		const previousLock = globalLock;
+		let resolveLock;
+		globalLock = new Promise(r => resolveLock = r);
 		
 		try {
-			await previous;
-			if (isDestroyed) return;
-
-			// Ensure DOM is updated so the container exists
-			await tick();
-
-			if (!stripe) {
-				// @ts-ignore
-				if (typeof Stripe === 'undefined') {
-					console.error('[Stripe] Stripe.js global not found');
-					return;
-				}
-				// @ts-ignore
-				stripe = Stripe(import.meta.env.VITE_PUBLIC_STRIPE_KEY || '');
+			await previousLock;
+			
+			if (isDestroyed || myGeneration !== currentGeneration) {
+				console.debug(`[Stripe] Aborting #${myGeneration}`);
+				return;
 			}
 
-			// 1. Force cleanup
+			await tick();
+			error = '';
+
+			if (!stripePromise) {
+				// @ts-ignore
+				if (typeof Stripe === 'undefined') throw new Error('Stripe.js not found in window');
+				// @ts-ignore
+				stripePromise = Stripe(import.meta.env.VITE_PUBLIC_STRIPE_KEY || '');
+			}
+			const stripe = stripePromise;
+
 			if (activeInstance) {
-				console.debug(`[Stripe] Destroying existing instance`);
-				try { 
-					activeInstance.destroy(); 
-					await new Promise(r => setTimeout(r, 50));
-				} catch (e) { /* ignore */ }
+				console.debug(`[Stripe] Destroying existing instance before #${myGeneration}`);
+				try {
+					activeInstance.destroy();
+					await new Promise(r => setTimeout(r, 300));
+				} catch (e) {
+					console.warn('[Stripe] Cleanup warning:', e);
+				}
 				activeInstance = null;
 			}
 
-			// 2. Locate container
 			const container = document.getElementById(`checkout-${uid}`);
-			if (!container) {
-				console.error(`[Stripe] Container checkout-${uid} missing`);
-				return;
-			}
+			if (!container) return;
 			container.innerHTML = '';
 
-			// 3. Initialize
-			console.debug(`[Stripe] Calling initEmbeddedCheckout`);
+			console.debug(`[Stripe] Creating instance #${myGeneration}`);
 			// @ts-ignore
 			const instance = await stripe.initEmbeddedCheckout({ clientSecret: secret });
 			
-			if (isDestroyed) {
+			if (isDestroyed || myGeneration !== currentGeneration) {
+				console.debug(`[Stripe] Discarding instance #${myGeneration}`);
 				instance.destroy();
 				return;
 			}
@@ -73,17 +83,18 @@
 			activeInstance = instance;
 			instance.mount(`#checkout-${uid}`);
 			isMounted = true;
-			console.debug(`[Stripe] Mounted ${uid}`);
-		} catch (err) {
-			console.error(`[Stripe] Error in ${uid}:`, err);
+			console.debug(`[Stripe] Mounted instance #${myGeneration} successfully`);
+		} catch (/** @type {any} */ err) {
+			console.error(`[Stripe] Error in #${myGeneration}:`, err);
+			error = err?.message || 'Payment engine failure';
+			isMounted = false;
 		} finally {
-			resolve();
+			if (resolveLock) resolveLock();
 		}
 	}
 
 	$effect(() => {
 		if (clientSecret) {
-			isMounted = false;
 			init(clientSecret);
 		}
 	});
@@ -96,10 +107,16 @@
 
 <div class="stripe-container">
 	<div class="checkout-wrapper">
-		{#if !isMounted}
-			<div class="loading">INITIALIZING_SECURE_CHANNEL...</div>
+		{#if error}
+			<div class="error-state">
+				<p class="text-muted">// GATEWAY_FAILURE</p>
+				<p class="error-msg">{error}</p>
+				<button class="btn-retry" onclick={() => { lastSecret = null; init(clientSecret); }}>[RETRY_CONNECTION]</button>
+			</div>
+		{:else if !isMounted}
+			<div class="loading">HANDSHAKING_WITH_STRIPE...</div>
 		{/if}
-		<div id="checkout-{uid}"></div>
+		<div id="checkout-{uid}" class:hidden={!isMounted || !!error}></div>
 	</div>
 </div>
 
@@ -116,9 +133,7 @@
 	}
 	.loading {
 		position: absolute;
-		top: 0;
-		left: 0;
-		right: 0;
+		top: 0; left: 0; right: 0;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -127,4 +142,15 @@
 		font-size: var(--font-size-0);
 		animation: var(--animation-pulse);
 	}
+	.error-state {
+		padding: var(--size-4);
+		display: flex;
+		flex-direction: column;
+		gap: var(--size-3);
+		align-items: center;
+		text-align: center;
+	}
+	.error-msg { color: #ff4444; font-size: var(--font-size-0); }
+	.btn-retry { font-size: var(--font-size-00); margin-top: var(--size-2); }
+	.hidden { display: none; }
 </style>
