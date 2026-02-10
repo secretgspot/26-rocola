@@ -125,7 +125,7 @@
 		<div class="header-meta">
 			{#if import.meta.env.DEV || isAdmin}
 				<button
-					class="btn-skip"
+					class="btn-skip btn-next"
 					onclick={advance}
 					aria-label="Force advance to next song"
 					aria-busy={nextPending}
@@ -133,12 +133,17 @@
 				>
 					<span class="icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path d="M4 5.5v13L14.5 12 4 5.5zM16 5.5v13h3v-13h-3z" />
+							<path
+								d="M6 17L11 12L6 7M13 17L18 12L13 7"
+								class="icon-stroke"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 					</span>
 				</button>
 				<button
-					class="btn-skip"
+					class="btn-skip btn-seed"
 					onclick={async () => {
 						if (seedPending) return;
 						seedPending = true;
@@ -158,12 +163,16 @@
 				>
 					<span class="icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path d="M12 3c-2.4 2.6-4 5-4 8a4 4 0 1 0 8 0c0-3-1.6-5.4-4-8zM6 19h12v2H6v-2z" />
+							<path fill="none" d="M0 0H24V24H0z"/>
+							<path
+								d="M6 3c3.49 0 6.383 2.554 6.913 5.895C14.088 7.724 15.71 7 17.5 7H22v2.5c0 3.59-2.91 6.5-6.5 6.5H13v5h-2v-8H9c-3.866 0-7-3.134-7-7V3h4zm14 6h-2.5c-2.485 0-4.5 2.015-4.5 4.5v.5h2.5c2.485 0 4.5-2.015 4.5-4.5V9zM6 5H4v1c0 2.761 2.239 5 5 5h2v-1c0-2.761-2.239-5-5-5z"
+								class="icon-fill"
+							/>
 						</svg>
 					</span>
 				</button>
 				<button
-					class="btn-skip"
+					class="btn-skip btn-clear"
 					onclick={async () => {
 						if (clearPending) return;
 						clearPending = true;
@@ -184,7 +193,26 @@
 				>
 					<span class="icon" aria-hidden="true">
 						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path d="M3 5h8l1 2h9v2H5.5l-2.5-4zM6 11h12v2H6v-2zm2 4h10v2H8v-2z" />
+							<path
+								d="M9 9L15 15"
+								class="icon-stroke"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<path
+								d="M15 9L9 15"
+								class="icon-stroke"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<circle
+								cx="12"
+								cy="12"
+								r="9"
+								class="icon-stroke"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
 						</svg>
 					</span>
 				</button>
@@ -333,6 +361,11 @@
 		background: transparent;
 		white-space: nowrap;
 		line-height: 1;
+		--icon-stroke-color: var(--text-main);
+		--icon-stroke-width: 2;
+	}
+	.btn-skip:hover {
+		--icon-stroke-color: var(--border-bright);
 	}
 	.btn-skip .icon {
 		display: inline-flex;
@@ -343,7 +376,14 @@
 	.btn-skip svg {
 		width: 100%;
 		height: 100%;
-		fill: currentColor;
+		fill: none;
+	}
+	.btn-skip .icon-stroke {
+		stroke: var(--icon-stroke-color);
+		stroke-width: var(--icon-stroke-width);
+	}
+	.btn-skip .icon-fill {
+		fill: var(--icon-stroke-color);
 	}
 
 	.main-layout {
