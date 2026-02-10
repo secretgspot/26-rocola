@@ -279,16 +279,18 @@
 			{/if}
 		</main>
 
-		<aside class="queue-zone min-w-0">
-			<div class="queue-header border-b">
-				<h3>SEQUENCE_QUEUE</h3>
-				<span class="count"
-					>[{playerState.queue.length.toString().padStart(2, '0')}]</span>
-			</div>
-			<div class="queue-content overflow-hidden">
-				<Queue />
-			</div>
-		</aside>
+		{#if playerState.queue.length > 0}
+			<aside class="queue-zone min-w-0">
+				<div class="queue-header border-b">
+					<h3>SEQUENCE_QUEUE</h3>
+					<span class="count"
+						>[{playerState.queue.length.toString().padStart(2, '0')}]</span>
+				</div>
+				<div class="queue-content overflow-hidden">
+					<Queue />
+				</div>
+			</aside>
+		{/if}
 	</div>
 
 	<div class="fab-container">

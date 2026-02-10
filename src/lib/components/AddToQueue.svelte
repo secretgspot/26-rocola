@@ -286,7 +286,7 @@
 
 	.tiers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--size-2); }
 	.tier-card { background: var(--bg-dark); border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
-	.tier-card.active { background: var(--bg-alt); }
+	.tier-card.active { background: var(--bg-alt); box-shadow: inset 0 0 0 1px var(--border-bright); opacity: 1; filter: none; }
 	.tier-card.active .tier-name, .tier-card.active .tier-price, .tier-card.active .tier-desc { color: var(--text-main); }
 	.tier-card.dimmed { opacity: 0.4; filter: grayscale(1); }
 	.tier-card:hover { opacity: 1; filter: none; background: var(--bg-alt); }
@@ -294,6 +294,12 @@
 	.tier-card.silver { box-shadow: inset 2px 0 0 var(--tier-silver); }
 	.tier-card.gold { box-shadow: inset 2px 0 0 var(--tier-gold); }
 	.tier-card.platinum { box-shadow: inset 2px 0 0 var(--tier-platinum); }
+	.tier-card.silver .tier-name,
+	.tier-card.silver .tier-price { color: var(--tier-silver); }
+	.tier-card.gold .tier-name,
+	.tier-card.gold .tier-price { color: var(--tier-gold); }
+	.tier-card.platinum .tier-name,
+	.tier-card.platinum .tier-price { color: var(--tier-platinum); }
 
 	.modal-footer { padding: var(--size-2) var(--size-3); background: var(--bg-dark); border-top: 0; }
 	.system-logs { font-size: var(--font-size-00); display: flex; flex-direction: column; gap: 1px; }
