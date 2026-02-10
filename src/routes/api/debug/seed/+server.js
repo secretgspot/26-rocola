@@ -1,5 +1,5 @@
 import { json } from '@sveltejs/kit';
-import { addToQueue } from '$lib/server/services/queue.js';
+import { addToQueue, invalidateQueueCache } from '$lib/server/services/queue.js';
 import { env } from '$env/dynamic/private';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -114,10 +114,17 @@ export async function POST({ locals, request }) {
 			.map((line) => extractVideoId(line))
 			.filter((videoId) => !!videoId);
 
-		await runWithConcurrency(tasks, fast ? 50 : 20, async (videoId) => {
+		const metaMap = new Map();
+		await runWithConcurrency(tasks, 30, async (videoId) => {
 			const metadata = fast
 				? { title: `Video ${videoId}`, thumbnail: null, channelTitle: 'Unknown', duration: null }
 				: await fetchMetadata(videoId);
+			metaMap.set(videoId, metadata);
+		});
+
+		await runWithConcurrency(tasks, 12, async (videoId) => {
+			const metadata = metaMap.get(videoId);
+			if (!metadata) return;
 
 			// 90% Free, 10% Premium
 			const isPremium = Math.random() > 0.9;
@@ -141,6 +148,8 @@ export async function POST({ locals, request }) {
 			await addToQueue(songData, tier, 'seed-script');
 			added.push({ videoId, title: metadata.title, tier });
 		});
+
+		invalidateQueueCache();
 
 		return json({ ok: true, message: `Seeded ${added.length} songs`, added });
 

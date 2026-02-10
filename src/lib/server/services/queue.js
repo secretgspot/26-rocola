@@ -6,6 +6,12 @@ import { eq, sql, gt, and } from 'drizzle-orm';
 import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 
 const MAX_PREMIUM_STREAK = 1;
+const QUEUE_CACHE_TTL_MS = 500;
+const queueCache = new Map();
+
+export function invalidateQueueCache() {
+	queueCache.clear();
+}
 
 /**
  * Get total number of songs played to use as a global turn counter.
@@ -32,6 +38,16 @@ export async function getQueue(options = {}) {
 		initialPremiumStreak = 0,
 		dbClient = db
 	} = options;
+	const cacheKey = JSON.stringify({
+		pinCurrent,
+		effectiveBaseTurnOverride,
+		initialPremiumStreak
+	});
+	const cached = queueCache.get(cacheKey);
+	if (cached && Date.now() - cached.ts < QUEUE_CACHE_TTL_MS) {
+		return cached.value;
+	}
+
 	const currentTurn = await getGlobalTurn(dbClient);
 	const playback = await getPlaybackState();
 	const currentQueueId = playback?.currentQueueId;
@@ -71,7 +87,9 @@ export async function getQueue(options = {}) {
 		initialPremiumStreak
 	});
 
-	return { queue: ordered, currentTurn };
+	const value = { queue: ordered, currentTurn };
+	queueCache.set(cacheKey, { ts: Date.now(), value });
+	return value;
 }
 
 function buildFairOrder({
@@ -251,6 +269,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	const { queue: snapshot } = await getQueue();
 	await broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
 	await broadcast('queue_changed', { queue: snapshot, currentTurn });
+	invalidateQueueCache();
 
 	if (snapshot.length === 1 && snapshot[0].id === qId) {
 		await setPlaybackState({
@@ -338,6 +357,7 @@ export async function advanceQueue(fromQueueId = null) {
 
 	await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
 	await broadcast('queue_changed', { queue: afterRows, currentTurn });
+	invalidateQueueCache();
 
 	if (afterRows.length > 0) {
 		const next = selectNextAfterCurrent(afterRows, nextTurn, current);

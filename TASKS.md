@@ -60,10 +60,12 @@
 
 ## Performance & Admin UX (2026-02-10)
 - [x] Speed up seed endpoint with concurrency + timeouts
+- [x] Seed endpoint two-phase metadata fetch + inserts
 - [x] Make realtime update payloads carry song data (reduce extra fetches)
 - [x] Add admin clear/seed/skip controls with icon buttons
 - [x] Improve admin unlock (konami code)
 - [x] Add periodic current-song sync to reduce client drift
+- [x] Add short-TTL queue cache + invalidation
 
 ## Docs Alignment (2026-02-10)
 - [x] Update PLAN to current architecture + UI theme
