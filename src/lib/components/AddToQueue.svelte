@@ -207,7 +207,7 @@
 		width: var(--size-9);
 		height: var(--size-9);
 		background: var(--text-main);
-		border: 0;
+		border: 1px solid transparent;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -224,7 +224,7 @@
 	 }
 	.fab .label { font-size: var(--font-size-00); font-weight: var(--font-weight-8); }
 	.fab .plus { font-size: var(--font-size-4); font-weight: var(--font-weight-7); line-height: 1; }
-	.fab:hover { transform: scale(1.04); background: var(--bg-alt); color: var(--text-main); }
+	.fab:hover { transform: scale(1.04); border-color: var(--border-bright); }
 	.fab.hidden { opacity: 0; pointer-events: none; }
 
 	.modal-backdrop {

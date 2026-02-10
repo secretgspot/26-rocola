@@ -363,9 +363,12 @@
 		line-height: 1;
 		--icon-stroke-color: var(--text-main);
 		--icon-stroke-width: 2;
+		opacity: 0.6;
+		transition: opacity var(--transition-duration-1) ease;
 	}
 	.btn-skip:hover {
 		--icon-stroke-color: var(--border-bright);
+		opacity: 1;
 	}
 	.btn-skip .icon {
 		display: inline-flex;
