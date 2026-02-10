@@ -54,9 +54,9 @@
 - [x] Replace DB client with Neon serverless driver
 - [x] Remove native WebSocket server; move to managed realtime provider
 - [x] Persist playback state in DB (no `globalThis` state)
-- [ ] Make queue advancement transactional + concurrency-safe
+- [x] Make queue advancement transactional + concurrency-safe
 - [x] Update env config for Neon and realtime provider keys
-- [ ] Verify realtime updates (song_playing, queue_changed, song_ended) across clients
+- [x] Verify realtime updates (song_playing, queue_changed, song_ended) across clients
 
 ## Performance & Admin UX (2026-02-10)
 - [x] Speed up seed endpoint with concurrency + timeouts
@@ -64,6 +64,10 @@
 - [x] Add admin clear/seed/skip controls with icon buttons
 - [x] Improve admin unlock (konami code)
 - [x] Add periodic current-song sync to reduce client drift
+
+## Docs Alignment (2026-02-10)
+- [x] Update PLAN to current architecture + UI theme
+- [x] Update PRD to current mechanics + fairness rules
 
 ## Future Phases
 - [ ] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)

@@ -249,7 +249,7 @@ export async function initRealtime() {
 			} catch (e) {
 				// ignore
 			}
-		}, 3000);
+		}, 1000);
 	}
 
 	// Sync when tab regains focus

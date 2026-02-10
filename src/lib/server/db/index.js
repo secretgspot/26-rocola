@@ -1,5 +1,6 @@
-import { drizzle } from 'drizzle-orm/neon-http';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 import * as schema from './schema';
 import { env } from '$env/dynamic/private';
 
@@ -15,5 +16,6 @@ if (!databaseUrl) {
 	throw new Error('DATABASE_URL or NEON_DB_* env vars are not set');
 }
 
-const client = neon(databaseUrl);
-export const db = drizzle({ client, schema });
+neonConfig.webSocketConstructor = ws;
+const pool = new Pool({ connectionString: databaseUrl });
+export const db = drizzle(pool, { schema });

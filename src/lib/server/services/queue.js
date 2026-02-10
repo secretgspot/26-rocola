@@ -11,8 +11,8 @@ const MAX_PREMIUM_STREAK = 1;
  * Get total number of songs played to use as a global turn counter.
  * @returns {Promise<number>}
  */
-export async function getGlobalTurn() {
-	const res = await db.select({ count: sql`count(*)` }).from(queue_plays_count_helper());
+export async function getGlobalTurn(dbClient = db) {
+	const res = await dbClient.select({ count: sql`count(*)` }).from(queue_plays_count_helper());
 	return Number(res[0]?.count || 0);
 }
 
@@ -29,14 +29,15 @@ export async function getQueue(options = {}) {
 	const {
 		pinCurrent = true,
 		effectiveBaseTurnOverride = null,
-		initialPremiumStreak = 0
+		initialPremiumStreak = 0,
+		dbClient = db
 	} = options;
-	const currentTurn = await getGlobalTurn();
+	const currentTurn = await getGlobalTurn(dbClient);
 	const playback = await getPlaybackState();
 	const currentQueueId = playback?.currentQueueId;
 
 	// Fetch queue joined with songs
-	const results = await db.select({
+	const results = await dbClient.select({
 		queue: queue,
 		song: songs
 	})
@@ -269,52 +270,73 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 export async function advanceQueue(fromQueueId = null) {
 	const playback = await getPlaybackState();
 	const playingId = playback?.currentQueueId || null;
-	const { queue: rows } = await getQueue({ pinCurrent: true });
 
-	if (rows.length === 0) {
-		return { ok: false, error: 'No available songs' };
-	}
+	const result = await db.transaction(async (tx) => {
+		await tx.execute(sql`select pg_advisory_lock(912734)`);
+		try {
+			const { queue: rows } = await getQueue({ pinCurrent: true, dbClient: tx });
 
-	let current = rows[0];
-	if (playingId) {
-		const found = rows.find((r) => r.id === playingId);
-		if (found) current = found;
-	}
+			if (rows.length === 0) {
+				return { ok: false, error: 'No available songs' };
+			}
 
-	if (fromQueueId && playingId && fromQueueId !== playingId) {
-		return {
-			ok: true,
-			message: 'Already advanced',
-			next: { ...current.song, ...current, queueId: current.id, songId: current.songId, startedAt: playback.startedAt }
-		};
-	}
+			let current = rows[0];
+			if (playingId) {
+				const found = rows.find((r) => r.id === playingId);
+				if (found) current = found;
+			}
 
-	const now = Math.floor(Date.now() / 1000);
-	const prevTurn = await getGlobalTurn();
-	const nextTurn = prevTurn + 1;
+			if (fromQueueId && playingId && fromQueueId !== playingId) {
+				return {
+					ok: true,
+					message: 'Already advanced',
+					next: { ...current.song, ...current, queueId: current.id, songId: current.songId, startedAt: playback.startedAt }
+				};
+			}
 
-	await db.update(queue).set({ 
-		playsRemainingToday: Math.max(0, current.playsRemainingToday - 1), 
-		lastPlayedTurn: nextTurn,
-		updatedAt: now 
-	}).where(eq(queue.id, current.id));
+			const now = Math.floor(Date.now() / 1000);
+			const prevTurn = await getGlobalTurn(tx);
+			const nextTurn = prevTurn + 1;
 
-	await db.update(songs).set({ totalPlays: (current.song.totalPlays || 0) + 1 }).where(eq(songs.id, current.song.id));
+			await tx.update(queue).set({ 
+				playsRemainingToday: Math.max(0, current.playsRemainingToday - 1), 
+				lastPlayedTurn: nextTurn,
+				updatedAt: now 
+			}).where(eq(queue.id, current.id));
 
-	await db.insert(queuePlays).values({
-		id: crypto.randomUUID(),
-		queueId: current.id,
-		tier: current.tier,
-		playedAt: now
+			await tx.update(songs).set({ totalPlays: (current.song.totalPlays || 0) + 1 }).where(eq(songs.id, current.song.id));
+
+			await tx.insert(queuePlays).values({
+				id: crypto.randomUUID(),
+				queueId: current.id,
+				tier: current.tier,
+				playedAt: now
+			});
+
+			const { queue: afterRows, currentTurn } = await getQueue({
+				pinCurrent: false,
+				effectiveBaseTurnOverride: nextTurn,
+				initialPremiumStreak: current.tier !== 'free' ? 1 : 0,
+				dbClient: tx
+			});
+
+			return { ok: true, current, afterRows, currentTurn, nextTurn, now };
+		} finally {
+			await tx.execute(sql`select pg_advisory_unlock(912734)`);
+		}
 	});
+
+	if (!result.ok) {
+		return result;
+	}
+
+	if (result.message === 'Already advanced') {
+		return result;
+	}
+
+	const { current, afterRows, currentTurn, nextTurn, now } = result;
 
 	await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
-	
-	const { queue: afterRows, currentTurn } = await getQueue({
-		pinCurrent: false,
-		effectiveBaseTurnOverride: nextTurn,
-		initialPremiumStreak: current.tier !== 'free' ? 1 : 0
-	});
 	await broadcast('queue_changed', { queue: afterRows, currentTurn });
 
 	if (afterRows.length > 0) {
