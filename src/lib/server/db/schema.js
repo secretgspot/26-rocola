@@ -1,8 +1,8 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { bigint, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
 // Songs table
-export const songs = sqliteTable('songs', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+export const songs = pgTable('songs', {
+	id: uuid('id').primaryKey(),
 	videoId: text('videoId').notNull().unique(),
 	title: text('title').notNull(),
 	thumbnail: text('thumbnail'),
@@ -16,11 +16,11 @@ export const songs = sqliteTable('songs', {
 });
 
 // Queue table
-export const queue = sqliteTable('queue', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	songId: text('songId').notNull().references(() => songs.id),
+export const queue = pgTable('queue', {
+	id: uuid('id').primaryKey(),
+	songId: uuid('songId').notNull().references(() => songs.id),
 	tier: text('tier').notNull(),
-	baseRank: integer('baseRank').notNull(),
+	baseRank: bigint('baseRank', { mode: 'number' }).notNull(),
 	rankBoost: integer('rankBoost').default(0),
 	playsRemainingToday: integer('playsRemainingToday').notNull(),
 	lastPlayedTurn: integer('lastPlayedTurn').default(0),
@@ -30,9 +30,9 @@ export const queue = sqliteTable('queue', {
 });
 
 // Queue plays / analytics
-export const queuePlays = sqliteTable('queue_plays', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	queueId: text('queueId').notNull().references(() => queue.id),
+export const queuePlays = pgTable('queue_plays', {
+	id: uuid('id').primaryKey(),
+	queueId: uuid('queueId').notNull().references(() => queue.id),
 	tier: text('tier').notNull(),
 	playedAt: integer('playedAt').notNull(),
 	skippedAt: integer('skippedAt'),
@@ -40,9 +40,9 @@ export const queuePlays = sqliteTable('queue_plays', {
 });
 
 // Daily play counts
-export const dailyPlayCounts = sqliteTable('daily_play_counts', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-	queueId: text('queueId').notNull().references(() => queue.id),
+export const dailyPlayCounts = pgTable('daily_play_counts', {
+	id: uuid('id').primaryKey(),
+	queueId: uuid('queueId').notNull().references(() => queue.id),
 	tier: text('tier').notNull(),
 	playDate: text('playDate').notNull(),
 	playsToday: integer('playsToday').default(0),
@@ -50,19 +50,19 @@ export const dailyPlayCounts = sqliteTable('daily_play_counts', {
 });
 
 // Free submissions log
-export const freeSubmissions = sqliteTable('free_submissions', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+export const freeSubmissions = pgTable('free_submissions', {
+	id: uuid('id').primaryKey(),
 	ipAddress: text('ipAddress').notNull(),
-	songId: text('songId').references(() => songs.id),
+	songId: uuid('songId').references(() => songs.id),
 	submissionDate: text('submissionDate').notNull(),
 	createdAt: integer('createdAt').notNull(),
 });
 
 // Orders / payments
-export const orders = sqliteTable('orders', {
-	id: text('id').primaryKey(),
+export const orders = pgTable('orders', {
+	id: uuid('id').primaryKey(),
 	stripeSessionId: text('stripeSessionId').notNull().unique(),
-	queueId: text('queue_id').references(() => queue.id),
+	queueId: uuid('queue_id').references(() => queue.id),
 	tier: text('tier').notNull(),
 	amount: integer('amount').notNull(),
 	currency: text('currency').default('USD'),
@@ -75,10 +75,17 @@ export const orders = sqliteTable('orders', {
 });
 
 // Sessions / anonymous users
-export const sessions = sqliteTable('sessions', {
-	id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+export const sessions = pgTable('sessions', {
+	id: uuid('id').primaryKey(),
 	ipAddress: text('ipAddress').notNull(),
 	userAgent: text('userAgent'),
 	lastActivityAt: integer('lastActivityAt').notNull(),
 	createdAt: integer('createdAt').notNull(),
+});
+
+// Playback state (single-row table)
+export const playbackState = pgTable('playback_state', {
+	id: text('id').primaryKey(), // use a single row id: 'global'
+	currentQueueId: uuid('currentQueueId'),
+	startedAt: integer('startedAt')
 });

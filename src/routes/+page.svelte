@@ -1,4 +1,4 @@
-<script>
+﻿<script>
 	import {
 		playerState,
 		initRealtime,
@@ -10,12 +10,73 @@
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
 
+	let { data } = $props();
+
 	let bitrate = $state(4820);
 	let buffer = $state(100);
 	let playbackProgress = $state(0);
+	let adminIndex = $state(0);
+	let seedPending = $state(false);
+	let nextPending = $state(false);
+	let clearPending = $state(false);
+
+	const isAdmin = $derived(() => data?.isAdmin);
+	const konami = [
+		'arrowup',
+		'arrowup',
+		'arrowdown',
+		'arrowdown',
+		'arrowleft',
+		'arrowright',
+		'arrowleft',
+		'arrowright',
+		'a',
+		'b'
+	];
 
 	$effect(() => {
 		initRealtime();
+	});
+
+	async function enableAdmin() {
+		try {
+			const res = await fetch('/api/admin/enable', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ code: 'up up down down left right left right a b' })
+			});
+			const data = await res.json();
+			if (data.ok) {
+				addToast({ message: 'ADMIN MODE ENABLED', level: 'success' });
+				location.reload();
+			} else {
+				addToast({ message: 'ADMIN MODE FAILED', level: 'error' });
+			}
+		} catch (e) {
+			addToast({ message: 'ADMIN MODE ERROR', level: 'error' });
+		}
+	}
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const handler = (e) => {
+			const target = e.target;
+			if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+			const key = String(e.key || '').toLowerCase();
+			const expected = konami[adminIndex];
+			if (key === expected) {
+				adminIndex += 1;
+				if (adminIndex >= konami.length) {
+					adminIndex = 0;
+					enableAdmin();
+				}
+			} else {
+				adminIndex = key === konami[0] ? 1 : 0;
+			}
+		};
+
+		window.addEventListener('keydown', handler);
+		return () => window.removeEventListener('keydown', handler);
 	});
 
 	function handleTimeUpdate(e) {
@@ -28,6 +89,8 @@
 	}
 
 	async function advance() {
+		if (nextPending) return;
+		nextPending = true;
 		const currentQueueId =
 			playerState.currentSong?.queueId || playerState.currentSong?.id;
 		const res = await fetch('/api/queue/next', {
@@ -39,8 +102,12 @@
 		if (data.ok && data.next) {
 			playerState.currentSong = data.next;
 			playbackProgress = 0;
-			await refreshQueue();
+			refreshQueue();
+			addToast({ message: 'ADVANCED', level: 'success' });
+		} else if (!data.ok) {
+			addToast({ message: `ADVANCE FAILED: ${data.error || 'unknown'}`, level: 'error' });
 		}
+		nextPending = false;
 	}
 </script>
 
@@ -56,18 +123,71 @@
 			<span class="logo-text">ROCOLA</span>
 		</div>
 		<div class="header-meta">
-			{#if import.meta.env.DEV}
-				<button class="btn-skip" onclick={advance} aria-label="Force advance to next song">[FORCE_NEXT]</button>
-				<button class="btn-skip" onclick={async () => {
-					const res = await fetch('/api/debug/seed', { method: 'POST' });
-					const data = await res.json();
-					if (data.ok) {
-						addToast({ message: `Seeded ${data.added.length} songs`, level: 'success' });
-						await refreshQueue();
-					} else {
-						addToast({ message: `Seed failed: ${data.error}`, level: 'error' });
-					}
-				}} aria-label="Seed queue with test data">[SEED]</button>
+			{#if import.meta.env.DEV || isAdmin}
+				<button
+					class="btn-skip"
+					onclick={advance}
+					aria-label="Force advance to next song"
+					aria-busy={nextPending}
+					disabled={nextPending}
+				>
+					<span class="icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" role="img" focusable="false">
+							<path d="M4 5.5v13L14.5 12 4 5.5zM16 5.5v13h3v-13h-3z" />
+						</svg>
+					</span>
+				</button>
+				<button
+					class="btn-skip"
+					onclick={async () => {
+						if (seedPending) return;
+						seedPending = true;
+						const res = await fetch('/api/debug/seed', { method: 'POST' });
+						const data = await res.json();
+						if (data.ok) {
+							addToast({ message: `Seeded ${data.added.length} songs`, level: 'success' });
+							refreshQueue();
+						} else {
+							addToast({ message: `Seed failed: ${data.error}`, level: 'error' });
+						}
+						seedPending = false;
+					}}
+					aria-label="Seed queue with test data"
+					aria-busy={seedPending}
+					disabled={seedPending}
+				>
+					<span class="icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" role="img" focusable="false">
+							<path d="M12 3c-2.4 2.6-4 5-4 8a4 4 0 1 0 8 0c0-3-1.6-5.4-4-8zM6 19h12v2H6v-2z" />
+						</svg>
+					</span>
+				</button>
+				<button
+					class="btn-skip"
+					onclick={async () => {
+						if (clearPending) return;
+						clearPending = true;
+						const res = await fetch('/api/debug/clear', { method: 'POST' });
+						const data = await res.json();
+						if (data.ok) {
+							addToast({ message: 'CLEARED', level: 'success' });
+							playerState.currentSong = null;
+							refreshQueue();
+						} else {
+							addToast({ message: `Clear failed: ${data.error}`, level: 'error' });
+						}
+						clearPending = false;
+					}}
+					aria-label="Clear all seeded data"
+					aria-busy={clearPending}
+					disabled={clearPending}
+				>
+					<span class="icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" role="img" focusable="false">
+							<path d="M3 5h8l1 2h9v2H5.5l-2.5-4zM6 11h12v2H6v-2zm2 4h10v2H8v-2z" />
+						</svg>
+					</span>
+				</button>
 			{/if}
 			<div class="status">
 				<div class="live-dot" aria-hidden="true"></div>
@@ -199,9 +319,23 @@
 		animation: var(--animation-pulse);
 	}
 	.btn-skip {
-		font-size: var(--font-size-00);
-		padding: var(--size-1) var(--size-2);
+		font-size: var(--font-size-2);
+		padding: 0;
+		border: 0;
+		background: transparent;
 		white-space: nowrap;
+		line-height: 1;
+	}
+	.btn-skip .icon {
+		display: inline-flex;
+		width: 22px;
+		height: 22px;
+		color: var(--text-main);
+	}
+	.btn-skip svg {
+		width: 100%;
+		height: 100%;
+		fill: currentColor;
 	}
 
 	.main-layout {
@@ -405,3 +539,5 @@
 		}
 	}
 </style>
+
+

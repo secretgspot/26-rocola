@@ -1,8 +1,11 @@
 import { db } from '$lib/server/db/index.js';
 import { queue, songs, queuePlays } from '$lib/server/db/schema.js';
-import { broadcast, getPlaybackState } from '$lib/server/ws.js';
+import { broadcast } from '$lib/server/realtime.js';
+import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { eq, sql, gt, and } from 'drizzle-orm';
 import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
+
+const MAX_PREMIUM_STREAK = 1;
 
 /**
  * Get total number of songs played to use as a global turn counter.
@@ -22,9 +25,14 @@ function queue_plays_count_helper() {
  * Get the current queue, sorted by fair-share priority.
  * Uses SQL Joins for efficiency.
  */
-export async function getQueue() {
+export async function getQueue(options = {}) {
+	const {
+		pinCurrent = true,
+		effectiveBaseTurnOverride = null,
+		initialPremiumStreak = 0
+	} = options;
 	const currentTurn = await getGlobalTurn();
-	const playback = getPlaybackState();
+	const playback = await getPlaybackState();
 	const currentQueueId = playback?.currentQueueId;
 
 	// Fetch queue joined with songs
@@ -47,46 +55,110 @@ export async function getQueue() {
 	// If a song is currently playing, we want to show the queue as it WILL be
 	// when that song finishes (Turn N+1). This ensures B vs C comparisons
 	// match what advanceQueue will decide.
-	const effectiveBaseTurn = currentQueueId ? currentTurn + 1 : currentTurn;
+	const effectiveBaseTurn =
+		effectiveBaseTurnOverride !== null
+			? effectiveBaseTurnOverride
+			: currentQueueId
+				? currentTurn + 1
+				: currentTurn;
 
-	// Sort by fair-share logic
-	rows.sort((a, b) => {
-		// 0. Pin currently playing song to top
-		if (currentQueueId) {
-			if (a.id === currentQueueId) return -1;
-			if (b.id === currentQueueId) return 1;
+	const ordered = buildFairOrder({
+		rows,
+		effectiveBaseTurn,
+		currentQueueId,
+		pinCurrent,
+		initialPremiumStreak
+	});
+
+	return { queue: ordered, currentTurn };
+}
+
+function buildFairOrder({
+	rows,
+	effectiveBaseTurn,
+	currentQueueId,
+	pinCurrent,
+	initialPremiumStreak
+}) {
+	const pool = rows.map((r) => ({ ...r, _lastPlayedSim: r.lastPlayedTurn || 0 }));
+	const result = [];
+	let premiumStreak = initialPremiumStreak || 0;
+	let turn = effectiveBaseTurn;
+
+	if (pinCurrent && currentQueueId) {
+		const idx = pool.findIndex((r) => r.id === currentQueueId);
+		if (idx !== -1) {
+			const current = pool.splice(idx, 1)[0];
+			result.push(current);
+			premiumStreak = current.tier !== 'free' ? 1 : 0;
 		}
+	}
 
+	while (pool.length > 0) {
+		const next = selectNext(pool, turn, premiumStreak);
+		if (!next) break;
+		next._lastPlayedSim = turn;
+		result.push(next);
+		if (next.tier !== 'free') premiumStreak += 1;
+		else premiumStreak = 0;
+		turn += 1;
+		pool.splice(pool.indexOf(next), 1);
+	}
+
+	return result;
+}
+
+function selectNext(pool, turn, premiumStreak) {
+	let minEffective = Number.POSITIVE_INFINITY;
+	for (const item of pool) {
+		const config = getTierConfig(item.tier);
+		const nextEligible = (item._lastPlayedSim || 0) + config.gap;
+		const effectiveTurn = Math.max(turn, nextEligible);
+		item._effectiveTurn = effectiveTurn;
+		if (effectiveTurn < minEffective) minEffective = effectiveTurn;
+	}
+
+	const candidates = pool.filter((r) => r._effectiveTurn === minEffective);
+	if (candidates.length === 0) return null;
+
+	if (premiumStreak >= MAX_PREMIUM_STREAK) {
+		const freeAny = pool.filter((r) => r.tier === 'free');
+		if (freeAny.length > 0) {
+			// Force at least one free between premium plays
+			return [...freeAny].sort((a, b) => {
+				if (a._effectiveTurn !== b._effectiveTurn) return a._effectiveTurn - b._effectiveTurn;
+				return (a._lastPlayedSim || 0) - (b._lastPlayedSim || 0);
+			})[0];
+		}
+	}
+
+	return pickByPriority(candidates);
+}
+
+function pickByPriority(candidates) {
+	return [...candidates].sort((a, b) => {
 		const configA = getTierConfig(a.tier);
 		const configB = getTierConfig(b.tier);
 
-		const nextEligibleA = (a.lastPlayedTurn || 0) + configA.gap;
-		const nextEligibleB = (b.lastPlayedTurn || 0) + configB.gap;
-
-		// Use effectiveBaseTurn for calculations
-		const effectiveTurnA = Math.max(effectiveBaseTurn, nextEligibleA);
-		const effectiveTurnB = Math.max(effectiveBaseTurn, nextEligibleB);
-
-		// 1. Primary: Effective Turn (Bucket those eligible "now" together)
-		if (effectiveTurnA !== effectiveTurnB) {
-			return effectiveTurnA - effectiveTurnB;
-		}
-
-		// 2. Secondary: Tier Priority
 		if (configA.priority !== configB.priority) {
 			return configB.priority - configA.priority;
 		}
 
-		// 3. Tertiary: Rotation (Who played longest ago wins the tie)
-		if (a.lastPlayedTurn !== b.lastPlayedTurn) {
-			return (a.lastPlayedTurn || 0) - (b.lastPlayedTurn || 0);
+		if ((a._lastPlayedSim || 0) !== (b._lastPlayedSim || 0)) {
+			return (a._lastPlayedSim || 0) - (b._lastPlayedSim || 0);
 		}
 
-		// 4. Quaternary: Submission Time
 		return a.baseRank - b.baseRank;
-	});
+	})[0];
+}
 
-	return { queue: rows, currentTurn };
+function pickByRotation(candidates) {
+	return [...candidates].sort((a, b) => {
+		if ((a._lastPlayedSim || 0) !== (b._lastPlayedSim || 0)) {
+			return (a._lastPlayedSim || 0) - (b._lastPlayedSim || 0);
+		}
+		return a.baseRank - b.baseRank;
+	})[0];
 }
 
 /**
@@ -176,11 +248,16 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 
 	// Broadcast updates
 	const { queue: snapshot } = await getQueue();
-	broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
-	broadcast('queue_changed', { queue: snapshot, currentTurn });
+	await broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
+	await broadcast('queue_changed', { queue: snapshot, currentTurn });
 
 	if (snapshot.length === 1 && snapshot[0].id === qId) {
-		broadcast('song_playing', { songId: song.id, queueId: qId, startedAt: Math.floor(Date.now() / 1000) });
+		await setPlaybackState({
+			currentQueueId: qId,
+			songId: song.id,
+			startedAt: Math.floor(Date.now() / 1000),
+			song: { ...song, queueId: qId, songId: song.id, startedAt: Math.floor(Date.now() / 1000) }
+		});
 	}
 
 	return { id: qId, song };
@@ -190,16 +267,21 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
  * Advance the queue to the next song.
  */
 export async function advanceQueue(fromQueueId = null) {
-	const { queue: rows } = await getQueue();
+	const playback = await getPlaybackState();
+	const playingId = playback?.currentQueueId || null;
+	const { queue: rows } = await getQueue({ pinCurrent: true });
 
 	if (rows.length === 0) {
 		return { ok: false, error: 'No available songs' };
 	}
 
-	const current = rows[0];
+	let current = rows[0];
+	if (playingId) {
+		const found = rows.find((r) => r.id === playingId);
+		if (found) current = found;
+	}
 
-	if (fromQueueId && current.id !== fromQueueId) {
-		const playback = getPlaybackState();
+	if (fromQueueId && playingId && fromQueueId !== playingId) {
 		return {
 			ok: true,
 			message: 'Already advanced',
@@ -226,20 +308,63 @@ export async function advanceQueue(fromQueueId = null) {
 		playedAt: now
 	});
 
-	broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
+	await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
 	
-	const { queue: afterRows, currentTurn } = await getQueue();
-	broadcast('queue_changed', { queue: afterRows, currentTurn });
+	const { queue: afterRows, currentTurn } = await getQueue({
+		pinCurrent: false,
+		effectiveBaseTurnOverride: nextTurn,
+		initialPremiumStreak: current.tier !== 'free' ? 1 : 0
+	});
+	await broadcast('queue_changed', { queue: afterRows, currentTurn });
 
 	if (afterRows.length > 0) {
-		const next = afterRows[0];
-		broadcast('song_playing', { songId: next.song.id, queueId: next.id, startedAt: now });
+		const next = selectNextAfterCurrent(afterRows, nextTurn, current);
+		await setPlaybackState({
+			currentQueueId: next.id,
+			songId: next.song.id,
+			startedAt: now,
+			song: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now }
+		});
 		return { 
 			ok: true, 
 			played: { queueId: current.id, songId: current.song.id }, 
 			next: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now } 
 		};
 	} else {
+		await setPlaybackState({ currentQueueId: null, startedAt: null });
 		return { ok: true, message: 'Queue exhausted' };
 	}
+}
+
+function selectNextAfterCurrent(rows, turn, current) {
+	const pool = rows.filter((r) => r.id !== current.id);
+	if (pool.length === 0) return rows[0];
+
+	const hadPremium = current.tier !== 'free';
+	for (const item of pool) {
+		const config = getTierConfig(item.tier);
+		const nextEligible = (item.lastPlayedTurn || 0) + config.gap;
+		item._effectiveTurn = Math.max(turn, nextEligible);
+	}
+
+	if (hadPremium) {
+		const freeAny = pool.filter((r) => r.tier === 'free');
+		if (freeAny.length > 0) {
+			return [...freeAny].sort((a, b) => {
+				if (a._effectiveTurn !== b._effectiveTurn) return a._effectiveTurn - b._effectiveTurn;
+				return (a.lastPlayedTurn || 0) - (b.lastPlayedTurn || 0);
+			})[0];
+		}
+	}
+
+	return [...pool].sort((a, b) => {
+		if (a._effectiveTurn !== b._effectiveTurn) return a._effectiveTurn - b._effectiveTurn;
+		const configA = getTierConfig(a.tier);
+		const configB = getTierConfig(b.tier);
+		if (configA.priority !== configB.priority) return configB.priority - configA.priority;
+		if ((a.lastPlayedTurn || 0) !== (b.lastPlayedTurn || 0)) {
+			return (a.lastPlayedTurn || 0) - (b.lastPlayedTurn || 0);
+		}
+		return a.baseRank - b.baseRank;
+	})[0];
 }

@@ -1,29 +1,53 @@
 import { json } from '@sveltejs/kit';
 import { getQueue } from '$lib/server/services/queue.js';
-import { getPlaybackState, broadcast } from '$lib/server/ws.js';
+import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
+import { db } from '$lib/server/db/index.js';
+import { queue, songs } from '$lib/server/db/schema.js';
+import { eq } from 'drizzle-orm';
 
 export async function GET() {
 	try {
+		let playback = await getPlaybackState();
+
+		if (playback?.currentQueueId) {
+			const rows = await db
+				.select({ queue: queue, song: songs })
+				.from(queue)
+				.innerJoin(songs, eq(queue.songId, songs.id))
+				.where(eq(queue.id, playback.currentQueueId))
+				.limit(1);
+
+			if (rows[0]) {
+				const top = rows[0].queue;
+				const current = {
+					...rows[0].song,
+					...top,
+					queueId: top.id,
+					songId: rows[0].song.id,
+					startedAt: playback.startedAt
+				};
+				return json({ ok: true, current });
+			}
+		}
+
 		const { queue: rows } = await getQueue();
-		
 		if (!rows || rows.length === 0) {
 			return json({ ok: true, current: null });
 		}
 
 		const top = rows[0];
-		let playback = getPlaybackState();
-		
+
 		// If no song is recorded as playing, or it's a different song than the top of queue
 		// we "start" this one now. 
 		// Note: this is a bit aggressive but ensures sync for the first person joining an idle system.
 		if (!playback.currentQueueId || playback.currentQueueId !== top.id) {
 			const now = Math.floor(Date.now() / 1000);
-			broadcast('song_playing', { 
+			await setPlaybackState({ 
 				songId: top.song.id, 
-				queueId: top.id, 
+				currentQueueId: top.id, 
 				startedAt: now 
 			});
-			playback = getPlaybackState(); // get updated state
+			playback = await getPlaybackState();
 		}
 		
 		const current = { 

@@ -1,0 +1,47 @@
+import { json } from '@sveltejs/kit';
+import { env } from '$env/dynamic/private';
+import { dev } from '$app/environment';
+
+const DEFAULT_CODE = 'up up down down left right left right a b';
+
+function normalize(code) {
+	return String(code || '')
+		.trim()
+		.toLowerCase()
+		.replace(/\s+/g, ' ');
+}
+
+export async function POST({ request, cookies }) {
+	try {
+		const { code } = await request.json();
+		const expected = normalize(env.ADMIN_CODE || DEFAULT_CODE);
+		const actual = normalize(code);
+
+		if (actual !== expected) {
+			return json({ ok: false, error: 'Invalid code' }, { status: 403 });
+		}
+
+		cookies.set('admin_mode', '1', {
+			path: '/',
+			httpOnly: true,
+			secure: !dev,
+			sameSite: 'lax',
+			maxAge: 60 * 60 * 12
+		});
+
+		return json({ ok: true });
+	} catch (err) {
+		return json({ ok: false, error: 'Bad request' }, { status: 400 });
+	}
+}
+
+export async function DELETE({ cookies }) {
+	cookies.set('admin_mode', '0', {
+		path: '/',
+		httpOnly: true,
+		secure: !dev,
+		sameSite: 'lax',
+		maxAge: 0
+	});
+	return json({ ok: true });
+}

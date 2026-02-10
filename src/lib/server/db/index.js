@@ -1,10 +1,19 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
+import { drizzle } from 'drizzle-orm/neon-http';
+import { neon } from '@neondatabase/serverless';
 import * as schema from './schema';
 import { env } from '$env/dynamic/private';
 
-if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+const databaseUrl =
+	env.DATABASE_URL ||
+	(env.NEON_DB_HOST &&
+		env.NEON_DB_USER &&
+		env.NEON_DB_PASSWORD &&
+		env.NEON_DB_NAME &&
+		`postgresql://${env.NEON_DB_USER}:${env.NEON_DB_PASSWORD}@${env.NEON_DB_HOST}/${env.NEON_DB_NAME}?${env.NEON_DB_OPTIONS || 'sslmode=require'}`);
 
-const client = new Database(env.DATABASE_URL);
+if (!databaseUrl) {
+	throw new Error('DATABASE_URL or NEON_DB_* env vars are not set');
+}
 
-export const db = drizzle(client, { schema });
+const client = neon(databaseUrl);
+export const db = drizzle({ client, schema });

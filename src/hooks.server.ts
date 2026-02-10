@@ -1,12 +1,4 @@
-import { initWebSocketServer } from '$lib/server/ws.js';
 import { dev } from '$app/environment';
-
-// Initialize WebSocket server on startup
-try {
-	initWebSocketServer();
-} catch (e) {
-	console.error('[Hooks] Failed to initialize WebSocket server:', e);
-}
 
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
@@ -27,6 +19,10 @@ export async function handle({ event, resolve }) {
 		});
 	}
 	event.locals.sessionId = sessionId;
+	
+	// Admin mode (dev always enabled)
+	const adminCookie = event.cookies.get('admin_mode');
+	event.locals.isAdmin = dev || adminCookie === '1';
 
 	const response = await resolve(event);
 	return response;

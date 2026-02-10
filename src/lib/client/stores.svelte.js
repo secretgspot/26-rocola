@@ -1,4 +1,4 @@
-import { connectWebSocket } from '$lib/client/websocket.js';
+import { connectRealtime } from '$lib/client/realtime.js';
 
 /**
  * @typedef {Object} Song
@@ -150,6 +150,8 @@ export function addToast({ message, level = 'info', ttl = 3500 }) {
 }
 
 let initialized = false;
+let syncInterval = null;
+let currentSyncInterval = null;
 
 export async function initRealtime() {
 	if (initialized) return;
@@ -158,28 +160,19 @@ export async function initRealtime() {
 	refreshQueue();
 
 	try {
-		const ws = connectWebSocket();
-		
-		ws.on('client_count', (payload) => {
-			console.debug('[Store] client_count received', payload);
-			if (payload?.count !== undefined) {
-				playerState.clientCount = payload.count;
-			}
-		});
-
-		ws.on('sync_playback', (payload) => {
-			console.debug('[WS] sync_playback received', payload);
-			if (playerState.currentSong && playerState.currentSong.queueId === payload.currentQueueId) {
-				playerState.currentSong.startedAt = payload.startedAt;
-			} else {
-				refreshQueue();
-			}
-		});
+		const ws = connectRealtime();
+		refreshQueue();
 
 		ws.on('queue_changed', (payload) => {
 			if (payload?.queue) {
 				playerState.currentTurn = payload.currentTurn || 0;
 				playerState.queue = filterQueue(payload.queue, playerState.currentSong);
+			}
+		});
+
+		ws.on('presence_count', (count) => {
+			if (typeof count === 'number') {
+				playerState.clientCount = count;
 			}
 		});
 		
@@ -204,11 +197,16 @@ export async function initRealtime() {
 		});
 		
 		ws.on('song_playing', (payload) => {
-			console.debug('[WS] song_playing received', payload);
+			console.debug('[RT] song_playing received', payload);
 			const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
 			if (currentId !== payload.queueId) {
 				playerState.previousSong = playerState.currentSong;
-				refreshQueue();
+				if (payload?.song) {
+					playerState.currentSong = normalizeQueueItem(payload.song);
+					refreshQueue();
+				} else {
+					refreshQueue();
+				}
 			} else {
 				// Just update startedAt if same song
 				if (playerState.currentSong) {
@@ -224,6 +222,38 @@ export async function initRealtime() {
 		});
 
 	} catch (e) {
-		console.warn('[Store] WS initialization failed:', e);
+		console.warn('[Store] Realtime initialization failed:', e);
+	}
+
+	// Periodic sync to keep clients aligned (handles missed realtime events)
+	if (!syncInterval) {
+		syncInterval = setInterval(() => {
+			refreshQueue();
+		}, 5000);
+	}
+	// Frequent current-song sync to keep playback time aligned
+	if (!currentSyncInterval) {
+		currentSyncInterval = setInterval(async () => {
+			try {
+				const res = await fetch('/api/queue/current');
+				if (!res.ok) return;
+				const data = await res.json();
+				if (data.ok && data.current) {
+					const current = normalizeQueueItem(data.current);
+					const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
+					const newId = current?.queueId || current?.id;
+					if (currentId !== newId || current.startedAt !== playerState.currentSong?.startedAt) {
+						playerState.currentSong = current;
+					}
+				}
+			} catch (e) {
+				// ignore
+			}
+		}, 3000);
+	}
+
+	// Sync when tab regains focus
+	if (typeof window !== 'undefined') {
+		window.addEventListener('focus', refreshQueue);
 	}
 }

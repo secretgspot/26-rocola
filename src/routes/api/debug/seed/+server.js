@@ -12,11 +12,22 @@ function extractVideoId(urlOrId) {
 	return m ? m[1] : null;
 }
 
+async function fetchWithTimeout(url, timeoutMs = 3000) {
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), timeoutMs);
+	try {
+		const res = await fetch(url, { signal: controller.signal });
+		return res;
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
 async function fetchMetadata(id) {
 	// 1. Try YouTube Data API
 	if (env.YOUTUBE_API_KEY) {
 		try {
-			const res = await fetch(
+			const res = await fetchWithTimeout(
 				`https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=${id}&key=${env.YOUTUBE_API_KEY}`
 			);
 			if (res.ok) {
@@ -38,7 +49,9 @@ async function fetchMetadata(id) {
 
 	// 2. Fallback: oEmbed
 	try {
-		const oembedRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+		const oembedRes = await fetchWithTimeout(
+			`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`
+		);
 		if (oembedRes.ok) {
 			const oembedData = await oembedRes.json();
 			return {
@@ -60,12 +73,34 @@ async function fetchMetadata(id) {
 	};
 }
 
-export async function POST() {
-	if (env.NODE_ENV !== 'development') {
+async function runWithConcurrency(items, limit, worker) {
+	const results = [];
+	let index = 0;
+
+	const runners = Array.from({ length: Math.min(limit, items.length) }).map(async () => {
+		while (index < items.length) {
+			const current = items[index++];
+			results.push(await worker(current));
+		}
+	});
+
+	await Promise.all(runners);
+	return results;
+}
+
+export async function POST({ locals, request }) {
+	if (env.NODE_ENV !== 'development' && !locals?.isAdmin) {
 		return json({ ok: false, error: 'Not allowed in production' }, { status: 403 });
 	}
 
 	try {
+		let fast = false;
+		try {
+			const body = await request.json();
+			fast = !!body?.fast;
+		} catch (e) {
+			// ignore empty body
+		}
 		const filePath = path.join(process.cwd(), 'docs', 'queue.txt');
 		if (!fs.existsSync(filePath)) {
 			return json({ ok: false, error: 'docs/queue.txt not found' }, { status: 404 });
@@ -75,16 +110,15 @@ export async function POST() {
 		const lines = fileContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
 		const added = [];
+		const tasks = lines
+			.map((line) => extractVideoId(line))
+			.filter((videoId) => !!videoId);
 
-		for (const line of lines) {
-			const videoId = extractVideoId(line);
-			if (!videoId) continue;
+		await runWithConcurrency(tasks, fast ? 50 : 20, async (videoId) => {
+			const metadata = fast
+				? { title: `Video ${videoId}`, thumbnail: null, channelTitle: 'Unknown', duration: null }
+				: await fetchMetadata(videoId);
 
-			// Check if already processed in this batch to avoid dupes (optional, but good)
-			// But addToQueue handles existing song logic.
-
-			const metadata = await fetchMetadata(videoId);
-			
 			// 90% Free, 10% Premium
 			const isPremium = Math.random() > 0.9;
 			let tier = 'free';
@@ -104,9 +138,9 @@ export async function POST() {
 				metadata
 			};
 
-			const result = await addToQueue(songData, tier, 'seed-script');
+			await addToQueue(songData, tier, 'seed-script');
 			added.push({ videoId, title: metadata.title, tier });
-		}
+		});
 
 		return json({ ok: true, message: `Seeded ${added.length} songs`, added });
 

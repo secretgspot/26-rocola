@@ -6,6 +6,7 @@ declare global {
 		interface Locals {
 			clientIp: string;
 			sessionId: string;
+			isAdmin: boolean;
 		}
 		// interface PageData {}
 		// interface PageState {}
