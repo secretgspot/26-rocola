@@ -18,7 +18,7 @@
 	// Get the "official" server-side elapsed time
 	function getServerElapsed() {
 		if (playerState.currentSong?.startedAt) {
-			const now = Date.now() / 1000;
+			const now = Date.now() / 1000 + (playerState.clockOffsetSec || 0);
 			const elapsed = now - playerState.currentSong.startedAt;
 			return elapsed > 0 ? elapsed : 0;
 		}
@@ -97,6 +97,8 @@
 		// This ensures bar keeps moving even if paused.
 		let frame;
 		let lastUpdate = 0;
+		let lastSync = 0;
+		let lastStateCheck = 0;
 
 		const update = (time) => {
 			// Update at ~5fps is enough for the progress bar but we can go faster for smoothness
@@ -114,9 +116,9 @@
 						duration = playerState.currentSong.duration;
 					}
 
-					if (duration > 0) {
-						const elapsed = getServerElapsed();
-						playbackProgress = (elapsed / duration) * 100;
+						if (duration > 0) {
+							const elapsed = getServerElapsed();
+							playbackProgress = (elapsed / duration) * 100;
 
 						// Clamp to 100%
 						if (playbackProgress > 100) playbackProgress = 100;
@@ -157,6 +159,33 @@
 							onnext?.();
 						}
 					}
+				}
+			}
+			// Periodic drift correction (target < 250ms)
+			if (time - lastSync > 800 && player && playerState.currentSong) {
+				lastSync = time;
+				try {
+					const current = player.getCurrentTime?.();
+					const correct = getServerElapsed();
+					if (typeof current === 'number' && Math.abs(current - correct) > 0.2) {
+						player.seek(correct);
+					}
+				} catch {
+					// ignore
+				}
+			}
+			// Ensure playback follows server even if user paused locally
+			if (time - lastStateCheck > 500 && player && playerState.currentSong) {
+				lastStateCheck = time;
+				try {
+					const state = player.getPlayerState?.();
+					if (state === 2) {
+						const correct = getServerElapsed();
+						player.seek(correct);
+						player.play();
+					}
+				} catch {
+					// ignore
 				}
 			}
 			frame = requestAnimationFrame(update);

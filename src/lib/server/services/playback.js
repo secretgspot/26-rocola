@@ -45,7 +45,8 @@ export async function setPlaybackState(state) {
 			queueId: state.currentQueueId,
 			songId: state.songId,
 			startedAt: state.startedAt,
-			song: state.song ?? null
+			song: state.song ?? null,
+			serverNowMs: Date.now()
 		});
 	}
 }

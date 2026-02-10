@@ -39,7 +39,8 @@ export const playerState = $state({
 	previousSong: null,
 	toasts: [],
 	currentTurn: 0,
-	clientCount: 1
+	clientCount: 1,
+	clockOffsetSec: 0
 });
 
 /**
@@ -107,6 +108,9 @@ export async function refreshQueue() {
 		let current = null;
 		if (cRes.ok) {
 			const data = await cRes.json();
+			if (data.serverNowMs) {
+				playerState.clockOffsetSec = data.serverNowMs / 1000 - Date.now() / 1000;
+			}
 			if (data.ok && data.current) {
 				current = normalizeQueueItem(data.current);
 				if (current) {
@@ -198,6 +202,9 @@ export async function initRealtime() {
 		
 		ws.on('song_playing', (payload) => {
 			console.debug('[RT] song_playing received', payload);
+			if (payload?.serverNowMs) {
+				playerState.clockOffsetSec = payload.serverNowMs / 1000 - Date.now() / 1000;
+			}
 			const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
 			if (currentId !== payload.queueId) {
 				playerState.previousSong = playerState.currentSong;
@@ -238,6 +245,9 @@ export async function initRealtime() {
 				const res = await fetch('/api/queue/current');
 				if (!res.ok) return;
 				const data = await res.json();
+				if (data.serverNowMs) {
+					playerState.clockOffsetSec = data.serverNowMs / 1000 - Date.now() / 1000;
+				}
 				if (data.ok && data.current) {
 					const current = normalizeQueueItem(data.current);
 					const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;

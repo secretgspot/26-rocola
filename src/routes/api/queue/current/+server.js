@@ -26,13 +26,13 @@ export async function GET() {
 					songId: rows[0].song.id,
 					startedAt: playback.startedAt
 				};
-				return json({ ok: true, current });
+				return json({ ok: true, current, serverNowMs: Date.now() });
 			}
 		}
 
 		const { queue: rows } = await getQueue();
 		if (!rows || rows.length === 0) {
-			return json({ ok: true, current: null });
+			return json({ ok: true, current: null, serverNowMs: Date.now() });
 		}
 
 		const top = rows[0];
@@ -58,7 +58,7 @@ export async function GET() {
 			startedAt: playback.startedAt
 		};
 		
-		return json({ ok: true, current });
+		return json({ ok: true, current, serverNowMs: Date.now() });
 	} catch (err) {
 		console.error(err);
 		return json({ ok: false, error: 'DB error', details: err?.message || String(err) }, { status: 500 });
