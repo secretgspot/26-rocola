@@ -21,6 +21,7 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--size-2);
+		padding: var(--size-2) var(--size-3);
 	}
 	.empty-queue {
 		text-align: center;
@@ -29,5 +30,7 @@
 		font-family: var(--font-mono);
 		font-size: var(--font-size-1);
 		opacity: 0.7;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 	}
 </style>

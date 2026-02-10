@@ -221,10 +221,5 @@
 		border-color: var(--text-main);
 	}
 
-	.frame-accents { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: var(--layer-1); }
-	.frame-accents .accent { position: absolute; width: var(--size-3); height: var(--size-3); border: var(--border-size-1) solid var(--text-muted); opacity: 0.5; }
-	.tl { top: var(--size-3); left: var(--size-3); border-right: 0; border-bottom: 0; }
-	.tr { top: var(--size-3); right: var(--size-3); border-left: 0; border-bottom: 0; }
-	.bl { bottom: var(--size-3); left: var(--size-3); border-right: 0; border-top: 0; }
-	.br { bottom: var(--size-3); right: var(--size-3); border-left: 0; border-top: 0; }
+	.frame-accents { display: none; }
 </style>

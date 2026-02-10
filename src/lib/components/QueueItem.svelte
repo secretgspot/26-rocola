@@ -67,15 +67,14 @@
 		align-items: center;
 		gap: var(--size-3);
 		padding: var(--size-2) var(--size-3);
-		background: var(--bg-panel);
-		border-bottom: var(--border-size-1) solid var(--border-dim);
-		transition: background var(--transition-duration-1) ease;
+		background: transparent;
+		border: 0;
+		transition: background var(--transition-duration-1) ease, color var(--transition-duration-1) ease;
 		position: relative;
 	}
 
 	.item:hover {
-		background: var(--text-main);
-		color: var(--bg-dark);
+		background: rgba(255, 255, 255, 0.04);
 	}
 
 	.item:hover .artist,
@@ -85,11 +84,11 @@
 	.item:hover .plays-badge .label,
 	.item:hover .plays-badge .count,
 	.item:hover .cooldown-tag {
-		color: var(--bg-dark);
+		color: inherit;
 	}
 
 	.item:hover .thumb {
-		border-color: var(--bg-dark);
+		border-color: var(--border-main);
 	}
 
 	.thumb-container {
@@ -104,7 +103,7 @@
 		background: var(--bg-dark);
 		position: relative;
 		overflow: hidden;
-		border: var(--border-size-1) solid var(--border-main);
+		border: 0;
 	}
 	.thumb img {
 		width: 100%;
@@ -134,16 +133,16 @@
 		font-size: var(--font-size-00);
 		font-weight: var(--font-weight-9);
 		padding: 1px var(--size-1);
-		background: var(--text-main);
-		color: var(--bg-dark);
-		border: var(--border-size-1) solid var(--bg-dark);
+		background: transparent;
+		color: var(--text-dim);
+		border: 0;
 		z-index: var(--layer-1);
+		letter-spacing: 0.08em;
 	}
-	.item:hover .tier-tag {
-		background: var(--bg-dark);
-		color: var(--text-main);
-		border-color: var(--text-main);
-	}
+	.item.free .tier-tag { color: var(--text-muted); }
+	.item.silver .tier-tag { color: var(--tier-silver); }
+	.item.gold .tier-tag { color: var(--tier-gold); }
+	.item.platinum .tier-tag { color: var(--tier-platinum); }
 
 	.meta {
 		flex: 1;
@@ -162,6 +161,7 @@
 		color: var(--text-dim);
 		text-transform: uppercase;
 		font-weight: var(--font-weight-4);
+		letter-spacing: 0.12em;
 	}
 	.track {
 		font-size: var(--font-size-1);
@@ -170,14 +170,16 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		text-transform: uppercase;
 	}
 
 	.cooldown-tag {
 		font-size: var(--font-size-00);
 		font-weight: var(--font-weight-8);
 		color: var(--text-muted);
-		border: var(--border-size-1) solid var(--border-main);
+		border: 0;
 		padding: 0 var(--size-1);
+		letter-spacing: 0.08em;
 	}
 
 	.item.cooldown {
@@ -207,11 +209,11 @@
 	.entry-id {
 		font-size: var(--font-size-00);
 		color: var(--text-muted);
+		letter-spacing: 0.12em;
 	}
 
 	/* Tier specific accents */
 	.item.platinum .track {
-		text-decoration: underline;
 		color: var(--tier-platinum);
 	}
 	.item.gold .track {

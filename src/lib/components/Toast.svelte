@@ -11,8 +11,8 @@
 
 <style>
 	.toast {
-		background: var(--text-main);
-		color: var(--bg-dark);
+		background: var(--bg-panel);
+		color: var(--text-main);
 		padding: var(--size-2) var(--size-3);
 		font-family: var(--font-mono);
 		font-size: var(--font-size-1);
@@ -20,13 +20,13 @@
 		animation: var(--animation-slide-in-right);
 		min-width: 250px;
 		pointer-events: auto;
-		border: var(--border-size-1) solid var(--bg-dark);
+		border: 0;
 	}
 
 	.toast.error {
-		background: #000;
-		color: #ff4444;
-		border: var(--border-size-1) solid #ff4444;
+		background: var(--bg-dark);
+		color: #ffffff;
+		border: 1px solid #ffffff;
 	}
 
 	.toast-content {
@@ -38,5 +38,6 @@
 	.level-tag {
 		font-weight: var(--font-weight-8);
 		font-size: var(--font-size-0);
+		letter-spacing: 0.1em;
 	}
 </style>

@@ -277,17 +277,21 @@
 		width: 100vw;
 		background: var(--bg-dark);
 		overflow: hidden;
+		position: relative;
 	}
 
 	.top-bar {
-		height: 60px;
+		height: 52px;
 		flex-shrink: 0;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 0 var(--size-5);
-		background: var(--bg-dark);
+		padding: 0 var(--size-4);
+		background: var(--bg-panel);
 		z-index: var(--layer-3);
+		letter-spacing: 0.08em;
+		border-bottom: 0;
+		text-transform: uppercase;
 	}
 	.logo {
 		display: flex;
@@ -295,8 +299,10 @@
 		gap: var(--size-3);
 	}
 	.logo-text {
-		font-size: var(--font-size-3);
-		font-weight: var(--font-weight-9);
+		font-size: var(--font-size-2);
+		font-weight: var(--font-weight-8);
+		text-transform: uppercase;
+		letter-spacing: 0.2em;
 	}
 	.header-meta {
 		display: flex;
@@ -311,12 +317,14 @@
 		gap: var(--size-2);
 		color: var(--text-dim);
 		white-space: nowrap;
+		border-left: 0;
+		padding-left: 0;
 	}
 	.live-dot {
 		width: var(--size-2);
 		height: var(--size-2);
 		background: var(--text-main);
-		animation: var(--animation-pulse);
+		box-shadow: 0 0 8px var(--hud-glow);
 	}
 	.btn-skip {
 		font-size: var(--font-size-2);
@@ -328,8 +336,8 @@
 	}
 	.btn-skip .icon {
 		display: inline-flex;
-		width: 22px;
-		height: 22px;
+		width: 20px;
+		height: 20px;
 		color: var(--text-main);
 	}
 	.btn-skip svg {
@@ -342,14 +350,17 @@
 		flex: 1;
 		display: flex;
 		min-height: 0;
+		position: relative;
+		z-index: 1;
 	}
 
 	.player-zone {
 		flex: 1;
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-dark);
+		background: var(--bg-panel);
 		min-width: 0;
+		border-right: 0;
 	}
 	.video-container {
 		flex: 1;
@@ -357,15 +368,19 @@
 		position: relative;
 		min-height: 0;
 	}
+	.video-container::after {
+		content: none;
+	}
 
 	.metadata-tray {
-		padding: var(--size-4);
+		padding: var(--size-3) var(--size-4);
 		flex-shrink: 0;
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
-		background: var(--bg-dark);
+		background: var(--bg-panel);
 		gap: var(--size-5);
+		border-top: 0;
 	}
 	.meta-main {
 		flex: 1;
@@ -376,6 +391,8 @@
 		font-weight: var(--font-weight-8);
 		display: block;
 		margin-bottom: var(--size-1);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
 	}
 	.meta-main .title {
 		font-size: var(--font-size-4);
@@ -403,6 +420,8 @@
 		display: flex;
 		gap: var(--size-3);
 		flex-shrink: 0;
+		border-left: 0;
+		padding-left: 0;
 	}
 	.stat {
 		display: flex;
@@ -424,10 +443,15 @@
 		background: var(--border-dim);
 		width: 100%;
 		flex-shrink: 0;
+		position: relative;
+		overflow: hidden;
 	}
 	.progress-bar .fill {
 		height: 100%;
 		background: var(--text-main);
+	}
+	.progress-bar::after {
+		content: none;
 	}
 
 	.empty-state {
@@ -459,21 +483,24 @@
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-dark);
+		background: var(--bg-panel);
 		min-width: 0;
 	}
 	.queue-header {
-		padding: var(--size-4);
+		padding: var(--size-3) var(--size-4);
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		background: var(--bg-dark);
+		background: var(--bg-panel);
 		flex-shrink: 0;
+		border-bottom: 0;
 	}
 	.queue-header h3 {
 		font-size: var(--font-size-1);
 		font-weight: var(--font-weight-9);
 		margin: 0;
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
 	}
 	.queue-header .count {
 		font-weight: var(--font-weight-9);
@@ -486,7 +513,7 @@
 
 	.toasts-layer {
 		position: fixed;
-		top: 0;
+		top: var(--size-2);
 		right: 0;
 		z-index: var(--layer-important);
 		padding: var(--size-3);
