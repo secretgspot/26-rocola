@@ -41,6 +41,19 @@ export function connectRealtime() {
 		});
 	});
 
+	const connectionHandler = (state) => {
+		const fn = handlers.get('connection_state');
+		if (fn) fn(state);
+	};
+
+	client.connection.on('connecting', () => connectionHandler('connecting'));
+	client.connection.on('connected', () => connectionHandler('connected'));
+	client.connection.on('disconnected', () => connectionHandler('disconnected'));
+	client.connection.on('suspended', () => connectionHandler('suspended'));
+	client.connection.on('failed', () => connectionHandler('failed'));
+	client.connection.on('closing', () => connectionHandler('closing'));
+	client.connection.on('closed', () => connectionHandler('closed'));
+
 	client.connection.on('failed', (stateChange) => {
 		console.warn('[Realtime] connection failed', stateChange.reason);
 	});

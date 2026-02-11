@@ -40,7 +40,8 @@ export const playerState = $state({
 	toasts: [],
 	currentTurn: 0,
 	clientCount: 1,
-	clockOffsetSec: 0
+	clockOffsetSec: 0,
+	connectionState: 'connecting'
 });
 
 /**
@@ -177,6 +178,12 @@ export async function initRealtime() {
 		ws.on('presence_count', (count) => {
 			if (typeof count === 'number') {
 				playerState.clientCount = count;
+			}
+		});
+
+		ws.on('connection_state', (state) => {
+			if (typeof state === 'string') {
+				playerState.connectionState = state;
 			}
 		});
 		
