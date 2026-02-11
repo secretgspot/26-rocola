@@ -440,10 +440,6 @@
 	.theme-toggle:hover { opacity: 1; }
 	.theme-toggle .icon { width: 18px; height: 18px; color: var(--text-main); display: inline-flex; }
 	.theme-toggle svg { width: 100%; height: 100%; }
-	.theme-toggle .icon-stroke {
-		stroke: currentColor;
-		stroke-width: var(--icon-stroke-width);
-	}
 	.theme-toggle .icon-fill {
 		fill: currentColor;
 	}

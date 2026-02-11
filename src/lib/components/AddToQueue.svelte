@@ -108,7 +108,18 @@
 </button>
 
 {#if isOpen}
-	<div class="modal-backdrop" onclick={(e) => e.target === e.currentTarget && close()} transition:fade={{duration: 100}}>
+	<div
+		class="modal-backdrop"
+		role="button"
+		tabindex="0"
+		aria-label="Close dialog"
+		onclick={(e) => e.target === e.currentTarget && close()}
+		onkeydown={(e) => {
+			if (e.target !== e.currentTarget) return;
+			if (e.key === 'Enter' || e.key === ' ') close();
+		}}
+		transition:fade={{duration: 100}}
+	>
 		<div class="modal-window" transition:fly={{y: 10, duration: 200}}>
 			<header>
 				<div class="header-main">
