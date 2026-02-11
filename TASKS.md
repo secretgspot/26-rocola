@@ -66,6 +66,9 @@
 - [x] Improve admin unlock (konami code)
 - [x] Add periodic current-song sync to reduce client drift
 - [x] Add short-TTL queue cache + invalidation
+- [x] Normalize `/api/queue/next` empty-queue response (ok: true, next: null)
+- [x] Live-dot reflects realtime connection state (good/bad/pending)
+- [x] Move theme toggle into header controls + persist in localStorage
 
 ## Docs Alignment (2026-02-10)
 - [x] Update PLAN to current architecture + UI theme
