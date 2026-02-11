@@ -18,8 +18,13 @@ export function invalidateQueueCache() {
  * @returns {Promise<number>}
  */
 export async function getGlobalTurn(dbClient = db) {
-	const res = await dbClient.select({ count: sql`count(*)` }).from(queue_plays_count_helper());
-	return Number(res[0]?.count || 0);
+	try {
+		const res = await dbClient.select({ count: sql`count(*)` }).from(queue_plays_count_helper());
+		return Number(res[0]?.count || 0);
+	} catch (err) {
+		console.warn('[Queue] getGlobalTurn failed, defaulting to 0', err?.message || err);
+		return 0;
+	}
 }
 
 // Helper for count query

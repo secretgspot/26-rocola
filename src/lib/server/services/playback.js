@@ -9,11 +9,17 @@ const PLAYBACK_ROW_ID = 'global';
  * @returns {Promise<{currentQueueId: string | null, startedAt: number | null}>}
  */
 export async function getPlaybackState() {
-	const rows = await db
-		.select()
-		.from(playbackState)
-		.where(eq(playbackState.id, PLAYBACK_ROW_ID))
-		.limit(1);
+	let rows = [];
+	try {
+		rows = await db
+			.select()
+			.from(playbackState)
+			.where(eq(playbackState.id, PLAYBACK_ROW_ID))
+			.limit(1);
+	} catch (err) {
+		console.warn('[Playback] getPlaybackState failed, defaulting to null', err?.message || err);
+		return { currentQueueId: null, startedAt: null };
+	}
 
 	if (!rows[0]) {
 		return { currentQueueId: null, startedAt: null };
@@ -35,10 +41,15 @@ export async function setPlaybackState(state) {
 		startedAt: state.startedAt ?? null
 	};
 
-	await db
-		.insert(playbackState)
-		.values(payload)
-		.onConflictDoUpdate({ target: playbackState.id, set: payload });
+	try {
+		await db
+			.insert(playbackState)
+			.values(payload)
+			.onConflictDoUpdate({ target: playbackState.id, set: payload });
+	} catch (err) {
+		console.warn('[Playback] setPlaybackState failed, skipping persist', err?.message || err);
+		return;
+	}
 
 	if (state.currentQueueId && state.startedAt) {
 		await broadcast('song_playing', {

@@ -18,9 +18,13 @@ export async function POST({ request }) {
 		const result = await advanceQueue(fromQueueId);
 		
 		if (!result.ok) {
-			return json(result, { status: result.error === 'No available songs' ? 404 : 400 });
+			// Treat empty queue as a successful "no next" response
+			if (result.error === 'No available songs') {
+				return json({ ok: true, next: null, message: 'Queue exhausted' });
+			}
+			return json(result, { status: 400 });
 		}
-		
+
 		return json(result);
 
 	} catch (err) {

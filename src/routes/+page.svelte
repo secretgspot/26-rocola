@@ -114,13 +114,23 @@
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ fromQueueId: currentQueueId }),
 		});
-		const data = await res.json();
-		if (data.ok && data.next) {
+		let data = null;
+		try {
+			data = await res.json();
+		} catch {
+			// ignore parse errors for empty responses
+		}
+		if (data?.ok && data?.next) {
 			playerState.currentSong = data.next;
 			playbackProgress = 0;
 			refreshQueue();
 			addToast({ message: 'ADVANCED', level: 'success' });
-		} else if (!data.ok) {
+		} else if (data?.ok && !data?.next) {
+			playerState.currentSong = null;
+			playbackProgress = 0;
+			refreshQueue();
+			addToast({ message: 'QUEUE EMPTY', level: 'info' });
+		} else if (data && !data.ok) {
 			addToast({ message: `ADVANCE FAILED: ${data.error || 'unknown'}`, level: 'error' });
 		}
 		nextPending = false;
@@ -304,17 +314,6 @@
 			<div class="status">
 				<div class="live-dot" aria-hidden="true"></div>
 				<span class="count">[{playerState.clientCount.toString().padStart(2, '0')}]</span>
-				<span class="icon" aria-hidden="true">
-					<svg viewBox="0 0 24 24" role="img" focusable="false">
-						<path
-							d="M4 12c2.5-3 5.2-4.5 8-4.5s5.5 1.5 8 4.5c-2.5 3-5.2 4.5-8 4.5S6.5 15 4 12z"
-							class="icon-stroke"
-							stroke-linecap="round"
-							stroke-linejoin="round"
-						/>
-						<circle cx="12" cy="12" r="2.5" class="icon-stroke" />
-					</svg>
-				</span>
 			</div>
 		</div>
 	</header>
