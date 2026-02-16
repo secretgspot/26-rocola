@@ -418,6 +418,7 @@
 		position: relative;
 		container-type: inline-size;
 		container-name: viewport;
+		--mobile-footer-h: 124px;
 	}
 
 	.top-bar {
@@ -728,21 +729,39 @@
 
 	@layer page-responsive {
 	@container viewport (max-width: 1023px) {
-		.video-layer { height: 60dvh; }
+		.video-layer {
+			inset: 0;
+			height: 100dvh;
+		}
 		.queue-zone {
 			width: 100%;
-			height: auto;
-			top: 60dvh;
-			bottom: calc(128px + env(safe-area-inset-bottom, 0px));
+			left: 0;
+			right: 0;
+			top: auto;
+			bottom: calc(var(--mobile-footer-h) + env(safe-area-inset-bottom, 0px));
 			right: 0;
 			transform: none;
+			background: linear-gradient(0deg, color-mix(in srgb, var(--bg-dark) 62%, transparent), transparent 45%);
 		}
+		.queue-content {
+			max-height: min(38dvh, calc(100dvh - var(--mobile-footer-h) - 56px));
+		}
+		.fab-center,
 		.fab-near-queue {
 			top: auto;
 			right: var(--size-3);
-			bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+			bottom: calc(var(--mobile-footer-h) + var(--size-2) + env(safe-area-inset-bottom, 0px));
+			left: auto;
+			transform: none;
 			margin-top: 0;
 			margin-right: 0;
+			margin-left: 0;
+		}
+		.toasts-layer {
+			top: 70px;
+			left: var(--size-1);
+			transform: none;
+			padding: var(--size-1);
 		}
 	}
 

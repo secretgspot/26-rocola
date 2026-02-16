@@ -57,7 +57,7 @@
 			pointer-events: none;
 			container-type: inline-size;
 			container-name: overlay;
-			z-index: 3;
+			z-index: 10;
 			background: linear-gradient(
 				0deg,
 				color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
@@ -141,34 +141,57 @@
 
 		@container overlay (max-width: 480px) {
 			.metadata-tray {
-				padding: var(--size-3);
-				flex-direction: column;
-				align-items: flex-start;
-				gap: var(--size-2);
+				padding: var(--size-2) var(--size-2);
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto;
+				grid-template-rows: auto auto;
+				align-items: end;
+				column-gap: var(--size-2);
+				row-gap: 2px;
+				min-height: var(--mobile-footer-h, 124px);
 				bottom: env(safe-area-inset-bottom, 0px);
-				padding-bottom: calc(var(--size-3) + env(safe-area-inset-bottom, 0px));
+				padding-bottom: calc(var(--size-2) + env(safe-area-inset-bottom, 0px));
+			}
+			.meta-main {
+				width: 100%;
+				grid-column: 1;
+				grid-row: 1 / span 2;
+				align-self: center;
 			}
 			.meta-stats {
-				width: 100%;
-				justify-content: space-between;
+				width: auto;
+				grid-column: 2;
+				grid-row: 1 / span 2;
+				justify-content: flex-end;
+				gap: var(--size-1);
+				margin-top: 0;
 			}
 			.meta-main .label {
-				font-size: var(--font-size-00);
+				font-size: clamp(0.56rem, 2vw, 0.68rem);
+				margin-bottom: 1px;
 			}
 			.meta-main .title {
-				font-size: var(--font-size-fluid-1);
-				line-height: 1.15;
-				white-space: normal;
-				display: -webkit-box;
-				line-clamp: 2;
-				-webkit-line-clamp: 2;
-				-webkit-box-orient: vertical;
+				font-size: clamp(0.82rem, 3.4vw, 1rem);
+				line-height: 1.12;
+				color: var(--text-main);
+				white-space: nowrap;
+				display: block;
 				overflow: hidden;
-				text-overflow: unset;
-				margin-bottom: var(--size-1);
+				text-overflow: ellipsis;
+				margin-bottom: 2px;
 			}
 			.meta-footer {
-				font-size: var(--font-size-00);
+				font-size: clamp(0.62rem, 2.6vw, 0.76rem);
+				gap: var(--size-1);
+			}
+			.s-label,
+			.s-val { font-size: clamp(0.62rem, 2.6vw, 0.76rem); }
+		}
+
+		@container overlay (max-width: 390px) {
+			.vid-id,
+			.divider {
+				display: none;
 			}
 		}
 	}
