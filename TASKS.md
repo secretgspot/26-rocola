@@ -69,10 +69,31 @@
 - [x] Normalize `/api/queue/next` empty-queue response (ok: true, next: null)
 - [x] Live-dot reflects realtime connection state (good/bad/pending)
 - [x] Move theme toggle into header controls + persist in localStorage
+- [x] Enforce free-tier duplicate rule (same song once/day per user; paid tiers bypass)
+- [x] Add unit tests for queue duplicate-rule responses (409 on free duplicate, paid allowed)
 
 ## Docs Alignment (2026-02-10)
 - [x] Update PLAN to current architecture + UI theme
 - [x] Update PRD to current mechanics + fairness rules
 
 ## Future Phases
-- [ ] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)
+- [x] Phase 4: Polish & Security (Session management, IP tracking, Rate limiting)
+    - [x] Track session, IP, and user-agent in server locals
+    - [x] Add centralized server security module for admin checks + throttling
+    - [x] Add rate limiting to queue add, queue next, validate, checkout, realtime token
+    - [x] Add rate limiting to admin unlock and debug seed/clear endpoints
+    - [x] Keep admin controls gated by admin cookie in production, allow dev override locally
+
+## Current UI/QA Subtasks (2026-02-16)
+- [x] Remove panel backgrounds and force black body background
+- [x] Remove `SEQUENCE_QUEUE` label and replace with translucent top queue overlay
+- [x] Add premium tier "entice" effects in `INJECT_SEQUENCE`
+- [x] Silver pulse glow (subtle), Gold pulse glow (brighter), Ultra/Void pulse glow (strongest serene cyan)
+- [x] Predict user usage conditions and encode as tests
+- [x] Verify with `npm run check` and unit test suite
+
+## Usage Conditions Covered by Tests
+- [x] User adds free song first time today -> accepted
+- [x] User adds same free song again today -> rejected with `409`
+- [x] User adds same song with paid tier -> accepted
+- [x] User rapidly triggers queue-next endpoint -> rate limit returns `429`

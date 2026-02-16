@@ -5,6 +5,7 @@ export async function handle({ event, resolve }) {
 	// IP Tracking
 	const clientIp = event.getClientAddress() || '127.0.0.1';
 	event.locals.clientIp = clientIp;
+	event.locals.userAgent = event.request.headers.get('user-agent') || 'unknown';
 
 	// Session management (Simple anonymous sessions)
 	let sessionId = event.cookies.get('session_id');

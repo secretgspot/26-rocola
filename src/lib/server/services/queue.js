@@ -1,5 +1,5 @@
 import { db } from '$lib/server/db/index.js';
-import { queue, songs, queuePlays } from '$lib/server/db/schema.js';
+import { queue, songs, queuePlays, freeSubmissions } from '$lib/server/db/schema.js';
 import { broadcast } from '$lib/server/realtime.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { eq, sql, gt, and } from 'drizzle-orm';
@@ -16,6 +16,9 @@ export function invalidateQueueCache() {
 /**
  * Get total number of songs played to use as a global turn counter.
  * @returns {Promise<number>}
+ */
+/**
+ * @param {any} [dbClient]
  */
 export async function getGlobalTurn(dbClient = db) {
 	try {
@@ -206,9 +209,12 @@ function parseDuration(duration) {
 export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	const { videoId, title, thumbnail, channelTitle, metadata } = songData;
 	const duration = parseDuration(songData.duration || metadata?.duration);
+	const normalizedTier = String(tier || 'free').toLowerCase();
+	const todayUtc = new Date().toISOString().slice(0, 10);
 
 	// Targeted lookup for existing song
 	const existingSongs = await db.select().from(songs).where(eq(songs.videoId, videoId)).limit(1);
+	/** @type {any} */
 	let song = existingSongs[0];
 
 	if (song) {
@@ -245,11 +251,34 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	}
 
 	// Add to queue
+	if (normalizedTier === 'free') {
+		const priorFreeSubmissions = await db
+			.select({ id: freeSubmissions.id })
+			.from(freeSubmissions)
+			.where(
+				and(
+					eq(freeSubmissions.ipAddress, ipAddress),
+					eq(freeSubmissions.songId, song.id),
+					eq(freeSubmissions.submissionDate, todayUtc)
+				)
+			)
+			.limit(1);
+
+		if (priorFreeSubmissions.length > 0) {
+			const err = new Error(
+				'Free tier allows the same song once per day. Use a paid tier to repeat it today.'
+			);
+			// @ts-ignore - custom application error code
+			err.code = 'FREE_TIER_DAILY_DUPLICATE';
+			throw err;
+		}
+	}
+
 	const qId = crypto.randomUUID();
 	const baseRank = Date.now();
 	const createdAt = Math.floor(Date.now() / 1000);
 	
-	const tierConfig = getTierConfig(tier);
+	const tierConfig = getTierConfig(normalizedTier);
 	const playsRemainingToday = tierConfig.dailyPlays;
 	const currentTurn = await getGlobalTurn();
 	
@@ -260,7 +289,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	await db.insert(queue).values({
 		id: qId,
 		songId: song.id,
-		tier,
+		tier: normalizedTier,
 		baseRank,
 		rankBoost: 0,
 		playsRemainingToday,
@@ -272,9 +301,19 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 
 	// Broadcast updates
 	const { queue: snapshot } = await getQueue();
-	await broadcast('song_added', { id: qId, songId: song.id, tier, baseRank });
+	await broadcast('song_added', { id: qId, songId: song.id, tier: normalizedTier, baseRank });
 	await broadcast('queue_changed', { queue: snapshot, currentTurn });
 	invalidateQueueCache();
+
+	if (normalizedTier === 'free') {
+		await db.insert(freeSubmissions).values({
+			id: crypto.randomUUID(),
+			ipAddress,
+			songId: song.id,
+			submissionDate: todayUtc,
+			createdAt
+		});
+	}
 
 	if (snapshot.length === 1 && snapshot[0].id === qId) {
 		await setPlaybackState({
@@ -319,7 +358,7 @@ export async function advanceQueue(fromQueueId = null) {
 			}
 
 			const now = Math.floor(Date.now() / 1000);
-			const prevTurn = await getGlobalTurn(tx);
+			const prevTurn = await getGlobalTurn(/** @type {any} */ (tx));
 			const nextTurn = prevTurn + 1;
 
 			await tx.update(queue).set({ 

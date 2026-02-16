@@ -3,9 +3,14 @@ import { stripe } from '$lib/server/stripe.js';
 import { getTierConfig } from '$lib/config.js';
 import { db } from '$lib/server/db/index.js';
 import { orders } from '$lib/server/db/schema.js';
+import { checkRate } from '$lib/server/security.js';
 
-export async function POST({ request, url, getClientAddress }) {
+export async function POST(event) {
+	const limited = checkRate(event, 'checkout-create', 12, 10 * 60 * 1000, 'ip+session');
+	if (!limited.ok) return json(limited.body, { status: limited.status });
+
 	try {
+		const { request, url, getClientAddress } = event;
 		const { tier, metadata: songMetadata } = await request.json();
 		const config = getTierConfig(tier);
 
@@ -32,6 +37,7 @@ export async function POST({ request, url, getClientAddress }) {
 			mode: 'payment',
 			billing_address_collection: 'auto', 
 			return_url: `${url.origin}/api/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
+			redirect_on_completion: 'if_required',
 			metadata: {
 				tier: config.id,
 				videoId: songMetadata.videoId

@@ -30,7 +30,9 @@ import { connectRealtime } from '$lib/client/realtime.js';
  *   previousSong: Song | null,
  *   toasts: Toast[],
  *   currentTurn: number,
- *   clientCount: number
+ *   clientCount: number,
+ *   clockOffsetSec: number,
+ *   connectionState: string
  * }}
  */
 export const playerState = $state({

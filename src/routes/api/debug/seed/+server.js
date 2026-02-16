@@ -3,6 +3,7 @@ import { addToQueue, invalidateQueueCache } from '$lib/server/services/queue.js'
 import { env } from '$env/dynamic/private';
 import fs from 'node:fs';
 import path from 'node:path';
+import { checkRate, isAdminRequest } from '$lib/server/security.js';
 
 function extractVideoId(urlOrId) {
 	if (!urlOrId) return null;
@@ -88,12 +89,15 @@ async function runWithConcurrency(items, limit, worker) {
 	return results;
 }
 
-export async function POST({ locals, request }) {
-	if (env.NODE_ENV !== 'development' && !locals?.isAdmin) {
+export async function POST(event) {
+	if (!isAdminRequest(event)) {
 		return json({ ok: false, error: 'Not allowed in production' }, { status: 403 });
 	}
+	const limited = checkRate(event, 'debug-seed', 4, 60 * 1000, 'ip');
+	if (!limited.ok) return json(limited.body, { status: limited.status });
 
 	try {
+		const { request } = event;
 		let fast = false;
 		try {
 			const body = await request.json();

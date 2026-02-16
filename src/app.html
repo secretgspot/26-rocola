@@ -20,8 +20,8 @@
 		:root {
 			/* HUD MONOCHROME */
 			--bg-dark: #000000;
-			--bg-panel: #050505;
-			--bg-alt: #0c0c0c;
+			--bg-panel: transparent;
+			--bg-alt: transparent;
 			--border-dim: #1d1d1d;
 			--border-main: #4d4d4d;
 			--border-bright: #ffffff;
@@ -39,6 +39,8 @@
 			--status-good: #22c55e;
 			--status-bad: #ef4444;
 			--status-pending: #ffffff;
+			--queue-fade-void: #000000;
+			--queue-fade-glow: rgba(255, 255, 255, 0.14);
 
 			/* TIER COLORS */
 			--tier-platinum: #e6e8f2;
@@ -47,9 +49,9 @@
 		}
 
 		[data-theme="light"] {
-			--bg-dark: #f5f5f5;
-			--bg-panel: #ffffff;
-			--bg-alt: #eeeeee;
+			--bg-dark: #000000;
+			--bg-panel: transparent;
+			--bg-alt: transparent;
 			--border-dim: #dddddd;
 			--border-main: #bbbbbb;
 			--border-bright: #000000;
@@ -63,6 +65,8 @@
 			--status-good: #16a34a;
 			--status-bad: #dc2626;
 			--status-pending: #111111;
+			--queue-fade-void: #ffffff;
+			--queue-fade-glow: rgba(0, 0, 0, 0.14);
 			--tier-platinum: #9aa3b2;
 			--tier-gold: #b89000;
 			--tier-silver: #7a8190;
@@ -86,9 +90,7 @@
 			overflow: hidden;
 			-webkit-font-smoothing: none;
 			box-sizing: border-box;
-			background-image:
-				linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0) 50%);
-			background-size: 100% 100%;
+			background: #000000;
 		}
 
 		/* Apply to all elements */
@@ -97,7 +99,6 @@
 		*::after {
 			box-sizing: inherit;
 			border-radius: 0 !important;
-			box-shadow: none !important;
 			text-transform: inherit;
 		}
 
@@ -120,9 +121,21 @@
 			padding: var(--size-2) var(--size-3);
 			font-size: var(--font-size-0);
 			font-weight: var(--font-weight-7);
+			border-radius: 9px !important;
+			transition:
+				border-color var(--transition-duration-1) ease,
+				box-shadow var(--transition-duration-1) ease,
+				filter var(--transition-duration-1) ease;
 
 			&:hover {
 				border-color: var(--border-bright);
+				box-shadow: 0 0 10px color-mix(in srgb, var(--text-main) 38%, transparent);
+				filter: brightness(1.06);
+			}
+
+			&:active {
+				box-shadow: 0 0 14px color-mix(in srgb, var(--text-main) 48%, transparent);
+				filter: brightness(1.12);
 			}
 
 			&:disabled {

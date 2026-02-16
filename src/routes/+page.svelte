@@ -21,8 +21,8 @@
 	let clearPending = $state(false);
 	let theme = $state('dark');
 
-	const isAdmin = $derived(() => data?.isAdmin);
-	const connectionState = $derived(() => playerState.connectionState || 'connecting');
+	const isAdmin = $derived(Boolean(data?.isAdmin));
+	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const konami = [
 		'arrowup',
 		'arrowup',
@@ -377,7 +377,6 @@
 		{#if playerState.queue.length > 0}
 			<aside class="queue-zone min-w-0">
 				<div class="queue-header border-b">
-					<h3>SEQUENCE_QUEUE</h3>
 					<span class="count"
 						>[{playerState.queue.length.toString().padStart(2, '0')}]</span>
 				</div>
@@ -412,7 +411,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 var(--size-4);
-		background: var(--bg-panel);
+		background: transparent;
 		z-index: var(--layer-3);
 		letter-spacing: 0.08em;
 		border-bottom: 0;
@@ -498,6 +497,11 @@
 	.btn-skip:hover {
 		--icon-stroke-color: var(--border-bright);
 		opacity: 1;
+		filter: drop-shadow(0 0 7px color-mix(in srgb, var(--text-main) 52%, transparent));
+	}
+	.btn-skip:active {
+		opacity: 1;
+		filter: drop-shadow(0 0 10px color-mix(in srgb, var(--text-main) 65%, transparent));
 	}
 	.btn-skip .icon {
 		display: inline-flex;
@@ -530,7 +534,7 @@
 		flex: 1;
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-panel);
+		background: transparent;
 		min-width: 0;
 		border-right: 0;
 	}
@@ -550,7 +554,7 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
-		background: var(--bg-panel);
+		background: transparent;
 		gap: var(--size-5);
 		border-top: 0;
 	}
@@ -612,7 +616,7 @@
 
 	.progress-bar {
 		height: var(--size-2);
-		background: var(--border-dim);
+		background: transparent;
 		width: 100%;
 		flex-shrink: 0;
 		position: relative;
@@ -655,32 +659,69 @@
 		flex-shrink: 0;
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-panel);
+		background: transparent;
 		min-width: 0;
 	}
 	.queue-header {
-		padding: var(--size-3) var(--size-4);
+		padding: var(--size-2) var(--size-4);
 		display: flex;
-		justify-content: space-between;
+		justify-content: flex-start;
 		align-items: center;
-		background: var(--bg-panel);
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--queue-fade-void) 72%, transparent) 0%,
+			color-mix(in srgb, var(--queue-fade-void) 42%, transparent) 45%,
+			transparent 100%
+		);
+		backdrop-filter: blur(4px);
 		flex-shrink: 0;
 		border-bottom: 0;
-	}
-	.queue-header h3 {
-		font-size: var(--font-size-1);
-		font-weight: var(--font-weight-9);
-		margin: 0;
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
+		position: sticky;
+		top: 0;
+		z-index: 2;
 	}
 	.queue-header .count {
 		font-weight: var(--font-weight-9);
+		font-size: var(--font-size-0);
+		letter-spacing: 0.12em;
+		color: color-mix(in srgb, var(--text-main) 80%, transparent);
 	}
 	.queue-content {
 		flex: 1;
 		overflow-y: auto;
 		overflow-x: hidden;
+		position: relative;
+	}
+	.queue-content::before,
+	.queue-content::after {
+		content: '';
+		position: sticky;
+		left: 0;
+		display: block;
+		width: 100%;
+		height: 56px;
+		pointer-events: none;
+		z-index: 3;
+	}
+	.queue-content::before {
+		top: 0;
+		margin-bottom: -56px;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--queue-fade-void) 90%, transparent) 0%,
+			color-mix(in srgb, var(--queue-fade-void) 60%, transparent) 45%,
+			transparent 100%
+		);
+	}
+	.queue-content::after {
+		bottom: 0;
+		margin-top: -56px;
+		background: linear-gradient(
+			0deg,
+			color-mix(in srgb, var(--queue-fade-void) 92%, transparent) 0%,
+			color-mix(in srgb, var(--queue-fade-void) 60%, transparent) 45%,
+			transparent 100%
+		);
 	}
 
 	.toasts-layer {

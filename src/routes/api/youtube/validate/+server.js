@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import { env } from '$env/dynamic/private';
+import { checkRate } from '$lib/server/security.js';
 
 function extractVideoId(urlOrId) {
 	if (!urlOrId) return null;
@@ -11,7 +12,11 @@ function extractVideoId(urlOrId) {
 	return m ? m[1] : null;
 }
 
-export async function POST({ request }) {
+export async function POST(event) {
+	const limited = checkRate(event, 'youtube-validate', 60, 60 * 1000, 'ip+session');
+	if (!limited.ok) return json(limited.body, { status: limited.status });
+
+	const { request } = event;
 	const { url, videoId } = await request.json();
 	const id = extractVideoId(videoId || url);
 	if (!id) return json({ ok: false, error: 'Invalid YouTube id or url' }, { status: 400 });

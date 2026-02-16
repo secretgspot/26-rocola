@@ -32,7 +32,7 @@ export async function getPlaybackState() {
 }
 
 /**
- * @param {{currentQueueId: string | null, startedAt: number | null, songId?: string}} state
+ * @param {{currentQueueId: string | null, startedAt: number | null, songId?: string, song?: any}} state
  */
 export async function setPlaybackState(state) {
 	const payload = {

@@ -1,7 +1,7 @@
 <script>
 	import { addToast } from '$lib/client/stores.svelte.js';
 	import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
-	import { fade, fly } from 'svelte/transition';
+	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
 
 	let { onqueued } = $props();
@@ -19,7 +19,11 @@
 	let activeTierConfig = $derived(getTierConfig(selectedTier));
 
 	function open() { isOpen = true; }
-	function close() { isOpen = false; reset(); }
+	function close() {
+		isOpen = false;
+		// Let modal outro complete before resetting fields.
+		setTimeout(reset, 220);
+	}
 	function reset() {
 		url = '';
 		metadata = null;
@@ -120,13 +124,27 @@
 		}}
 		transition:fade={{duration: 100}}
 	>
-		<div class="modal-window" transition:fly={{y: 10, duration: 200}}>
+		<div class="modal-window" transition:scale={{start: 0.14, duration: 220, opacity: 0.15}}>
 			<header>
-				<div class="header-main">
-					<div class="icon-box">IN</div>
-					<h3>INJECT_SEQUENCE</h3>
-				</div>
-				<button class="close-btn" onclick={close}>[CLOSE]</button>
+				<div class="header-main" aria-hidden="true"></div>
+				<button class="close-btn" onclick={close} aria-label="Close">
+					<span class="close-icon" aria-hidden="true">
+						<svg viewBox="0 0 24 24" role="img" focusable="false">
+							<path
+								fill-rule="evenodd"
+								clip-rule="evenodd"
+								d="M6.21991 6.21479C6.51281 5.92189 6.98768 5.92189 7.28057 6.21479L17.7854 16.7196C18.0783 17.0125 18.0783 17.4874 17.7854 17.7803C17.4925 18.0732 17.0177 18.0732 16.7248 17.7803L6.21991 7.27545C5.92702 6.98255 5.92702 6.50768 6.21991 6.21479Z"
+								class="close-icon-soft"
+							/>
+							<path
+								fill-rule="evenodd"
+								clip-rule="evenodd"
+								d="M17.7853 6.21479C18.0782 6.50769 18.0782 6.98256 17.7853 7.27545L7.28038 17.7802C6.98749 18.0731 6.51261 18.0731 6.21972 17.7802C5.92683 17.4873 5.92683 17.0124 6.21973 16.7195L16.7247 6.21478C17.0176 5.92189 17.4924 5.9219 17.7853 6.21479Z"
+								class="close-icon-main"
+							/>
+						</svg>
+					</span>
+				</button>
 			</header>
 
 			<div class="modal-body">
@@ -170,7 +188,6 @@
 							<button 
 								class="tier-card {t.id}" 
 								class:active={selectedTier === t.id}
-								class:dimmed={selectedTier && selectedTier !== t.id}
 								onclick={() => submit(t.id)}
 								disabled={isProcessingPayment && selectedTier === t.id}
 							>
@@ -244,20 +261,21 @@
 		background: rgba(0, 0, 0, 0.92);
 		z-index: var(--layer-important);
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: var(--size-3);
+		align-items: flex-end;
+		justify-content: flex-end;
+		padding: var(--size-5);
 	}
 
 	.modal-window {
 		width: 100%;
 		max-width: 480px;
-		background: var(--bg-panel);
+		background: transparent;
 		border: 0;
 		display: flex;
 		flex-direction: column;
 		max-height: 90vh;
 		box-shadow: none;
+		transform-origin: right bottom;
 	}
 
 	header {
@@ -266,28 +284,49 @@
 		align-items: center;
 		padding: var(--size-3);
 		border-bottom: 0;
-		background: var(--bg-alt);
+		background: transparent;
 		flex-shrink: 0;
 	}
-	.header-main { display: flex; align-items: center; gap: var(--size-3); }
-	.icon-box { border: 0; color: var(--text-main); font-weight: var(--font-weight-8); font-size: var(--font-size-00); padding: 1px var(--size-1); }
-	header h3 { font-size: var(--font-size-1); font-weight: var(--font-weight-8); margin: 0; }
-	.close-btn { background: none; border: none; color: var(--text-muted); font-size: var(--font-size-0); cursor: pointer; font-weight: var(--font-weight-7); }
-	.close-btn:hover { color: var(--text-main); }
+	.header-main { display: block; width: 1px; height: 1px; }
+	.close-btn {
+		background: transparent;
+		border: 0;
+		color: var(--text-muted);
+		cursor: pointer;
+		padding: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		border-radius: 9px !important;
+	}
+	.close-btn .close-icon { width: 36px; height: 36px; display: inline-flex; }
+	.close-btn .close-icon svg { width: 100%; height: 100%; }
+	.close-btn .close-icon-soft {
+		fill: #ff6b6b;
+		transition: fill var(--transition-duration-1) ease, filter var(--transition-duration-1) ease;
+	}
+	.close-btn .close-icon-main {
+		fill: #8b1f1f;
+		transition: fill var(--transition-duration-1) ease, filter var(--transition-duration-1) ease;
+	}
+	.close-btn:hover .close-icon-soft { fill: #ff8a8a; filter: drop-shadow(0 0 6px rgba(255, 106, 106, 0.8)); }
+	.close-btn:hover .close-icon-main { fill: #b32020; filter: drop-shadow(0 0 8px rgba(179, 32, 32, 0.85)); }
+	.close-btn:active .close-icon-soft { fill: #ffb0b0; filter: drop-shadow(0 0 8px rgba(255, 106, 106, 0.95)); }
+	.close-btn:active .close-icon-main { fill: #d92b2b; filter: drop-shadow(0 0 10px rgba(217, 43, 43, 0.95)); }
 
 	.modal-body { padding: var(--size-4); display: flex; flex-direction: column; gap: var(--size-4); overflow-y: auto; }
 	.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
 	.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-8); }
 	.input-group { display: flex; gap: var(--size-2); }
-	input { flex: 1; background: var(--bg-dark); border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-mono); }
+	input { flex: 1; background: transparent; border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-mono); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
 	input:focus { outline: none; border-color: var(--text-main); }
-	.btn-scan { font-weight: var(--font-weight-8); font-size: var(--font-size-1); padding: 0 var(--size-3); background: var(--bg-dark); border: 0; color: var(--text-main); cursor: pointer; }
-	.btn-scan:hover:not(:disabled) { background: var(--bg-alt); }
+	.btn-scan { font-weight: var(--font-weight-8); font-size: var(--font-size-1); padding: 0 var(--size-3); background: transparent; border: 0; color: var(--text-main); cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
+	.btn-scan:hover:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 75%, transparent); }
 
 	.error-msg { background: var(--bg-dark); border: var(--border-size-1) solid #ff4444; padding: var(--size-2); color: #ff4444; font-size: var(--font-size-0); display: flex; align-items: center; gap: var(--size-2); }
 	.err-tag { font-weight: var(--font-weight-8); background: #ff4444; color: #fff; padding: 1px 3px; font-size: var(--font-size-00); }
 
-	.preview-card { display: flex; gap: var(--size-3); background: var(--bg-alt); padding: var(--size-2); border: 0; }
+	.preview-card { display: flex; gap: var(--size-3); background: transparent; padding: var(--size-2); border: 0; }
 	.preview-thumb { width: 80px; height: 55px; border: 0; }
 	.preview-thumb img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); }
 	.preview-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
@@ -296,23 +335,62 @@
 	.vid-id { font-size: var(--font-size-00); color: var(--text-muted); }
 
 	.tiers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--size-2); }
-	.tier-card { background: var(--bg-dark); border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
-	.tier-card.active { background: var(--bg-alt); box-shadow: inset 0 0 0 1px var(--border-bright); opacity: 1; filter: none; }
+	.tier-card { background: transparent; border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
+	.tier-card.active {
+		background: transparent;
+		border: 1px solid var(--border-bright);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in srgb, var(--border-bright) 65%, transparent),
+			0 0 16px color-mix(in srgb, var(--border-bright) 65%, transparent);
+		opacity: 1;
+		filter: none;
+	}
 	.tier-card.active .tier-name, .tier-card.active .tier-price, .tier-card.active .tier-desc { color: var(--text-main); }
-	.tier-card.dimmed { opacity: 0.4; filter: grayscale(1); }
-	.tier-card:hover { opacity: 1; filter: none; background: var(--bg-alt); }
+	.tier-card:hover { opacity: 1; filter: none; background: transparent; }
 	.tier-card.free { box-shadow: inset 2px 0 0 var(--text-muted); }
-	.tier-card.silver { box-shadow: inset 2px 0 0 var(--tier-silver); }
-	.tier-card.gold { box-shadow: inset 2px 0 0 var(--tier-gold); }
-	.tier-card.platinum { box-shadow: inset 2px 0 0 var(--tier-platinum); }
+	.tier-card.silver {
+		--glow-color: var(--tier-silver);
+		border: 1px solid color-mix(in srgb, var(--tier-silver) 58%, transparent);
+		box-shadow:
+			inset 2px 0 0 var(--tier-silver),
+			0 0 5px color-mix(in srgb, var(--tier-silver) 40%, transparent);
+		animation: tierPulseSilver 2.5s ease-in-out infinite;
+	}
+	.tier-card.gold {
+		--glow-color: var(--tier-gold);
+		border: 1px solid color-mix(in srgb, var(--tier-gold) 68%, transparent);
+		box-shadow:
+			inset 2px 0 0 var(--tier-gold),
+			0 0 7px color-mix(in srgb, var(--tier-gold) 55%, transparent);
+		animation: tierPulseGold 2.1s ease-in-out infinite;
+	}
+	.tier-card.platinum {
+		--glow-color: #7de3ff;
+		border: 1px solid color-mix(in srgb, #7de3ff 78%, transparent);
+		box-shadow:
+			inset 2px 0 0 #7de3ff,
+			0 0 18px color-mix(in srgb, #7de3ff 72%, transparent);
+		animation: tierPulsePlatinum 1.8s ease-in-out infinite;
+	}
 	.tier-card.silver .tier-name,
 	.tier-card.silver .tier-price { color: var(--tier-silver); }
 	.tier-card.gold .tier-name,
 	.tier-card.gold .tier-price { color: var(--tier-gold); }
 	.tier-card.platinum .tier-name,
-	.tier-card.platinum .tier-price { color: var(--tier-platinum); }
+	.tier-card.platinum .tier-price { color: #7de3ff; }
+	.tier-card.active.silver,
+	.tier-card.active.gold,
+	.tier-card.active.platinum,
+	.tier-card.active.free {
+		border-color: var(--border-bright);
+		box-shadow:
+			inset 0 0 0 1px color-mix(in srgb, var(--border-bright) 65%, transparent),
+			0 0 18px color-mix(in srgb, var(--border-bright) 72%, transparent);
+		opacity: 1;
+		filter: none;
+	}
 
-	.modal-footer { padding: var(--size-2) var(--size-3); background: var(--bg-dark); border-top: 0; }
+	.modal-footer { padding: var(--size-2) var(--size-3); background: transparent; border-top: 0; }
 	.system-logs { font-size: var(--font-size-00); display: flex; flex-direction: column; gap: 1px; }
 	.log-line { color: var(--text-muted); }
 	.log-line.highlight { color: var(--text-dim); }
@@ -344,5 +422,18 @@
 	}
 	.btn-cancel-pay:hover {
 		color: #ff4444;
+	}
+
+	@keyframes tierPulseSilver {
+		0%, 100% { box-shadow: inset 2px 0 0 var(--tier-silver), 0 0 3px color-mix(in srgb, var(--tier-silver) 30%, transparent); }
+		50% { box-shadow: inset 2px 0 0 var(--tier-silver), 0 0 6px color-mix(in srgb, var(--tier-silver) 55%, transparent); }
+	}
+	@keyframes tierPulseGold {
+		0%, 100% { box-shadow: inset 2px 0 0 var(--tier-gold), 0 0 5px color-mix(in srgb, var(--tier-gold) 45%, transparent); }
+		50% { box-shadow: inset 2px 0 0 var(--tier-gold), 0 0 9px color-mix(in srgb, var(--tier-gold) 70%, transparent); }
+	}
+	@keyframes tierPulsePlatinum {
+		0%, 100% { box-shadow: inset 2px 0 0 #7de3ff, 0 0 14px color-mix(in srgb, #7de3ff 55%, transparent); }
+		50% { box-shadow: inset 2px 0 0 #7de3ff, 0 0 26px color-mix(in srgb, #7de3ff 85%, transparent); }
 	}
 </style>

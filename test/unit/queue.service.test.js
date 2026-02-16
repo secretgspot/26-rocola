@@ -27,7 +27,8 @@ vi.mock('$lib/server/db/index.js', () => {
 vi.mock('$lib/server/db/schema.js', () => ({
 	queue: { baseRank: 'baseRank', id: 'id', playsRemainingToday: 'playsRemainingToday', songId: 'songId' },
 	songs: { id: 'id', isAvailable: 'isAvailable', videoId: 'videoId' },
-	queuePlays: {}
+	queuePlays: {},
+	playbackState: { id: 'id', currentQueueId: 'currentQueueId', startedAt: 'startedAt' }
 }));
 
 vi.mock('$lib/server/ws.js', () => ({

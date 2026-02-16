@@ -33,7 +33,8 @@
 
 		// Serialized global queue
 		const previousLock = globalLock;
-		let resolveLock;
+		/** @type {(() => void) | null} */
+		let resolveLock = null;
 		globalLock = new Promise(r => resolveLock = r);
 		
 		try {
@@ -72,7 +73,16 @@
 
 			console.debug(`[Stripe] Creating instance #${myGeneration}`);
 			// @ts-ignore
-			const instance = await stripe.initEmbeddedCheckout({ clientSecret: secret });
+			const instance = await stripe.initEmbeddedCheckout({
+				clientSecret: secret,
+				onComplete: async () => {
+					try {
+						oncomplete?.();
+					} catch (e) {
+						console.warn('[Stripe] onComplete callback failed', e);
+					}
+				}
+			});
 			
 			if (isDestroyed || myGeneration !== currentGeneration) {
 				console.debug(`[Stripe] Discarding instance #${myGeneration}`);
@@ -89,7 +99,7 @@
 			error = err?.message || 'Payment engine failure';
 			isMounted = false;
 		} finally {
-			if (resolveLock) resolveLock();
+			resolveLock?.();
 		}
 	}
 

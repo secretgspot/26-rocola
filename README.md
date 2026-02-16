@@ -11,6 +11,8 @@ A tiny SvelteKit + Drizzle + SQLite jukebox demo used for local development and 
 
 ## Quick start ⚡
 
+0. codex resume 019c4612-092d-7712-9ed8-6f15d67ae8cd
+
 1. Install dependencies and run dev server
 
 ```powershell
@@ -21,14 +23,15 @@ bun install
 bun run dev -- --open
 ```
 
-2. Open http://localhost:5173
+1. Open <http://localhost:5173>
 
-3. (Payments) Start the Stripe Webhook listener in a separate terminal:
+2. (Payments) Start the Stripe Webhook listener in a separate terminal:
+
 ```powershell
 npm run stripe:listen
 ```
 
-4. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
+1. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
 
 ---
 
@@ -67,6 +70,7 @@ A pragmatic integration test is available to validate queue behavior:
 - Runs: `npm run test:integration` (added to `package.json`)
 
 What it asserts:
+
 - POST `/api/debug/seed` returns OK and seeds items
 - GET `/api/queue/current` returns the current song
 - GET `/api/queue` does *not* include the current song (upcoming list excludes current)
@@ -110,6 +114,7 @@ Note: This test is lightweight and expects a running server and direct DB access
 - ✅ Client filters upcoming queue to exclude the currently playing song and entries with zero `playsRemainingToday`.
 
 Pending / recommended next steps:
+
 - Add proper automated test runner (Vitest) and convert integration script into a tracked test with setup/teardown.
 - Add end-to-end tests for WS broadcasts (song_playing, queue_changed).
 - Add admin confirmation for destructive dev endpoints and more robust auth for production.

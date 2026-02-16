@@ -1,13 +1,15 @@
 import { json } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
 import { db } from '$lib/server/db/index.js';
 import { queue, queuePlays, songs, playbackState } from '$lib/server/db/schema.js';
 import { invalidateQueueCache } from '$lib/server/services/queue.js';
+import { checkRate, isAdminRequest } from '$lib/server/security.js';
 
-export async function POST({ locals }) {
-	if (env.NODE_ENV !== 'development' && !locals?.isAdmin) {
+export async function POST(event) {
+	if (!isAdminRequest(event)) {
 		return json({ ok: false, error: 'Not allowed in production' }, { status: 403 });
 	}
+	const limited = checkRate(event, 'debug-clear', 6, 60 * 1000, 'ip');
+	if (!limited.ok) return json(limited.body, { status: limited.status });
 
 	try {
 		await db.delete(queuePlays);
