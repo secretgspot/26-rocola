@@ -1,6 +1,14 @@
 import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db/index.js';
-import { queue, queuePlays, songs, playbackState } from '$lib/server/db/schema.js';
+import {
+	queue,
+	queuePlays,
+	songs,
+	playbackState,
+	orders,
+	dailyPlayCounts,
+	freeSubmissions
+} from '$lib/server/db/schema.js';
 import { invalidateQueueCache } from '$lib/server/services/queue.js';
 import { checkRate, isAdminRequest } from '$lib/server/security.js';
 
@@ -12,7 +20,11 @@ export async function POST(event) {
 	if (!limited.ok) return json(limited.body, { status: limited.status });
 
 	try {
+		// Delete in FK-safe order.
 		await db.delete(queuePlays);
+		await db.delete(dailyPlayCounts);
+		await db.delete(orders);
+		await db.delete(freeSubmissions);
 		await db.delete(queue);
 		await db.delete(songs);
 		await db.delete(playbackState);

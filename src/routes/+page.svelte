@@ -20,6 +20,7 @@
 	let nextPending = $state(false);
 	let clearPending = $state(false);
 	let theme = $state('dark');
+	let isVideoPaused = $state(false);
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const connectionState = $derived(playerState.connectionState || 'connecting');
@@ -103,6 +104,10 @@
 	function handleStatsUpdate(e) {
 		if (e.bitrate) bitrate = e.bitrate;
 		if (e.buffer !== undefined) buffer = e.buffer;
+	}
+
+	function handlePlayState(e) {
+		isVideoPaused = Boolean(e?.paused);
 	}
 
 	async function advance() {
@@ -370,7 +375,8 @@
 						<VideoPlayer
 							onnext={advance}
 							ontimeupdate={handleTimeUpdate}
-							onstatsupdate={handleStatsUpdate} />
+							onstatsupdate={handleStatsUpdate}
+							onplaystate={handlePlayState} />
 					</svelte:boundary>
 				</div>
 				<div class="metadata-tray border-t">
@@ -405,7 +411,6 @@
 				</div>
 			{:else}
 				<div class="empty-state">
-					<h1 class="blink">SYSTEM_IDLE</h1>
 				</div>
 			{/if}
 		</main>
@@ -423,7 +428,7 @@
 	</div>
 
 	<div class="fab-container">
-		<AddToQueue onqueued={refreshQueue} />
+		<AddToQueue onqueued={refreshQueue} hideTrigger={isVideoPaused} pulse={playerState.queue.length === 0} />
 	</div>
 </div>
 
@@ -450,11 +455,26 @@
 		justify-content: space-between;
 		padding: 0 var(--size-4);
 		background: transparent;
-		z-index: var(--layer-5);
+		z-index: 3;
 		letter-spacing: 0.08em;
 		border-bottom: 0;
 		text-transform: uppercase;
 		pointer-events: auto;
+	}
+	.top-bar::after {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		height: 56px;
+		pointer-events: none;
+		background: linear-gradient(
+			180deg,
+			color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
+			color-mix(in srgb, var(--queue-fade-void) 70%, transparent) 40%,
+			transparent 100%
+		);
 	}
 	.logo {
 		display: flex;
@@ -619,7 +639,7 @@
 	.video-layer {
 		position: fixed;
 		inset: 0;
-		z-index: 0;
+		z-index: 1;
 	}
 
 	.player-zone {
@@ -653,8 +673,23 @@
 		background: transparent;
 		gap: var(--size-5);
 		border-top: 0;
-		z-index: var(--layer-3);
+		z-index: 3;
 		pointer-events: none;
+	}
+	.metadata-tray::before {
+		content: '';
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		height: 56px;
+		pointer-events: none;
+		background: linear-gradient(
+			0deg,
+			color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
+			color-mix(in srgb, var(--queue-fade-void) 70%, transparent) 40%,
+			transparent 100%
+		);
 	}
 	.meta-main {
 		flex: 1;
@@ -775,11 +810,11 @@
 
 	.queue-zone {
 		width: 400px;
-		height: 81dvh;
+		height: 100dvh;
 		position: absolute;
-		top: 50%;
+		top: 0;
 		right: 0;
-		transform: translateY(-50%);
+		transform: none;
 		display: flex;
 		flex-direction: column;
 		background: transparent;
@@ -793,7 +828,7 @@
 	.overlay-layout {
 		position: fixed;
 		inset: 0;
-		z-index: var(--layer-3);
+		z-index: 2;
 		pointer-events: none;
 	}
 	.queue-content {
@@ -802,37 +837,6 @@
 		overflow-x: hidden;
 		position: relative;
 		pointer-events: auto;
-	}
-	.queue-content::before,
-	.queue-content::after {
-		content: '';
-		position: sticky;
-		left: 0;
-		display: block;
-		width: 100%;
-		height: 56px;
-		pointer-events: none;
-		z-index: 3;
-	}
-	.queue-content::before {
-		top: 0;
-		margin-bottom: -56px;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--queue-fade-void) 90%, transparent) 0%,
-			color-mix(in srgb, var(--queue-fade-void) 60%, transparent) 45%,
-			transparent 100%
-		);
-	}
-	.queue-content::after {
-		bottom: 0;
-		margin-top: -56px;
-		background: linear-gradient(
-			0deg,
-			color-mix(in srgb, var(--queue-fade-void) 92%, transparent) 0%,
-			color-mix(in srgb, var(--queue-fade-void) 60%, transparent) 45%,
-			transparent 100%
-		);
 	}
 
 	.toasts-layer {
@@ -850,8 +854,10 @@
 	}
 	.fab-container {
 		position: fixed;
-		bottom: var(--size-8);
-		right: var(--size-5);
+		left: 50%;
+		top: 50%;
+		margin-left: calc(var(--size-9) / -2);
+		margin-top: calc(var(--size-9) / -2);
 		z-index: var(--layer-important);
 	}
 

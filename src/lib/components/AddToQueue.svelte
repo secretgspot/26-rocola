@@ -4,7 +4,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
 
-	let { onqueued } = $props();
+	let { onqueued, hideTrigger = false, pulse = false } = $props();
 
 	let url = $state('');
 	let validating = $state(false);
@@ -19,9 +19,30 @@
 
 	let activeTierConfig = $derived(getTierConfig(selectedTier));
 
-	function open() { isOpen = true; }
+	async function withViewTransition(update) {
+		if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function') {
+			update();
+			return;
+		}
+		try {
+			const vt = document.startViewTransition(() => {
+				update();
+			});
+			await vt.finished;
+		} catch {
+			update();
+		}
+	}
+
+	function open() {
+		void withViewTransition(() => {
+			isOpen = true;
+		});
+	}
 	function close() {
-		isOpen = false;
+		void withViewTransition(() => {
+			isOpen = false;
+		});
 		// Let modal outro complete before resetting fields.
 		setTimeout(reset, 220);
 	}
@@ -131,7 +152,13 @@
 	}
 </script>
 
-<button class="fab" onclick={open} class:hidden={isOpen}>
+<button
+	class="fab"
+	class:pulse
+	onclick={open}
+	class:hidden={isOpen || hideTrigger}
+	style={`view-transition-name: ${isOpen ? 'none' : 'inject-sequence'}`}
+>
 	<div class="fab-inner">
 		<span class="label">[ADD]</span>
 		<span class="plus">+</span>
@@ -151,7 +178,11 @@
 		}}
 		transition:fade={{duration: 100}}
 	>
-		<div class="modal-window" transition:scale={{start: 0.14, duration: 220, opacity: 0.15}}>
+		<div
+			class="modal-window"
+			style="view-transition-name: inject-sequence"
+			transition:scale={{start: 0.14, duration: 220, opacity: 0.15}}
+		>
 			<header>
 				<div class="header-main" aria-hidden="true"></div>
 				<button class="close-btn" onclick={close} aria-label="Close">
@@ -278,6 +309,9 @@
 	.fab .plus { font-size: var(--font-size-4); font-weight: var(--font-weight-7); line-height: 1; }
 	.fab:hover { transform: scale(1.04); border-color: var(--border-bright); }
 	.fab.hidden { opacity: 0; pointer-events: none; }
+	.fab.pulse {
+		animation: fabPulse 1.4s ease-in-out infinite;
+	}
 
 	.modal-backdrop {
 		position: fixed;
@@ -285,8 +319,8 @@
 		background: var(--backdrop-veil);
 		z-index: var(--layer-important);
 		display: flex;
-		align-items: flex-end;
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: center;
 		padding: var(--size-5);
 	}
 
@@ -299,7 +333,7 @@
 		flex-direction: column;
 		max-height: 90vh;
 		box-shadow: none;
-		transform-origin: right bottom;
+		transform-origin: center center;
 	}
 
 	header {
@@ -459,5 +493,15 @@
 	@keyframes tierPulsePlatinum {
 		0%, 100% { box-shadow: inset 2px 0 0 #7de3ff, 0 0 14px color-mix(in srgb, #7de3ff 55%, transparent); }
 		50% { box-shadow: inset 2px 0 0 #7de3ff, 0 0 26px color-mix(in srgb, #7de3ff 85%, transparent); }
+	}
+	@keyframes fabPulse {
+		0%, 100% { transform: scale(1); }
+		50% { transform: scale(1.08); }
+	}
+
+	:global(::view-transition-old(inject-sequence)),
+	:global(::view-transition-new(inject-sequence)) {
+		animation-duration: 220ms;
+		animation-timing-function: ease;
 	}
 </style>

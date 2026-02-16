@@ -3,7 +3,7 @@
 	import { createPlayer } from '$lib/client/youtube-player';
 	import { playerState, addToast } from '$lib/client/stores.svelte.js';
 
-	let { onnext, ontimeupdate, onstatsupdate } = $props();
+	let { onnext, ontimeupdate, onstatsupdate, onplaystate } = $props();
 
 	let el = $state();
 	/** @type {any} */
@@ -37,6 +37,7 @@
 			videoId: initialVideoId,
 			onStateChange: (e) => {
 				// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
+				onplaystate?.({ paused: e.data === 2 });
 				if (e.data === 0) {
 					// Native player end - strictly fallback, we rely on server time mostly
 					onnext?.();
@@ -228,6 +229,7 @@
 <style>
 	.video-container { width: 100%; height: 100%; position: relative; background: var(--bg-dark); overflow: hidden; }
 	.yt-embed { width: 100%; height: 100%; transform: scale(1.02); filter: grayscale(1) contrast(1.1); }
+	:global([data-theme='light']) .yt-embed { filter: grayscale(1) contrast(1.1) invert(1); }
 
 	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: var(--layer-important); }
 	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: var(--size-3); }
