@@ -100,7 +100,6 @@
 		*::before,
 		*::after {
 			box-sizing: inherit;
-			border-radius: 0 !important;
 			text-transform: inherit;
 		}
 
@@ -113,36 +112,6 @@
 			font-weight: var(--font-weight-9);
 			margin: 0;
 		}
-
-		/* Flat UI Components */
-		button {
-			cursor: pointer;
-			border: var(--border-size-1) solid var(--border-main);
-			background: var(--bg-dark);
-			color: var(--text-main);
-			padding: var(--size-2) var(--size-3);
-			font-size: var(--font-size-0);
-			font-weight: var(--font-weight-7);
-			border-radius: 9px !important;
-			transition:
-				border-color var(--transition-duration-1) ease,
-				background-color var(--transition-duration-1) ease,
-				color var(--transition-duration-1) ease;
-
-			&:hover {
-				border-color: var(--border-bright);
-			}
-
-			&:active {
-				border-color: var(--border-bright);
-			}
-
-			&:disabled {
-				opacity: 0.3;
-				cursor: not-allowed;
-			}
-		}
-
 
 		input {
 			background: var(--bg-dark);

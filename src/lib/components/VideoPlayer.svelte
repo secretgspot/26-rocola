@@ -197,65 +197,9 @@
 	});
 </script>
 
-<div class="video-container">
-	<div id="yt-player-video" bind:this={el} class="yt-embed"></div>
-	
-	{#if player && playerState.currentSong && lastLoadedVideoId === null}
-		<div class="autoplay-overlay">
-			<div class="overlay-content">
-				<p>SYSTEM_READY</p>
-				<button onclick={() => { 
-					if (!player || !playerState.currentSong) return;
-					player.play(); 
-					const seekTo = getServerElapsed();
-					if (seekTo > 0) player.seek(seekTo);
-					lastLoadedVideoId = playerState.currentSong.videoId; 
-					lastStartedAt = playerState.currentSong.startedAt ?? null;
-				}}>
-					[INITIALIZE]
-				</button>
-			</div>
-		</div>
-	{/if}
-
-	<div class="frame-accents">
-		<div class="accent tl"></div>
-		<div class="accent tr"></div>
-		<div class="accent bl"></div>
-		<div class="accent br"></div>
-	</div>
-</div>
+<div id="yt-player-video" bind:this={el} class="yt-embed"></div>
 
 <style>
-	.video-container { width: 100%; height: 100%; position: relative; background: var(--bg-dark); overflow: hidden; }
-	.yt-embed { width: 100%; height: 100%; }
+	.yt-embed { width: 100%; height: 100%; display: block; background: var(--bg-dark); }
 	:global([data-theme='light']) .yt-embed { filter: invert(1); }
-
-	@media (max-width: 1023px) {
-		.video-container {
-			height: 60dvh;
-		}
-	}
-
-	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: var(--layer-important); }
-	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: var(--size-3); }
-	.overlay-content p { color: var(--text-muted); font-size: var(--font-size-1); font-weight: var(--font-weight-8); }
-	
-	.autoplay-overlay button { 
-		background: var(--text-main); 
-		color: var(--bg-dark); 
-		padding: var(--size-3) var(--size-5); 
-		font-weight: var(--font-weight-8); 
-		font-size: var(--font-size-2); 
-		cursor: pointer; 
-		border: var(--border-size-1) solid var(--bg-dark);
-		font-family: var(--font-mono);
-	}
-	.autoplay-overlay button:hover { 
-		background: var(--bg-dark); 
-		color: var(--text-main); 
-		border-color: var(--text-main);
-	}
-
-	.frame-accents { display: none; }
 </style>

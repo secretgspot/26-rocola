@@ -97,3 +97,13 @@
 - [x] User adds same free song again today -> rejected with `409`
 - [x] User adds same song with paid tier -> accepted
 - [x] User rapidly triggers queue-next endpoint -> rate limit returns `429`
+
+## UI Refactor Sweep (2026-02-16)
+- [x] Split playback overlay from page into dedicated `NowPlayingOverlay.svelte`
+- [x] Keep `VideoPlayer.svelte` focused on YouTube embed only (iframe host)
+- [x] Replace viewport media breakpoints in `+page.svelte` with container queries
+- [x] Replace mobile breakpoint in `AddToQueue.svelte` with container query
+- [x] Add CSS cascade layers (`@layer`) for page and add-modal styling
+- [x] Flatten page structure to primary components (`header`, `main.video-layer`, `aside.queue-zone`, `footer` overlay component)
+- [x] Remove `overlay-layout` wrapper and queue-header spacer wrapper
+- [x] Move progress bar into dedicated `ProgressBar.svelte` and render inside metadata footer component

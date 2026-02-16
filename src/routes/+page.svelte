@@ -9,6 +9,7 @@
 	import Queue from '$lib/components/Queue.svelte';
 	import AddToQueue from '$lib/components/AddToQueue.svelte';
 	import VideoPlayer from '$lib/components/VideoPlayer.svelte';
+	import NowPlayingOverlay from '$lib/components/NowPlayingOverlay.svelte';
 
 	let { data } = $props();
 
@@ -150,7 +151,7 @@
 		{/each}
 	</div>
 
-	<header class="top-bar border-b">
+	<header class="top-bar">
 		<div class="logo">
 			<div class="live-dot {connectionState}" aria-hidden="true"></div>
 			<span class="logo-text">ROCOLA</span>
@@ -360,70 +361,42 @@
 		</div>
 	</header>
 
-	<div class="video-layer">
-		<main class="player-zone min-w-0">
-			{#if playerState.currentSong}
-				<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
-					{#snippet failed(error, reset)}
-						<div class="empty-state">
-							<p class="text-muted">// ERROR: PLAYER_CRASHED</p>
-							<button onclick={reset}>[REBOOT_PLAYER]</button>
-							<button onclick={advance}>[FORCE_SKIP]</button>
-						</div>
-					{/snippet}
-					<VideoPlayer
-						onnext={advance}
-						ontimeupdate={handleTimeUpdate}
-						onstatsupdate={handleStatsUpdate}
-						onplaystate={handlePlayState} />
-				</svelte:boundary>
-				<div class="metadata-tray border-t">
-					<div class="meta-main min-w-0">
-						<span class="label text-muted">// NOW_PLAYING</span>
-						<h2 class="title">{playerState.currentSong.title}</h2>
-						<div class="meta-footer text-dim">
-							<span class="channel">{playerState.currentSong.channelTitle}</span>
-							<span class="divider">|</span>
-							<span class="vid-id">{playerState.currentSong.videoId}</span>
-						</div>
+	<main class="video-layer min-w-0">
+		{#if playerState.currentSong}
+			<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
+				{#snippet failed(error, reset)}
+					<div class="empty-state">
+						<p class="text-muted">// ERROR: PLAYER_CRASHED</p>
+						<button onclick={reset}>[REBOOT_PLAYER]</button>
+						<button onclick={advance}>[FORCE_SKIP]</button>
 					</div>
-					<div class="meta-stats">
-						{#if playerState.currentSong.tier && playerState.currentSong.tier !== 'free'}
-							<div class="stat">
-								<span class="s-label">REM</span>
-								<span class="s-val">{playerState.currentSong.playsRemainingToday}</span>
-							</div>
-						{/if}
-						<div class="stat">
-							<span class="s-label">BTR</span>
-							<span class="s-val">{bitrate}</span>
-						</div>
-						<div class="stat">
-							<span class="s-label">BUF</span>
-							<span class="s-val">{buffer}%</span>
-						</div>
-					</div>
-				</div>
-				<div class="progress-bar">
-					<div class="fill" style="width: {playbackProgress}%"></div>
-				</div>
-			{:else}
-				<div class="empty-state">
-				</div>
-			{/if}
-		</main>
-	</div>
-
-	<div class="overlay-layout">
-		{#if playerState.queue.length > 0}
-			<aside class="queue-zone min-w-0">
-				<div class="queue-header" aria-hidden="true"></div>
-				<div class="queue-content overflow-hidden">
-					<Queue />
-				</div>
-			</aside>
+				{/snippet}
+				<VideoPlayer
+					onnext={advance}
+					ontimeupdate={handleTimeUpdate}
+					onstatsupdate={handleStatsUpdate}
+					onplaystate={handlePlayState} />
+			</svelte:boundary>
+		{:else}
+			<div class="empty-state">
+			</div>
 		{/if}
-	</div>
+	</main>
+
+	{#if playerState.queue.length > 0}
+		<aside class="queue-zone min-w-0">
+			<div class="queue-content overflow-hidden">
+				<Queue />
+			</div>
+		</aside>
+	{/if}
+
+	<NowPlayingOverlay
+		song={playerState.currentSong}
+		{bitrate}
+		{buffer}
+		progress={playbackProgress}
+	/>
 
 	<div class="fab-container" class:fab-center={playerState.queue.length === 0} class:fab-near-queue={playerState.queue.length > 0}>
 		<AddToQueue onqueued={refreshQueue} hideTrigger={isVideoPaused} pulse={playerState.queue.length === 0} />
@@ -431,6 +404,9 @@
 </div>
 
 <style>
+	@layer page-layout, page-motion, page-responsive;
+
+	@layer page-layout {
 	.app-container {
 		display: flex;
 		flex-direction: column;
@@ -440,6 +416,8 @@
 		background: transparent;
 		overflow: hidden;
 		position: relative;
+		container-type: inline-size;
+		container-name: viewport;
 	}
 
 	.top-bar {
@@ -501,7 +479,7 @@
 		gap: var(--size-2);
 		background: color-mix(in srgb, var(--bg-dark) 92%, transparent);
 		padding: 4px 8px;
-		border-radius: 9px !important;
+		border-radius: 9px;
 	}
 	.status {
 		font-size: var(--font-size-1);
@@ -601,6 +579,17 @@
 		opacity: 0.6;
 		transition: opacity var(--transition-duration-1) ease;
 	}
+	.top-bar button {
+		all: unset;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		cursor: pointer;
+	}
+	.top-bar button:disabled {
+		opacity: 0.3;
+		cursor: not-allowed;
+	}
 	.btn-skip:hover {
 		--icon-stroke-color: var(--border-bright);
 		opacity: 1;
@@ -631,110 +620,10 @@
 		position: fixed;
 		inset: 0;
 		z-index: 1;
-	}
-
-	.player-zone {
 		width: 100dvw;
 		height: 100dvh;
 		background: transparent;
-		min-width: 0;
-		border-right: 0;
-		position: relative;
-	}
-	.metadata-tray {
-		padding: var(--size-3) var(--size-4);
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: var(--size-2);
-		display: flex;
-		justify-content: space-between;
-		align-items: flex-end;
-		background: transparent;
-		gap: var(--size-5);
-		border-top: 0;
-		z-index: 3;
-		pointer-events: none;
-		background: linear-gradient(
-			0deg,
-			color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
-			color-mix(in srgb, var(--queue-fade-void) 70%, transparent) 40%,
-			transparent 100%
-		);
-	}
-	.meta-main {
-		flex: 1;
-		min-width: 0;
-	}
-	.meta-main .label {
-		font-size: var(--font-size-00);
-		font-weight: var(--font-weight-8);
 		display: block;
-		margin-bottom: var(--size-1);
-		letter-spacing: 0.1em;
-		text-transform: uppercase;
-	}
-	.meta-main .title {
-		font-size: var(--font-size-fluid-2);
-		font-weight: var(--font-weight-9);
-		line-height: var(--font-lineheight-1);
-		margin-bottom: var(--size-2);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.meta-footer {
-		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-7);
-		display: flex;
-		gap: var(--size-3);
-		overflow: hidden;
-	}
-	.meta-footer span {
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-
-	.meta-stats {
-		display: flex;
-		gap: var(--size-3);
-		flex-shrink: 0;
-		border-left: 0;
-		padding-left: 0;
-	}
-	.stat {
-		display: flex;
-		flex-direction: column;
-		align-items: flex-end;
-	}
-	.s-label {
-		font-size: var(--font-size-00);
-		color: var(--text-muted);
-		font-weight: var(--font-weight-9);
-	}
-	.s-val {
-		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-8);
-	}
-
-	.progress-bar {
-		height: var(--size-2);
-		background: transparent;
-		width: 100%;
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		overflow: hidden;
-		z-index: var(--layer-4);
-	}
-	.progress-bar .fill {
-		height: 100%;
-		background: var(--text-main);
-	}
-	.progress-bar::after {
-		content: none;
 	}
 
 	.empty-state {
@@ -750,7 +639,9 @@
 	.blink {
 		animation: var(--animation-blink);
 	}
+	}
 
+	@layer page-motion {
 	@media (prefers-reduced-motion: no-preference) {
 		@keyframes blink {
 			0%,
@@ -778,6 +669,7 @@
 			50% { stroke: var(--tier-gold); }
 		}
 	}
+	}
 
 	.queue-zone {
 		width: min(420px, calc(100vw - var(--size-6)));
@@ -792,17 +684,8 @@
 		backdrop-filter: blur(6px);
 		background: linear-gradient(270deg, var(--bg-dark), transparent);
 		min-width: 0;
-	}
-	.queue-header {
-		height: 0;
-		flex-shrink: 0;
-		background: transparent;
-	}
-	.overlay-layout {
-		position: fixed;
-		inset: 0;
 		z-index: 2;
-		pointer-events: none;
+		pointer-events: auto;
 	}
 	.queue-content {
 		flex: 0 1 auto;
@@ -843,7 +726,9 @@
 		margin-top: calc(var(--size-9) / -2);
 	}
 
-	@media (max-width: 1023px) {
+	@layer page-responsive {
+	@container viewport (max-width: 1023px) {
+		.video-layer { height: 60dvh; }
 		.queue-zone {
 			width: 100%;
 			height: auto;
@@ -851,15 +736,6 @@
 			bottom: calc(128px + env(safe-area-inset-bottom, 0px));
 			right: 0;
 			transform: none;
-		}
-		.meta-main .title {
-			font-size: var(--font-size-fluid-1);
-		}
-		.meta-main .label {
-			font-size: var(--font-size-fluid-0);
-		}
-		.meta-footer {
-			font-size: var(--font-size-fluid-0);
 		}
 		.fab-near-queue {
 			top: auto;
@@ -870,43 +746,14 @@
 		}
 	}
 
-	@media (max-width: 480px) {
-		.metadata-tray {
-			padding: var(--size-3);
-			flex-direction: column;
-			align-items: flex-start;
-			gap: var(--size-2);
-			bottom: env(safe-area-inset-bottom, 0px);
-			padding-bottom: calc(var(--size-3) + env(safe-area-inset-bottom, 0px));
-		}
-		.meta-stats {
-			width: 100%;
-			justify-content: space-between;
-		}
-		.meta-main .label {
-			font-size: var(--font-size-00);
-		}
-		.meta-main .title {
-			font-size: var(--font-size-fluid-1);
-			line-height: 1.15;
-			white-space: normal;
-			display: -webkit-box;
-			line-clamp: 2;
-			-webkit-line-clamp: 2;
-			-webkit-box-orient: vertical;
-			overflow: hidden;
-			text-overflow: unset;
-			margin-bottom: var(--size-1);
-		}
-		.meta-footer {
-			font-size: var(--font-size-00);
-		}
+	@container viewport (max-width: 480px) {
 		.top-bar {
 			padding: 0 var(--size-3);
 		}
 		.logo-text {
 			font-size: var(--font-size-1);
 		}
+	}
 	}
 </style>
 

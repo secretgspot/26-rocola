@@ -264,11 +264,16 @@
 {/if}
 
 <style>
+	@layer add-layout, add-responsive, add-motion;
+
+	@layer add-layout {
 	.fab {
 		width: var(--size-9);
 		height: var(--size-9);
 		background: var(--text-main);
-		border: 1px solid transparent;
+		color: var(--bg-dark);
+		border: 0;
+		border-radius: 9px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -281,8 +286,12 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		color: var(--bg-dark);
+		color: inherit;
 	 }
+	:global([data-theme='light']) .fab {
+		background: var(--text-main);
+		color: var(--bg-dark);
+	}
 	.fab .label { font-size: var(--font-size-00); font-weight: var(--font-weight-8); }
 	.fab .plus { font-size: var(--font-size-4); font-weight: var(--font-weight-7); line-height: 1; }
 	.fab:hover { transform: scale(1.04); border-color: var(--border-bright); }
@@ -300,6 +309,8 @@
 		align-items: center;
 		justify-content: center;
 		padding: var(--size-5);
+		container-type: inline-size;
+		container-name: add-modal;
 	}
 
 	.modal-window {
@@ -333,7 +344,7 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		border-radius: 9px !important;
+		border-radius: 9px;
 	}
 	.close-btn .close-icon { width: 36px; height: 36px; display: inline-flex; }
 	.close-btn .close-icon svg { width: 100%; height: 100%; }
@@ -351,6 +362,10 @@
 	.close-btn:active .close-icon-main { fill: #d92b2b; filter: drop-shadow(0 0 10px rgba(217, 43, 43, 0.95)); }
 
 	.modal-body { padding: var(--size-4); display: flex; flex-direction: column; gap: var(--size-4); overflow-y: auto; }
+	.modal-window button {
+		color: var(--text-main);
+		border-radius: 9px;
+	}
 	.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
 	.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-8); }
 	.input-group { display: flex; gap: var(--size-2); }
@@ -371,7 +386,7 @@
 	.vid-id { font-size: var(--font-size-00); color: var(--text-muted); }
 
 	.tiers-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--size-2); }
-	.tier-card { background: transparent; border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); }
+	.tier-card { background: transparent; border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); color: var(--text-main); border-radius: 9px; }
 	.tier-card.active {
 		background: transparent;
 		border: 1px solid var(--border-bright);
@@ -481,8 +496,10 @@
 		0%, 100% { transform: scale(1); }
 		50% { transform: scale(1.08); }
 	}
+	}
 
-	@media (max-width: 640px) {
+	@layer add-responsive {
+	@container add-modal (max-width: 640px) {
 		.modal-backdrop {
 			align-items: flex-end;
 			justify-content: center;
@@ -493,6 +510,7 @@
 			max-width: 100%;
 			max-height: calc(100dvh - var(--size-2) - env(safe-area-inset-bottom, 0px));
 		}
+	}
 	}
 
 </style>
