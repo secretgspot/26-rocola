@@ -226,9 +226,8 @@
 </div>
 
 <style>
-	.video-container { width: 100%; height: 100%; position: relative; background: #000; overflow: hidden; }
+	.video-container { width: 100%; height: 100%; position: relative; background: var(--bg-dark); overflow: hidden; }
 	.yt-embed { width: 100%; height: 100%; transform: scale(1.02); filter: grayscale(1) contrast(1.1); }
-	.video-container:hover .yt-embed { filter: none; }
 
 	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: var(--layer-important); }
 	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: var(--size-3); }

@@ -57,7 +57,7 @@ export async function POST(event) {
 			createdAt: Math.floor(Date.now() / 1000)
 		});
 
-		return json({ clientSecret: session.client_secret });
+		return json({ clientSecret: session.client_secret, sessionId: session.id });
 	} catch (err) {
 		console.error('[Stripe] Checkout Error:', err);
 		return json({ ok: false, error: err.message }, { status: 500 });

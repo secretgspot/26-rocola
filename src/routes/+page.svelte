@@ -151,98 +151,100 @@
 		</div>
 		<div class="header-meta">
 			{#if import.meta.env.DEV || isAdmin}
-				<button
-					class="btn-skip btn-next"
-					onclick={advance}
-					aria-label="Force advance to next song"
-					aria-busy={nextPending}
-					disabled={nextPending}
-				>
-					<span class="icon" aria-hidden="true">
-						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path
-								d="M6 17L11 12L6 7M13 17L18 12L13 7"
-								class="icon-stroke"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
-					</span>
-				</button>
-				<button
-					class="btn-skip btn-seed"
-					onclick={async () => {
-						if (seedPending) return;
-						seedPending = true;
-						const res = await fetch('/api/debug/seed', { method: 'POST' });
-						const data = await res.json();
-						if (data.ok) {
-							addToast({ message: `Seeded ${data.added.length} songs`, level: 'success' });
-							refreshQueue();
-						} else {
-							addToast({ message: `Seed failed: ${data.error}`, level: 'error' });
-						}
-						seedPending = false;
-					}}
-					aria-label="Seed queue with test data"
-					aria-busy={seedPending}
-					disabled={seedPending}
-				>
-					<span class="icon" aria-hidden="true">
-						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path fill="none" d="M0 0H24V24H0z"/>
-							<path
-								d="M6 3c3.49 0 6.383 2.554 6.913 5.895C14.088 7.724 15.71 7 17.5 7H22v2.5c0 3.59-2.91 6.5-6.5 6.5H13v5h-2v-8H9c-3.866 0-7-3.134-7-7V3h4zm14 6h-2.5c-2.485 0-4.5 2.015-4.5 4.5v.5h2.5c2.485 0 4.5-2.015 4.5-4.5V9zM6 5H4v1c0 2.761 2.239 5 5 5h2v-1c0-2.761-2.239-5-5-5z"
-								class="icon-fill"
-							/>
-						</svg>
-					</span>
-				</button>
-				<button
-					class="btn-skip btn-clear"
-					onclick={async () => {
-						if (clearPending) return;
-						clearPending = true;
-						const res = await fetch('/api/debug/clear', { method: 'POST' });
-						const data = await res.json();
-						if (data.ok) {
-							addToast({ message: 'CLEARED', level: 'success' });
-							playerState.currentSong = null;
-							refreshQueue();
-						} else {
-							addToast({ message: `Clear failed: ${data.error}`, level: 'error' });
-						}
-						clearPending = false;
-					}}
-					aria-label="Clear all seeded data"
-					aria-busy={clearPending}
-					disabled={clearPending}
-				>
-					<span class="icon" aria-hidden="true">
-						<svg viewBox="0 0 24 24" role="img" focusable="false">
-							<path
-								d="M9 9L15 15"
-								class="icon-stroke"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<path
-								d="M15 9L9 15"
-								class="icon-stroke"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-							<circle
-								cx="12"
-								cy="12"
-								r="9"
-								class="icon-stroke"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-							/>
-						</svg>
-					</span>
-				</button>
+				<div class="admin-panel">
+					<button
+						class="btn-skip btn-next"
+						onclick={advance}
+						aria-label="Force advance to next song"
+						aria-busy={nextPending}
+						disabled={nextPending}
+					>
+						<span class="icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" role="img" focusable="false">
+								<path
+									d="M6 17L11 12L6 7M13 17L18 12L13 7"
+									class="icon-stroke"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</span>
+					</button>
+					<button
+						class="btn-skip btn-seed"
+						onclick={async () => {
+							if (seedPending) return;
+							seedPending = true;
+							const res = await fetch('/api/debug/seed', { method: 'POST' });
+							const data = await res.json();
+							if (data.ok) {
+								addToast({ message: `Seeded ${data.added.length} songs`, level: 'success' });
+								refreshQueue();
+							} else {
+								addToast({ message: `Seed failed: ${data.error}`, level: 'error' });
+							}
+							seedPending = false;
+						}}
+						aria-label="Seed queue with test data"
+						aria-busy={seedPending}
+						disabled={seedPending}
+					>
+						<span class="icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" role="img" focusable="false">
+								<path fill="none" d="M0 0H24V24H0z"/>
+								<path
+									d="M6 3c3.49 0 6.383 2.554 6.913 5.895C14.088 7.724 15.71 7 17.5 7H22v2.5c0 3.59-2.91 6.5-6.5 6.5H13v5h-2v-8H9c-3.866 0-7-3.134-7-7V3h4zm14 6h-2.5c-2.485 0-4.5 2.015-4.5 4.5v.5h2.5c2.485 0 4.5-2.015 4.5-4.5V9zM6 5H4v1c0 2.761 2.239 5 5 5h2v-1c0-2.761-2.239-5-5-5z"
+									class="icon-fill"
+								/>
+							</svg>
+						</span>
+					</button>
+					<button
+						class="btn-skip btn-clear"
+						onclick={async () => {
+							if (clearPending) return;
+							clearPending = true;
+							const res = await fetch('/api/debug/clear', { method: 'POST' });
+							const data = await res.json();
+							if (data.ok) {
+								addToast({ message: 'CLEARED', level: 'success' });
+								playerState.currentSong = null;
+								refreshQueue();
+							} else {
+								addToast({ message: `Clear failed: ${data.error}`, level: 'error' });
+							}
+							clearPending = false;
+						}}
+						aria-label="Clear all seeded data"
+						aria-busy={clearPending}
+						disabled={clearPending}
+					>
+						<span class="icon" aria-hidden="true">
+							<svg viewBox="0 0 24 24" role="img" focusable="false">
+								<path
+									d="M9 9L15 15"
+									class="icon-stroke"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+								<path
+									d="M15 9L9 15"
+									class="icon-stroke"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+								<circle
+									cx="12"
+									cy="12"
+									r="9"
+									class="icon-stroke"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+								/>
+							</svg>
+						</span>
+					</button>
+				</div>
 			{/if}
 			<button class="theme-toggle btn-skip btn-theme" onclick={toggleTheme} aria-label="Toggle theme">
 				<span class="icon" aria-hidden="true">
@@ -314,13 +316,47 @@
 			</button>
 			<div class="status">
 				<div class="live-dot {connectionState}" aria-hidden="true"></div>
-				<span class="count">[{playerState.clientCount.toString().padStart(2, '0')}]</span>
+				<span class="client-icon" aria-hidden="true">
+					<svg viewBox="0 0 24 24" role="img" focusable="false">
+						<path
+							d="M8 12H16"
+							class="client-icon-main"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+						<path
+							d="M15 16H17C19.2091 16 21 14.2091 21 12C21 9.79086 19.2091 8 17 8H15M9 8H7C4.79086 8 3 9.79086 3 12C3 14.2091 4.79086 16 7 16H9"
+							class="client-icon-side"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+						/>
+					</svg>
+				</span>
+				<span class="count">{playerState.clientCount.toString().padStart(2, '0')}</span>
+				<span class="queue-count" aria-label="Queue count">
+					<span class="queue-icon" aria-hidden="true">
+						<svg viewBox="0 0 32 32" role="img" focusable="false">
+							<path
+								d="M7 24.269V9.73C7 8.223 8.753 7.44 9.83 8.465l7.632 7.269a1.758 1.758 0 010 2.532L9.83 25.535C8.753 26.56 7 25.777 7 24.269z"
+								class="queue-icon-main"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+							/>
+							<path
+								d="M23 5v8M19 9h8"
+								class="queue-icon-plus"
+								stroke-linecap="round"
+							/>
+						</svg>
+					</span>
+					<span class="count">{playerState.queue.length.toString().padStart(2, '0')}</span>
+				</span>
 			</div>
 		</div>
 	</header>
 
-	<div class="main-layout overflow-hidden">
-		<main class="player-zone border-r min-w-0">
+	<div class="video-layer">
+		<main class="player-zone min-w-0">
 			{#if playerState.currentSong}
 				<div class="video-container">
 					<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
@@ -373,13 +409,12 @@
 				</div>
 			{/if}
 		</main>
+	</div>
 
+	<div class="overlay-layout">
 		{#if playerState.queue.length > 0}
 			<aside class="queue-zone min-w-0">
-				<div class="queue-header border-b">
-					<span class="count"
-						>[{playerState.queue.length.toString().padStart(2, '0')}]</span>
-				</div>
+				<div class="queue-header" aria-hidden="true"></div>
 				<div class="queue-content overflow-hidden">
 					<Queue />
 				</div>
@@ -399,23 +434,27 @@
 		height: 100vh;
 		height: 100dvh;
 		width: 100vw;
-		background: var(--bg-dark);
+		background: transparent;
 		overflow: hidden;
 		position: relative;
 	}
 
 	.top-bar {
-		height: 52px;
-		flex-shrink: 0;
+		height: 56px;
+		position: fixed;
+		top: 0;
+		left: 0;
+		right: 0;
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		padding: 0 var(--size-4);
 		background: transparent;
-		z-index: var(--layer-3);
+		z-index: var(--layer-5);
 		letter-spacing: 0.08em;
 		border-bottom: 0;
 		text-transform: uppercase;
+		pointer-events: auto;
 	}
 	.logo {
 		display: flex;
@@ -447,6 +486,14 @@
 		align-items: center;
 		gap: var(--size-3);
 	}
+	.admin-panel {
+		display: flex;
+		align-items: center;
+		gap: var(--size-2);
+		background: color-mix(in srgb, var(--bg-dark) 92%, transparent);
+		padding: 4px 8px;
+		border-radius: 9px !important;
+	}
 	.status {
 		font-size: var(--font-size-0);
 		font-weight: var(--font-weight-8);
@@ -460,6 +507,55 @@
 	}
 	.status .icon { width: 18px; height: 18px; display: inline-flex; color: var(--text-main); }
 	.status .count { color: var(--text-dim); letter-spacing: 0.12em; }
+	.status .queue-count {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--size-1);
+	}
+	.queue-icon {
+		display: inline-flex;
+		width: 18px;
+		height: 18px;
+	}
+	.queue-icon svg {
+		width: 100%;
+		height: 100%;
+		fill: none;
+	}
+	.queue-icon-main,
+	.queue-icon-plus {
+		stroke-width: 2;
+	}
+	.queue-icon-main {
+		stroke: var(--tier-gold);
+		animation: queueIconMainPulse 2.4s ease-in-out infinite;
+	}
+	.queue-icon-plus {
+		stroke: #7de3ff;
+		animation: queueIconPlusPulse 2.4s ease-in-out infinite;
+	}
+	.client-icon {
+		display: inline-flex;
+		width: 18px;
+		height: 18px;
+	}
+	.client-icon svg {
+		width: 100%;
+		height: 100%;
+		fill: none;
+	}
+	.client-icon-main,
+	.client-icon-side {
+		stroke-width: 1.6;
+	}
+	.client-icon-main {
+		stroke: var(--tier-silver);
+		animation: clientIconMainPulse 2.2s ease-in-out infinite;
+	}
+	.client-icon-side {
+		stroke: var(--tier-gold);
+		animation: clientIconSidePulse 2.2s ease-in-out infinite;
+	}
 	.live-dot {
 		width: var(--size-2);
 		height: var(--size-2);
@@ -497,11 +593,9 @@
 	.btn-skip:hover {
 		--icon-stroke-color: var(--border-bright);
 		opacity: 1;
-		filter: drop-shadow(0 0 7px color-mix(in srgb, var(--text-main) 52%, transparent));
 	}
 	.btn-skip:active {
 		opacity: 1;
-		filter: drop-shadow(0 0 10px color-mix(in srgb, var(--text-main) 65%, transparent));
 	}
 	.btn-skip .icon {
 		display: inline-flex;
@@ -522,27 +616,26 @@
 		fill: var(--icon-stroke-color);
 	}
 
-	.main-layout {
-		flex: 1;
-		display: flex;
-		min-height: 0;
-		position: relative;
-		z-index: 1;
+	.video-layer {
+		position: fixed;
+		inset: 0;
+		z-index: 0;
 	}
 
 	.player-zone {
-		flex: 1;
-		display: flex;
-		flex-direction: column;
+		width: 100dvw;
+		height: 100dvh;
 		background: transparent;
 		min-width: 0;
 		border-right: 0;
+		position: relative;
 	}
 	.video-container {
-		flex: 1;
-		background: #000;
-		position: relative;
+		position: absolute;
+		inset: 0;
+		background: var(--bg-dark);
 		min-height: 0;
+		z-index: 0;
 	}
 	.video-container::after {
 		content: none;
@@ -550,13 +643,18 @@
 
 	.metadata-tray {
 		padding: var(--size-3) var(--size-4);
-		flex-shrink: 0;
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: var(--size-2);
 		display: flex;
 		justify-content: space-between;
 		align-items: flex-end;
 		background: transparent;
 		gap: var(--size-5);
 		border-top: 0;
+		z-index: var(--layer-3);
+		pointer-events: none;
 	}
 	.meta-main {
 		flex: 1;
@@ -618,9 +716,12 @@
 		height: var(--size-2);
 		background: transparent;
 		width: 100%;
-		flex-shrink: 0;
-		position: relative;
+		position: absolute;
+		left: 0;
+		right: 0;
+		bottom: 0;
 		overflow: hidden;
+		z-index: var(--layer-4);
 	}
 	.progress-bar .fill {
 		height: 100%;
@@ -631,12 +732,14 @@
 	}
 
 	.empty-state {
-		flex: 1;
+		position: absolute;
+		inset: 0;
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
 		gap: var(--size-3);
+		z-index: var(--layer-2);
 	}
 	.blink {
 		animation: var(--animation-blink);
@@ -652,45 +755,53 @@
 				opacity: 0;
 			}
 		}
+		@keyframes clientIconMainPulse {
+			0%, 100% { stroke: var(--tier-silver); }
+			50% { stroke: var(--tier-gold); }
+		}
+		@keyframes clientIconSidePulse {
+			0%, 100% { stroke: var(--tier-gold); }
+			50% { stroke: var(--tier-silver); }
+		}
+		@keyframes queueIconMainPulse {
+			0%, 100% { stroke: var(--tier-gold); }
+			50% { stroke: #7de3ff; }
+		}
+		@keyframes queueIconPlusPulse {
+			0%, 100% { stroke: #7de3ff; }
+			50% { stroke: var(--tier-gold); }
+		}
 	}
 
 	.queue-zone {
 		width: 400px;
-		flex-shrink: 0;
+		height: 81dvh;
+		position: absolute;
+		top: 50%;
+		right: 0;
+		transform: translateY(-50%);
 		display: flex;
 		flex-direction: column;
 		background: transparent;
 		min-width: 0;
 	}
 	.queue-header {
-		padding: var(--size-2) var(--size-4);
-		display: flex;
-		justify-content: flex-start;
-		align-items: center;
-		background: linear-gradient(
-			180deg,
-			color-mix(in srgb, var(--queue-fade-void) 72%, transparent) 0%,
-			color-mix(in srgb, var(--queue-fade-void) 42%, transparent) 45%,
-			transparent 100%
-		);
-		backdrop-filter: blur(4px);
+		height: 0;
 		flex-shrink: 0;
-		border-bottom: 0;
-		position: sticky;
-		top: 0;
-		z-index: 2;
+		background: transparent;
 	}
-	.queue-header .count {
-		font-weight: var(--font-weight-9);
-		font-size: var(--font-size-0);
-		letter-spacing: 0.12em;
-		color: color-mix(in srgb, var(--text-main) 80%, transparent);
+	.overlay-layout {
+		position: fixed;
+		inset: 0;
+		z-index: var(--layer-3);
+		pointer-events: none;
 	}
 	.queue-content {
 		flex: 1;
 		overflow-y: auto;
 		overflow-x: hidden;
 		position: relative;
+		pointer-events: auto;
 	}
 	.queue-content::before,
 	.queue-content::after {
@@ -726,34 +837,32 @@
 
 	.toasts-layer {
 		position: fixed;
-		top: var(--size-2);
-		right: 0;
+		top: 50%;
+		left: var(--size-2);
+		transform: translateY(-50%);
 		z-index: var(--layer-important);
 		padding: var(--size-3);
 		display: flex;
 		flex-direction: column;
 		gap: var(--size-1);
 		pointer-events: none;
+		align-items: flex-start;
 	}
 	.fab-container {
 		position: fixed;
-		bottom: var(--size-5);
+		bottom: var(--size-8);
 		right: var(--size-5);
-		z-index: var(--layer-5);
+		z-index: var(--layer-important);
 	}
 
 	@media (max-width: 1023px) {
-		.main-layout {
-			flex-direction: column;
-		}
 		.queue-zone {
 			width: 100%;
-			height: 40%;
-			border-left: 0;
-			border-top: var(--border-size-1) solid var(--border-main);
-		}
-		.player-zone {
-			border-right: 0;
+			height: 40dvh;
+			top: auto;
+			bottom: 0;
+			right: 0;
+			transform: none;
 		}
 		.meta-main .title {
 			font-size: var(--font-size-3);

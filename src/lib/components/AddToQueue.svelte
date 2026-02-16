@@ -13,6 +13,7 @@
 	let error = $state('');
 	let isOpen = $state(false);
 	let stripeClientSecret = $state('');
+	let stripeSessionId = $state('');
 	let isProcessingPayment = $state(false);
 	let selectedTier = $state('');
 
@@ -29,14 +30,39 @@
 		metadata = null;
 		error = '';
 		stripeClientSecret = '';
+		stripeSessionId = '';
 		isProcessingPayment = false;
 		selectedTier = '';
 	}
 
 	function cancelPayment() {
 		stripeClientSecret = '';
+		stripeSessionId = '';
 		isProcessingPayment = false;
 		selectedTier = '';
+	}
+
+	async function completePayment() {
+		if (!stripeSessionId) {
+			error = 'Missing checkout session';
+			return;
+		}
+		try {
+			const res = await fetch('/api/checkout/complete', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ sessionId: stripeSessionId })
+			});
+			const data = await res.json();
+			if (!data.ok) {
+				error = data.error || 'Payment finalization failed';
+				return;
+			}
+			onqueued?.();
+			close();
+		} catch (e) {
+			error = 'Payment finalization failed';
+		}
 	}
 
 	async function validate() {
@@ -78,6 +104,7 @@
 				const payData = await payRes.json();
 				if (payData.clientSecret) {
 					stripeClientSecret = payData.clientSecret;
+					stripeSessionId = payData.sessionId || '';
 				} else {
 					error = payData.error || 'Payment initialization failed';
 					isProcessingPayment = false;
@@ -208,10 +235,7 @@
 							</div>
 							<StripeCheckout 
 								clientSecret={stripeClientSecret} 
-								oncomplete={() => {
-									onqueued?.();
-									close();
-								}}
+								oncomplete={completePayment}
 								oncancel={cancelPayment}
 							/>
 						</div>
@@ -258,7 +282,7 @@
 	.modal-backdrop {
 		position: fixed;
 		top: 0; left: 0; width: 100vw; height: 100vh;
-		background: rgba(0, 0, 0, 0.92);
+		background: var(--backdrop-veil);
 		z-index: var(--layer-important);
 		display: flex;
 		align-items: flex-end;
@@ -318,9 +342,9 @@
 	.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
 	.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-8); }
 	.input-group { display: flex; gap: var(--size-2); }
-	input { flex: 1; background: transparent; border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-mono); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
+	input { flex: 1; background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-mono); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
 	input:focus { outline: none; border-color: var(--text-main); }
-	.btn-scan { font-weight: var(--font-weight-8); font-size: var(--font-size-1); padding: 0 var(--size-3); background: transparent; border: 0; color: var(--text-main); cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
+	.btn-scan { font-weight: var(--font-weight-8); font-size: var(--font-size-1); padding: 0 var(--size-3); background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; color: var(--text-main); cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
 	.btn-scan:hover:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 75%, transparent); }
 
 	.error-msg { background: var(--bg-dark); border: var(--border-size-1) solid #ff4444; padding: var(--size-2); color: #ff4444; font-size: var(--font-size-0); display: flex; align-items: center; gap: var(--size-2); }
@@ -330,7 +354,7 @@
 	.preview-thumb { width: 80px; height: 55px; border: 0; }
 	.preview-thumb img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); }
 	.preview-info { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-	.preview-info h4 { font-size: var(--font-size-1); margin: 0 0 var(--size-1) 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+	.preview-info h4 { font-size: var(--font-size-1); color: var(--text-dim); margin: 0 0 var(--size-1) 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 	.preview-info p { font-size: var(--font-size-0); color: var(--text-dim); margin: 0; }
 	.vid-id { font-size: var(--font-size-00); color: var(--text-muted); }
 

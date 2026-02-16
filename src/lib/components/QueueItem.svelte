@@ -74,7 +74,7 @@
 	}
 
 	.item:hover {
-		background: rgba(255, 255, 255, 0.04);
+		background: color-mix(in srgb, var(--text-main) 6%, transparent);
 	}
 
 	.item:hover .artist,
