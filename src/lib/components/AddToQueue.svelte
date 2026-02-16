@@ -3,7 +3,7 @@
 	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
 
-	let { onqueued, hideTrigger = false, pulse = false } = $props();
+	let { onqueued, hideTrigger = false, pulse = false, mode = 'center' } = $props();
 
 	let url = $state('');
 	let validating = $state(false);
@@ -135,6 +135,8 @@
 <button
 	class="fab"
 	class:pulse
+	class:fab-center={mode === 'center'}
+	class:fab-near-queue={mode === 'nearQueue'}
 	onclick={open}
 	class:hidden={isOpen || hideTrigger}
 >
@@ -268,6 +270,7 @@
 
 	@layer add-layout {
 	.fab {
+		position: fixed;
 		width: var(--size-9);
 		height: var(--size-9);
 		background: var(--text-main);
@@ -280,6 +283,18 @@
 		cursor: pointer;
 		z-index: var(--layer-5);
 		transition: transform var(--transition-duration-1), background var(--transition-duration-1), color var(--transition-duration-1);
+	}
+	.fab-center {
+		left: 50%;
+		top: 50%;
+		margin-left: calc(var(--size-9) / -2);
+		margin-top: calc(var(--size-9) / -2);
+	}
+	.fab-near-queue {
+		top: 50%;
+		right: min(420px, calc(100vw - var(--size-6)));
+		margin-right: var(--size-3);
+		margin-top: calc(var(--size-9) / -2);
 	}
 	.fab-inner {
 		display: flex;
@@ -499,6 +514,17 @@
 	}
 
 	@layer add-responsive {
+	@media (max-width: 1023px) {
+		.fab-center,
+		.fab-near-queue {
+			left: auto;
+			top: auto;
+			right: var(--size-3);
+			bottom: calc(var(--mobile-footer-h, 124px) + var(--size-2) + env(safe-area-inset-bottom, 0px));
+			margin: 0;
+			transform: none;
+		}
+	}
 	@container add-modal (max-width: 640px) {
 		.modal-backdrop {
 			align-items: flex-end;

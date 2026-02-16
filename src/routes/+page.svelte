@@ -398,9 +398,12 @@
 		progress={playbackProgress}
 	/>
 
-	<div class="fab-container" class:fab-center={playerState.queue.length === 0} class:fab-near-queue={playerState.queue.length > 0}>
-		<AddToQueue onqueued={refreshQueue} hideTrigger={isVideoPaused} pulse={playerState.queue.length === 0} />
-	</div>
+	<AddToQueue
+		onqueued={refreshQueue}
+		hideTrigger={isVideoPaused}
+		pulse={playerState.queue.length === 0}
+		mode={playerState.queue.length === 0 ? 'center' : 'nearQueue'}
+	/>
 </div>
 
 <style>
@@ -710,23 +713,6 @@
 		pointer-events: none;
 		align-items: flex-start;
 	}
-	.fab-container {
-		position: fixed;
-		z-index: var(--layer-important);
-	}
-	.fab-center {
-		left: 50%;
-		top: 50%;
-		margin-left: calc(var(--size-9) / -2);
-		margin-top: calc(var(--size-9) / -2);
-	}
-	.fab-near-queue {
-		top: 50%;
-		right: min(420px, calc(100vw - var(--size-6)));
-		margin-right: var(--size-3);
-		margin-top: calc(var(--size-9) / -2);
-	}
-
 	@layer page-responsive {
 	@container viewport (max-width: 1023px) {
 		.video-layer {
@@ -745,17 +731,6 @@
 		}
 		.queue-content {
 			max-height: min(38dvh, calc(100dvh - var(--mobile-footer-h) - 56px));
-		}
-		.fab-center,
-		.fab-near-queue {
-			top: auto;
-			right: var(--size-3);
-			bottom: calc(var(--mobile-footer-h) + var(--size-2) + env(safe-area-inset-bottom, 0px));
-			left: auto;
-			transform: none;
-			margin-top: 0;
-			margin-right: 0;
-			margin-left: 0;
 		}
 		.toasts-layer {
 			top: 70px;
