@@ -425,7 +425,7 @@
 		{/if}
 	</div>
 
-	<div class="fab-container">
+	<div class="fab-container" class:fab-center={playerState.queue.length === 0} class:fab-near-queue={playerState.queue.length > 0}>
 		<AddToQueue onqueued={refreshQueue} hideTrigger={isVideoPaused} pulse={playerState.queue.length === 0} />
 	</div>
 </div>
@@ -828,24 +828,45 @@
 	}
 	.fab-container {
 		position: fixed;
+		z-index: var(--layer-important);
+	}
+	.fab-center {
 		left: 50%;
 		top: 50%;
 		margin-left: calc(var(--size-9) / -2);
 		margin-top: calc(var(--size-9) / -2);
-		z-index: var(--layer-important);
+	}
+	.fab-near-queue {
+		top: 50%;
+		right: min(420px, calc(100vw - var(--size-6)));
+		margin-right: var(--size-3);
+		margin-top: calc(var(--size-9) / -2);
 	}
 
 	@media (max-width: 1023px) {
 		.queue-zone {
 			width: 100%;
-			height: 40dvh;
-			top: auto;
-			bottom: 0;
+			height: auto;
+			top: 60dvh;
+			bottom: calc(128px + env(safe-area-inset-bottom, 0px));
 			right: 0;
 			transform: none;
 		}
 		.meta-main .title {
-			font-size: var(--font-size-fluid-2);
+			font-size: var(--font-size-fluid-1);
+		}
+		.meta-main .label {
+			font-size: var(--font-size-fluid-0);
+		}
+		.meta-footer {
+			font-size: var(--font-size-fluid-0);
+		}
+		.fab-near-queue {
+			top: auto;
+			right: var(--size-3);
+			bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+			margin-top: 0;
+			margin-right: 0;
 		}
 	}
 
@@ -861,6 +882,24 @@
 		.meta-stats {
 			width: 100%;
 			justify-content: space-between;
+		}
+		.meta-main .label {
+			font-size: var(--font-size-00);
+		}
+		.meta-main .title {
+			font-size: var(--font-size-fluid-1);
+			line-height: 1.15;
+			white-space: normal;
+			display: -webkit-box;
+			line-clamp: 2;
+			-webkit-line-clamp: 2;
+			-webkit-box-orient: vertical;
+			overflow: hidden;
+			text-overflow: unset;
+			margin-bottom: var(--size-1);
+		}
+		.meta-footer {
+			font-size: var(--font-size-00);
 		}
 		.top-bar {
 			padding: 0 var(--size-3);

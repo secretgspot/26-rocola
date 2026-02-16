@@ -231,6 +231,12 @@
 	.yt-embed { width: 100%; height: 100%; }
 	:global([data-theme='light']) .yt-embed { filter: invert(1); }
 
+	@media (max-width: 1023px) {
+		.video-container {
+			height: 60dvh;
+		}
+	}
+
 	.autoplay-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; z-index: var(--layer-important); }
 	.overlay-content { display: flex; flex-direction: column; align-items: center; gap: var(--size-3); }
 	.overlay-content p { color: var(--text-muted); font-size: var(--font-size-1); font-weight: var(--font-weight-8); }
