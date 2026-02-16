@@ -71,6 +71,7 @@
 		border: 0;
 		transition: background var(--transition-duration-1) ease, color var(--transition-duration-1) ease;
 		position: relative;
+		min-width: 0;
 	}
 
 	.item:hover {
@@ -157,14 +158,14 @@
 		gap: var(--size-2);
 	}
 	.artist {
-		font-size: var(--font-size-0);
+		font-size: var(--font-size-00);
 		color: var(--text-dim);
 		text-transform: uppercase;
 		font-weight: var(--font-weight-4);
 		letter-spacing: 0.12em;
 	}
 	.track {
-		font-size: var(--font-size-1);
+		font-size: var(--font-size-0);
 		font-weight: var(--font-weight-7);
 		color: var(--text-main);
 		white-space: nowrap;

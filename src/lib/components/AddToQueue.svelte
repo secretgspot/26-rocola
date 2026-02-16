@@ -1,5 +1,4 @@
 <script>
-	import { addToast } from '$lib/client/stores.svelte.js';
 	import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
@@ -19,30 +18,11 @@
 
 	let activeTierConfig = $derived(getTierConfig(selectedTier));
 
-	async function withViewTransition(update) {
-		if (typeof document === 'undefined' || typeof document.startViewTransition !== 'function') {
-			update();
-			return;
-		}
-		try {
-			const vt = document.startViewTransition(() => {
-				update();
-			});
-			await vt.finished;
-		} catch {
-			update();
-		}
-	}
-
 	function open() {
-		void withViewTransition(() => {
-			isOpen = true;
-		});
+		isOpen = true;
 	}
 	function close() {
-		void withViewTransition(() => {
-			isOpen = false;
-		});
+		isOpen = false;
 		// Let modal outro complete before resetting fields.
 		setTimeout(reset, 220);
 	}
@@ -157,7 +137,6 @@
 	class:pulse
 	onclick={open}
 	class:hidden={isOpen || hideTrigger}
-	style={`view-transition-name: ${isOpen ? 'none' : 'inject-sequence'}`}
 >
 	<div class="fab-inner">
 		<span class="label">[ADD]</span>
@@ -180,7 +159,6 @@
 	>
 		<div
 			class="modal-window"
-			style="view-transition-name: inject-sequence"
 			transition:scale={{start: 0.14, duration: 220, opacity: 0.15}}
 		>
 			<header>
@@ -331,7 +309,7 @@
 		border: 0;
 		display: flex;
 		flex-direction: column;
-		max-height: 90vh;
+		max-height: calc(100dvh - var(--size-6));
 		box-shadow: none;
 		transform-origin: center center;
 	}
@@ -448,7 +426,12 @@
 		filter: none;
 	}
 
-	.modal-footer { padding: var(--size-2) var(--size-3); background: transparent; border-top: 0; }
+	.modal-footer {
+		padding: var(--size-2) var(--size-3);
+		padding-bottom: calc(var(--size-2) + env(safe-area-inset-bottom, 0px));
+		background: transparent;
+		border-top: 0;
+	}
 	.system-logs { font-size: var(--font-size-00); display: flex; flex-direction: column; gap: 1px; }
 	.log-line { color: var(--text-muted); }
 	.log-line.highlight { color: var(--text-dim); }
@@ -499,9 +482,17 @@
 		50% { transform: scale(1.08); }
 	}
 
-	:global(::view-transition-old(inject-sequence)),
-	:global(::view-transition-new(inject-sequence)) {
-		animation-duration: 220ms;
-		animation-timing-function: ease;
+	@media (max-width: 640px) {
+		.modal-backdrop {
+			align-items: flex-end;
+			justify-content: center;
+			padding: var(--size-2);
+			padding-bottom: calc(var(--size-2) + env(safe-area-inset-bottom, 0px));
+		}
+		.modal-window {
+			max-width: 100%;
+			max-height: calc(100dvh - var(--size-2) - env(safe-area-inset-bottom, 0px));
+		}
 	}
+
 </style>

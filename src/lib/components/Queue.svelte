@@ -20,8 +20,10 @@
 	.list {
 		display: flex;
 		flex-direction: column;
-		gap: var(--size-2);
-		padding: var(--size-2) var(--size-3);
+		gap: 0;
+		padding: var(--size-2) var(--size-4) var(--size-2) var(--size-3);
+		width: 100%;
+		min-width: 0;
 	}
 	.empty-queue {
 		text-align: center;

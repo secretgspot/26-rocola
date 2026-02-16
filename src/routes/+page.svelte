@@ -152,6 +152,7 @@
 
 	<header class="top-bar border-b">
 		<div class="logo">
+			<div class="live-dot {connectionState}" aria-hidden="true"></div>
 			<span class="logo-text">ROCOLA</span>
 		</div>
 		<div class="header-meta">
@@ -320,7 +321,6 @@
 				</span>
 			</button>
 			<div class="status">
-				<div class="live-dot {connectionState}" aria-hidden="true"></div>
 				<span class="client-icon" aria-hidden="true">
 					<svg viewBox="0 0 24 24" role="img" focusable="false">
 						<path
@@ -363,22 +363,20 @@
 	<div class="video-layer">
 		<main class="player-zone min-w-0">
 			{#if playerState.currentSong}
-				<div class="video-container">
-					<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
-						{#snippet failed(error, reset)}
-							<div class="empty-state">
-								<p class="text-muted">// ERROR: PLAYER_CRASHED</p>
-								<button onclick={reset}>[REBOOT_PLAYER]</button>
-								<button onclick={advance}>[FORCE_SKIP]</button>
-							</div>
-						{/snippet}
-						<VideoPlayer
-							onnext={advance}
-							ontimeupdate={handleTimeUpdate}
-							onstatsupdate={handleStatsUpdate}
-							onplaystate={handlePlayState} />
-					</svelte:boundary>
-				</div>
+				<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
+					{#snippet failed(error, reset)}
+						<div class="empty-state">
+							<p class="text-muted">// ERROR: PLAYER_CRASHED</p>
+							<button onclick={reset}>[REBOOT_PLAYER]</button>
+							<button onclick={advance}>[FORCE_SKIP]</button>
+						</div>
+					{/snippet}
+					<VideoPlayer
+						onnext={advance}
+						ontimeupdate={handleTimeUpdate}
+						onstatsupdate={handleStatsUpdate}
+						onplaystate={handlePlayState} />
+				</svelte:boundary>
 				<div class="metadata-tray border-t">
 					<div class="meta-main min-w-0">
 						<span class="label text-muted">// NOW_PLAYING</span>
@@ -460,15 +458,6 @@
 		border-bottom: 0;
 		text-transform: uppercase;
 		pointer-events: auto;
-	}
-	.top-bar::after {
-		content: '';
-		position: absolute;
-		left: 0;
-		right: 0;
-		top: 0;
-		height: 56px;
-		pointer-events: none;
 		background: linear-gradient(
 			180deg,
 			color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
@@ -479,11 +468,11 @@
 	.logo {
 		display: flex;
 		align-items: center;
-		gap: var(--size-3);
+		gap: var(--size-1);
 	}
 	.logo-text {
-		font-size: var(--font-size-2);
-		font-weight: var(--font-weight-8);
+		font-size: var(--font-size-0);
+		font-weight: var(--font-weight-1);
 		text-transform: uppercase;
 		letter-spacing: 0;
 	}
@@ -515,7 +504,7 @@
 		border-radius: 9px !important;
 	}
 	.status {
-		font-size: var(--font-size-0);
+		font-size: var(--font-size-1);
 		font-weight: var(--font-weight-8);
 		display: flex;
 		align-items: center;
@@ -525,7 +514,6 @@
 		border-left: 0;
 		padding-left: 0;
 	}
-	.status .icon { width: 18px; height: 18px; display: inline-flex; color: var(--text-main); }
 	.status .count { color: var(--text-dim); letter-spacing: 0.12em; }
 	.status .queue-count {
 		display: inline-flex;
@@ -599,6 +587,9 @@
 		animation: blink 1.2s infinite;
 	}
 	.btn-skip {
+		display: flex;
+		align-items: center;
+		justify-content: center;
 		font-size: var(--font-size-2);
 		padding: 0;
 		border: 0;
@@ -650,17 +641,6 @@
 		border-right: 0;
 		position: relative;
 	}
-	.video-container {
-		position: absolute;
-		inset: 0;
-		background: var(--bg-dark);
-		min-height: 0;
-		z-index: 0;
-	}
-	.video-container::after {
-		content: none;
-	}
-
 	.metadata-tray {
 		padding: var(--size-3) var(--size-4);
 		position: absolute;
@@ -674,15 +654,6 @@
 		gap: var(--size-5);
 		border-top: 0;
 		z-index: 3;
-		pointer-events: none;
-	}
-	.metadata-tray::before {
-		content: '';
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		height: 56px;
 		pointer-events: none;
 		background: linear-gradient(
 			0deg,
@@ -704,7 +675,7 @@
 		text-transform: uppercase;
 	}
 	.meta-main .title {
-		font-size: var(--font-size-4);
+		font-size: var(--font-size-fluid-2);
 		font-weight: var(--font-weight-9);
 		line-height: var(--font-lineheight-1);
 		margin-bottom: var(--size-2);
@@ -809,15 +780,17 @@
 	}
 
 	.queue-zone {
-		width: 400px;
-		height: 100dvh;
+		width: min(420px, calc(100vw - var(--size-6)));
+		height: auto;
 		position: absolute;
-		top: 0;
+		top: 50%;
+		bottom: auto;
 		right: 0;
-		transform: none;
+		transform: translateY(-50%);
 		display: flex;
 		flex-direction: column;
-		background: transparent;
+		backdrop-filter: blur(6px);
+		background: linear-gradient(270deg, var(--bg-dark), transparent);
 		min-width: 0;
 	}
 	.queue-header {
@@ -832,9 +805,10 @@
 		pointer-events: none;
 	}
 	.queue-content {
-		flex: 1;
+		flex: 0 1 auto;
+		max-height: 36vh;
 		overflow-y: auto;
-		overflow-x: hidden;
+		overflow-x: visible;
 		position: relative;
 		pointer-events: auto;
 	}
@@ -871,7 +845,7 @@
 			transform: none;
 		}
 		.meta-main .title {
-			font-size: var(--font-size-3);
+			font-size: var(--font-size-fluid-2);
 		}
 	}
 
@@ -881,6 +855,8 @@
 			flex-direction: column;
 			align-items: flex-start;
 			gap: var(--size-2);
+			bottom: env(safe-area-inset-bottom, 0px);
+			padding-bottom: calc(var(--size-3) + env(safe-area-inset-bottom, 0px));
 		}
 		.meta-stats {
 			width: 100%;
