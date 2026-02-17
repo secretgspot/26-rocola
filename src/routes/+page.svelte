@@ -428,7 +428,7 @@
 	}
 	.status {
 		font-size: var(--font-size-1);
-		font-weight: var(--font-weight-8);
+		font-weight: var(--font-weight-3);
 		display: flex;
 		align-items: center;
 		gap: var(--size-2);
@@ -562,20 +562,11 @@
 		position: relative;
 		pointer-events: auto;
 		align-content: center;
-		-webkit-backdrop-filter: blur(2px);
-		backdrop-filter: blur(2px);
 		background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 84%, transparent), transparent);
-		transition:
-			-webkit-backdrop-filter 180ms ease,
-			backdrop-filter 180ms ease,
-			background 180ms ease;
-		will-change: backdrop-filter, -webkit-backdrop-filter, background;
-		transform: translateZ(0);
-		backface-visibility: hidden;
+		transition: background 180ms ease;
+		will-change: background;
 	}
 	.queue-zone.visible .queue-content {
-		-webkit-backdrop-filter: blur(6px);
-		backdrop-filter: blur(6px);
 		background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 88%, transparent), transparent);
 	}
 
@@ -637,13 +628,9 @@
 			flex: 1 1 auto;
 			height: 100%;
 			max-height: none;
-			-webkit-backdrop-filter: blur(2px);
-			backdrop-filter: blur(2px);
 			background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
 		}
 		.queue-zone.visible .queue-content {
-			-webkit-backdrop-filter: blur(6px);
-			backdrop-filter: blur(6px);
 			background: color-mix(in srgb, var(--bg-dark) 92%, transparent);
 		}
 		.toasts-layer {
@@ -666,13 +653,9 @@
 		.queue-content {
 			height: 100%;
 			max-height: 100%;
-			-webkit-backdrop-filter: blur(2px);
-			backdrop-filter: blur(2px);
 			background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 92%, transparent), transparent);
 		}
 		.queue-zone.visible .queue-content {
-			-webkit-backdrop-filter: blur(6px);
-			backdrop-filter: blur(6px);
 			background: linear-gradient(270deg, var(--bg-dark), transparent);
 		}
 	}

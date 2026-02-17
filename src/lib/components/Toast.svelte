@@ -44,7 +44,7 @@
 		.message { text-align: left; }
 
 		.level-tag {
-			font-weight: var(--font-weight-8);
+			font-weight: var(--font-weight-3);
 			font-size: var(--font-size-0);
 			letter-spacing: 0.1em;
 		}

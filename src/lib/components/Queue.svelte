@@ -29,7 +29,7 @@
 		text-align: center;
 		padding: var(--size-5);
 		color: var(--text-dim);
-		font-family: var(--font-mono);
+		font-family: var(--font-monospace-code);
 		font-size: var(--font-size-1);
 		opacity: 0.7;
 		letter-spacing: 0.12em;

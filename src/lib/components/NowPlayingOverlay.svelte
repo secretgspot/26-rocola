@@ -58,6 +58,7 @@
 			container-type: inline-size;
 			container-name: overlay;
 			z-index: 10;
+			font-family: var(--font-monospace-code);
 			background: linear-gradient(
 				0deg,
 				color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 0%,
@@ -72,7 +73,7 @@
 		}
 		.meta-main .label {
 			font-size: var(--font-size-00);
-			font-weight: var(--font-weight-8);
+			font-weight: var(--font-weight-3);
 			display: block;
 			margin-bottom: var(--size-1);
 			letter-spacing: 0.1em;
@@ -80,7 +81,7 @@
 		}
 		.meta-main .title {
 			font-size: var(--font-size-fluid-2);
-			font-weight: var(--font-weight-9);
+			font-weight: var(--font-weight-3);
 			line-height: var(--font-lineheight-1);
 			margin-bottom: var(--size-2);
 			white-space: nowrap;
@@ -89,7 +90,7 @@
 		}
 		.meta-footer {
 			font-size: var(--font-size-0);
-			font-weight: var(--font-weight-7);
+			font-weight: var(--font-weight-2);
 			display: flex;
 			gap: var(--size-3);
 			overflow: hidden;
@@ -112,11 +113,11 @@
 		.s-label {
 			font-size: var(--font-size-00);
 			color: var(--text-muted);
-			font-weight: var(--font-weight-9);
+			font-weight: var(--font-weight-3);
 		}
 		.s-val {
 			font-size: var(--font-size-0);
-			font-weight: var(--font-weight-8);
+			font-weight: var(--font-weight-3);
 		}
 
 		.progress-slot {

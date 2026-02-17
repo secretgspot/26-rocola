@@ -393,16 +393,16 @@
 		color: var(--text-main);
 		border-radius: 9px;
 	}
-	.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
-	.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-8); }
-	.input-group { display: flex; gap: var(--size-2); }
-	input { flex: 1; background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-mono); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
-	input:focus { outline: none; border-color: var(--text-main); }
-	.btn-scan { font-weight: var(--font-weight-8); font-size: var(--font-size-1); padding: 0 var(--size-3); background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; color: var(--text-main); cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
-	.btn-scan:hover:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 75%, transparent); }
+		.input-container { display: flex; flex-direction: column; gap: var(--size-1); }
+		.input-label { font-size: var(--font-size-00); color: var(--text-muted); font-weight: var(--font-weight-3); }
+		.input-group { display: flex; gap: var(--size-2); }
+		input { flex: 1; background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; padding: var(--size-2); color: var(--text-main); font-size: var(--font-size-1); font-family: var(--font-monospace-code); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
+		input:focus { outline: none; border-color: var(--text-main); }
+		.btn-scan { font-weight: var(--font-weight-3); font-size: var(--font-size-1); padding: 0 var(--size-3); background: color-mix(in srgb, var(--bg-dark) 94%, transparent); border: 0; color: var(--text-main); cursor: pointer; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 35%, transparent); }
+		.btn-scan:hover:not(:disabled) { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text-main) 75%, transparent); }
 
 	.error-msg { background: var(--bg-dark); border: var(--border-size-1) solid #ff4444; padding: var(--size-2); color: #ff4444; font-size: var(--font-size-0); display: flex; align-items: center; gap: var(--size-2); }
-	.err-tag { font-weight: var(--font-weight-8); background: #ff4444; color: #fff; padding: 1px 3px; font-size: var(--font-size-00); }
+		.err-tag { font-weight: var(--font-weight-4); background: #ff4444; color: #fff; padding: 1px 3px; font-size: var(--font-size-00); }
 
 	.preview-card { display: flex; gap: var(--size-3); background: transparent; padding: var(--size-2); border: 0; }
 	.preview-thumb { width: 80px; height: 55px; border: 0; }
@@ -484,14 +484,14 @@
 		gap: var(--size-3);
 		margin-top: var(--size-2);
 	}
-	.section-divider {
+		.section-divider {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
 		gap: var(--size-3);
 		font-size: var(--font-size-00);
 		color: var(--text-muted);
-		font-weight: var(--font-weight-8);
+			font-weight: var(--font-weight-3);
 		border-bottom: 0;
 		padding-bottom: var(--size-1);
 	}

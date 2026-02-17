@@ -65,7 +65,8 @@
 		display: flex;
 		align-items: center;
 		gap: var(--size-3);
-		padding: 4px var(--size-3);
+		padding: 2px var(--size-3);
+		font-family: var(--font-monospace-code);
 		background: transparent;
 		border: 0;
 		transition: background var(--transition-duration-1) ease, color var(--transition-duration-1) ease;
@@ -141,12 +142,12 @@
 		font-size: var(--font-size-00);
 		color: var(--text-dim);
 		text-transform: uppercase;
-		font-weight: var(--font-weight-4);
+		font-weight: var(--font-weight-2);
 		letter-spacing: 0.12em;
 	}
 	.track {
 		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-7);
+		font-weight: var(--font-weight-3);
 		color: var(--text-main);
 		white-space: nowrap;
 		overflow: hidden;
@@ -156,7 +157,7 @@
 
 	.cooldown-tag {
 		font-size: var(--font-size-00);
-		font-weight: var(--font-weight-8);
+		font-weight: var(--font-weight-4);
 		color: var(--text-muted);
 		border: 0;
 		padding: 0 var(--size-1);
@@ -184,7 +185,7 @@
 	}
 	.plays-badge .count {
 		font-size: var(--font-size-0);
-		font-weight: var(--font-weight-8);
+		font-weight: var(--font-weight-4);
 		color: var(--text-dim);
 	}
 	.entry-id {
@@ -202,7 +203,7 @@
 	/* Tier specific accents */
 	.item.free .track {
 		color: var(--text-dim);
-		font-weight: var(--font-weight-5);
+		font-weight: var(--font-weight-3);
 	}
 	.item.platinum .track {
 		color: #7de3ff;
