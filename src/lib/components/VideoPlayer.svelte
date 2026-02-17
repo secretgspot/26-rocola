@@ -200,6 +200,6 @@
 <div id="yt-player-video" bind:this={el} class="yt-embed"></div>
 
 <style>
-	.yt-embed { width: 100%; height: 100%; display: block; background: var(--bg-dark); }
+	.yt-embed { width: 100%; height: 100%; display: block; background: var(--bg-dark); pointer-events: none; }
 	:global([data-theme='light']) .yt-embed { filter: invert(1); }
 </style>
