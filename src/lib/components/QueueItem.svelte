@@ -37,7 +37,6 @@
 				<div class="icon">[NO_IMG]</div>
 			{/if}
 		</div>
-		<div class="tier-tag">{tier.toUpperCase()}</div>
 	</div>
 
 	<div class="meta">
@@ -57,7 +56,7 @@
 				<span class="count">{item.playsRemainingToday.toString().padStart(2, '0')}</span>
 			</div>
 		{/if}
-		<div class="entry-id">#{item.id?.toString().slice(-4) || '0000'}</div>
+		<div class="entry-id">{tier.toUpperCase()}</div>
 	</div>
 </div>
 
@@ -78,12 +77,11 @@
 		background: color-mix(in srgb, var(--text-main) 6%, transparent);
 	}
 
-	.item:hover .artist,
-	.item:hover .track,
-	.item:hover .tier-tag,
-	.item:hover .entry-id,
-	.item:hover .plays-badge .label,
-	.item:hover .plays-badge .count,
+		.item:hover .artist,
+		.item:hover .track,
+		.item:hover .entry-id,
+		.item:hover .plays-badge .label,
+		.item:hover .plays-badge .count,
 	.item:hover .cooldown-tag {
 		color: inherit;
 	}
@@ -126,24 +124,6 @@
 		font-size: var(--font-size-00);
 		color: var(--text-muted);
 	}
-
-	.tier-tag {
-		position: absolute;
-		bottom: -4px;
-		right: -4px;
-		font-size: var(--font-size-00);
-		font-weight: var(--font-weight-9);
-		padding: 1px var(--size-1);
-		background: transparent;
-		color: var(--text-dim);
-		border: 0;
-		z-index: var(--layer-1);
-		letter-spacing: 0.08em;
-	}
-	.item.free .tier-tag { color: var(--text-muted); }
-	.item.silver .tier-tag { color: var(--tier-silver); }
-	.item.gold .tier-tag { color: var(--tier-gold); }
-	.item.platinum .tier-tag { color: var(--tier-platinum); }
 
 	.meta {
 		flex: 1;
@@ -212,10 +192,20 @@
 		color: var(--text-muted);
 		letter-spacing: 0.12em;
 	}
+	.item.free .entry-id { color: var(--text-muted); }
+	.item.silver .entry-id {
+		color: var(--tier-silver);
+	}
+	.item.gold .entry-id { color: var(--tier-gold); }
+	.item.platinum .entry-id { color: #7de3ff; }
 
 	/* Tier specific accents */
+	.item.free .track {
+		color: var(--text-dim);
+		font-weight: var(--font-weight-5);
+	}
 	.item.platinum .track {
-		color: var(--tier-platinum);
+		color: #7de3ff;
 	}
 	.item.gold .track {
 		font-style: italic;
