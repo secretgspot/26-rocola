@@ -65,7 +65,7 @@
 		display: flex;
 		align-items: center;
 		gap: var(--size-3);
-		padding: var(--size-2) var(--size-3);
+		padding: 4px var(--size-3);
 		background: transparent;
 		border: 0;
 		transition: background var(--transition-duration-1) ease, color var(--transition-duration-1) ease;

@@ -23,6 +23,9 @@
 	let clearPending = $state(false);
 	let theme = $state('dark');
 	let isVideoPaused = $state(false);
+	let queueVisible = $state(false);
+	let queueHideTimer = null;
+	let isMobileViewport = $state(false);
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const connectionState = $derived(playerState.connectionState || 'connecting');
@@ -49,6 +52,21 @@
 		const stored = localStorage.getItem('rocola-theme');
 		theme = stored === 'light' ? 'light' : 'dark';
 		document.documentElement.setAttribute('data-theme', theme);
+	});
+
+	$effect(() => {
+		if (typeof window === 'undefined') return;
+		const media = window.matchMedia('(max-width: 1023px)');
+		const update = () => {
+			isMobileViewport = media.matches;
+			if (isMobileViewport) {
+				queueVisible = true;
+				clearQueueHideTimer();
+			}
+		};
+		update();
+		media.addEventListener('change', update);
+		return () => media.removeEventListener('change', update);
 	});
 
 	function toggleTheme() {
@@ -113,6 +131,59 @@
 		isVideoPaused = Boolean(e?.paused);
 	}
 
+	function clearQueueHideTimer() {
+		if (queueHideTimer) {
+			clearTimeout(queueHideTimer);
+			queueHideTimer = null;
+		}
+	}
+
+	function scheduleQueueHide(delayMs = 1600) {
+		clearQueueHideTimer();
+		queueHideTimer = setTimeout(() => {
+			queueVisible = false;
+		}, delayMs);
+	}
+
+	function handleQueuePointerEnter(e) {
+		if (e.pointerType === 'mouse') {
+			queueVisible = true;
+			clearQueueHideTimer();
+		}
+	}
+
+	function handleQueuePointerMove(e) {
+		if (e.pointerType === 'mouse') {
+			queueVisible = true;
+			clearQueueHideTimer();
+		}
+	}
+
+	function handleQueuePointerLeave(e) {
+		if (e.pointerType === 'mouse') {
+			queueVisible = false;
+			clearQueueHideTimer();
+		}
+	}
+
+	function handleQueueTouchReveal() {
+		queueVisible = true;
+		scheduleQueueHide();
+	}
+
+	$effect(() => {
+		if (playerState.queue.length === 0) {
+			queueVisible = false;
+			clearQueueHideTimer();
+		}
+	});
+
+	$effect(() => {
+		return () => {
+			clearQueueHideTimer();
+		};
+	});
+
 	async function advance() {
 		if (nextPending) return;
 		nextPending = true;
@@ -146,7 +217,13 @@
 	}
 </script>
 
-<div class="app-container">
+<div
+	class="app-container"
+	onpointerenter={handleQueuePointerEnter}
+	onpointermove={handleQueuePointerMove}
+	onpointerleave={handleQueuePointerLeave}
+	ontouchstart={handleQueueTouchReveal}
+>
 	<div class="toasts-layer">
 		{#each playerState.toasts as t (t.id)}
 			<Toast message={t.message} level={t.level} />
@@ -252,7 +329,7 @@
 	</main>
 
 	{#if playerState.queue.length > 0}
-		<aside class="queue-zone min-w-0">
+		<aside class="queue-zone min-w-0" class:visible={queueVisible || isMobileViewport}>
 			<div class="queue-content">
 				<Queue />
 			</div>
@@ -464,8 +541,17 @@
 		justify-content: center;
 		min-width: 0;
 		z-index: 2;
-		pointer-events: auto;
+		pointer-events: none;
 		background: transparent;
+		opacity: 0;
+		transform: translateX(14px);
+		transition: opacity 180ms ease, transform 180ms ease;
+		will-change: opacity, transform;
+	}
+	.queue-zone.visible {
+		opacity: 1;
+		transform: translateX(0);
+		pointer-events: auto;
 	}
 	.queue-content {
 		flex: 1 1 auto;
@@ -476,6 +562,19 @@
 		position: relative;
 		pointer-events: auto;
 		align-content: center;
+		-webkit-backdrop-filter: blur(2px);
+		backdrop-filter: blur(2px);
+		background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 84%, transparent), transparent);
+		transition:
+			-webkit-backdrop-filter 180ms ease,
+			backdrop-filter 180ms ease,
+			background 180ms ease;
+		will-change: backdrop-filter, -webkit-backdrop-filter, background;
+		transform: translateZ(0);
+		backface-visibility: hidden;
+	}
+	.queue-zone.visible .queue-content {
+		-webkit-backdrop-filter: blur(6px);
 		backdrop-filter: blur(6px);
 		background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 88%, transparent), transparent);
 	}
@@ -538,6 +637,13 @@
 			flex: 1 1 auto;
 			height: 100%;
 			max-height: none;
+			-webkit-backdrop-filter: blur(2px);
+			backdrop-filter: blur(2px);
+			background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
+		}
+		.queue-zone.visible .queue-content {
+			-webkit-backdrop-filter: blur(6px);
+			backdrop-filter: blur(6px);
 			background: color-mix(in srgb, var(--bg-dark) 92%, transparent);
 		}
 		.toasts-layer {
@@ -560,6 +666,13 @@
 		.queue-content {
 			height: 100%;
 			max-height: 100%;
+			-webkit-backdrop-filter: blur(2px);
+			backdrop-filter: blur(2px);
+			background: linear-gradient(270deg, color-mix(in srgb, var(--bg-dark) 92%, transparent), transparent);
+		}
+		.queue-zone.visible .queue-content {
+			-webkit-backdrop-filter: blur(6px);
+			backdrop-filter: blur(6px);
 			background: linear-gradient(270deg, var(--bg-dark), transparent);
 		}
 	}
