@@ -435,7 +435,7 @@
 		justify-content: space-between;
 		padding: 0 var(--size-4);
 		background: transparent;
-		z-index: 3;
+		z-index: 10;
 		letter-spacing: 0.08em;
 		border-bottom: 0;
 		text-transform: uppercase;
@@ -679,14 +679,14 @@
 		width: min(420px, calc(100vw - var(--size-6)));
 		height: auto;
 		position: absolute;
-		top: 50%;
-		bottom: auto;
+		top: 0;
+		bottom: 0;
+		left: auto;
 		right: 0;
-		transform: translateY(-50%);
 		display: flex;
 		flex-direction: column;
-		backdrop-filter: blur(6px);
-		background: linear-gradient(270deg, var(--bg-dark), transparent);
+		justify-content: center;
+		background: transparent;
 		min-width: 0;
 		z-index: 2;
 		pointer-events: auto;
@@ -698,6 +698,8 @@
 		overflow-x: visible;
 		position: relative;
 		pointer-events: auto;
+		backdrop-filter: blur(6px);
+		background: linear-gradient(270deg, var(--bg-dark), transparent);
 	}
 
 	.toasts-layer {
@@ -714,23 +716,28 @@
 		align-items: flex-start;
 	}
 	@layer page-responsive {
+	@media (orientation: portrait) {
 	@container viewport (max-width: 1023px) {
 		.video-layer {
-			inset: 0;
-			height: 100dvh;
+			top: 0;
+			left: 0;
+			right: 0;
+			bottom: auto;
+			height: 50dvh;
 		}
 		.queue-zone {
 			width: 100%;
 			left: 0;
 			right: 0;
-			top: auto;
-			bottom: calc(var(--mobile-footer-h) + env(safe-area-inset-bottom, 0px));
-			right: 0;
-			transform: none;
-			background: linear-gradient(0deg, color-mix(in srgb, var(--bg-dark) 62%, transparent), transparent 45%);
+			top: 50dvh;
+			bottom: 0;
+			height: auto;
+			justify-content: flex-start;
+			background: transparent;
 		}
 		.queue-content {
-			max-height: min(38dvh, calc(100dvh - var(--mobile-footer-h) - 56px));
+			max-height: calc(50dvh - var(--mobile-footer-h) - env(safe-area-inset-bottom, 0px));
+			background: linear-gradient(0deg, color-mix(in srgb, var(--bg-dark) 62%, transparent), transparent 45%);
 		}
 		.toasts-layer {
 			top: 70px;
@@ -738,6 +745,7 @@
 			transform: none;
 			padding: var(--size-1);
 		}
+	}
 	}
 
 	@container viewport (max-width: 480px) {

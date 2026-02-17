@@ -514,13 +514,13 @@
 	}
 
 	@layer add-responsive {
-	@media (max-width: 1023px) {
+	@media (max-width: 1023px) and (orientation: portrait) {
 		.fab-center,
 		.fab-near-queue {
 			left: auto;
 			top: auto;
 			right: var(--size-3);
-			bottom: calc(var(--mobile-footer-h, 124px) + var(--size-2) + env(safe-area-inset-bottom, 0px));
+			bottom: calc(var(--mobile-footer-h, 124px) + var(--size-1) + env(safe-area-inset-bottom, 0px));
 			margin: 0;
 			transform: none;
 		}
