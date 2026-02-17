@@ -2,6 +2,7 @@
 	import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
+	import Icon from './Icon.svelte';
 
 	let { onqueued, hideTrigger = false, pulse = false, mode = 'center' } = $props();
 
@@ -140,10 +141,7 @@
 	onclick={open}
 	class:hidden={isOpen || hideTrigger}
 >
-	<div class="fab-inner">
-		<span class="label">[ADD]</span>
-		<span class="plus">+</span>
-	</div>
+	<Icon name="add" size={30} color="currentColor" strokeWidth={1.9} />
 </button>
 
 {#if isOpen}
@@ -292,24 +290,15 @@
 	}
 	.fab-near-queue {
 		top: 50%;
-		right: min(420px, calc(100vw - var(--size-6)));
+		right: min(340px, 34vw);
 		margin-right: var(--size-3);
 		margin-top: calc(var(--size-9) / -2);
 	}
-	.fab-inner {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		color: inherit;
-	 }
 	:global([data-theme='light']) .fab {
 		background: var(--text-main);
 		color: var(--bg-dark);
 	}
-	.fab .label { font-size: var(--font-size-00); font-weight: var(--font-weight-8); }
-	.fab .plus { font-size: var(--font-size-4); font-weight: var(--font-weight-7); line-height: 1; }
-	.fab:hover { transform: scale(1.04); border-color: var(--border-bright); }
+	.fab:hover { transform: scale(1.04); }
 	.fab.hidden { opacity: 0; pointer-events: none; }
 	.fab.pulse {
 		animation: fabPulse 1.4s ease-in-out infinite;
@@ -515,14 +504,26 @@
 
 	@layer add-responsive {
 	@media (max-width: 1023px) and (orientation: portrait) {
-		.fab-center,
+		.fab-center {
+			left: 50%;
+			top: auto;
+			right: auto;
+			bottom: calc(var(--mobile-footer-h, 124px) - 10px + env(safe-area-inset-bottom, 0px));
+			margin: 0;
+			transform: translateX(-50%);
+		}
 		.fab-near-queue {
 			left: auto;
 			top: auto;
 			right: var(--size-3);
-			bottom: calc(var(--mobile-footer-h, 124px) + var(--size-1) + env(safe-area-inset-bottom, 0px));
+			bottom: calc(var(--mobile-footer-h, 124px) - 10px + env(safe-area-inset-bottom, 0px));
 			margin: 0;
 			transform: none;
+		}
+	}
+	@media (max-width: 1023px) and (orientation: landscape) {
+		.fab-near-queue {
+			right: min(340px, 40vw);
 		}
 	}
 	@container add-modal (max-width: 640px) {

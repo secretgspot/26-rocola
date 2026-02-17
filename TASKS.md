@@ -109,25 +109,41 @@
 - [x] Move progress bar into dedicated `ProgressBar.svelte` and render inside metadata footer component
 
 ## Screenshot Match Pass (Pending Approval)
-- [ ] Create reusable icon system:
-    - [ ] Build `Icon.svelte` with props (`name`, `size`, `color`, `strokeWidth`, `className`)
-    - [ ] Add icon registry from `docs/reference/*.svg` (`skip`, `seed`, `clear`, `add`, `clients`, `queue`, `dark`, `light`)
-    - [ ] Ensure all icons use `currentColor` for fill/stroke mapping
-- [ ] Header alignment to screenshot:
-    - [ ] Left cluster: live-dot + `ROCOLA`
-    - [ ] Right cluster: admin icons, theme icon, clients icon + count, queue icon + count
-    - [ ] Match spacing, heights, and top gradient fade from screenshot
-- [ ] Desktop layout match:
-    - [ ] Keep video full canvas background
-    - [ ] Keep queue as right-side floating panel with expected size/position and blur treatment
-    - [ ] Position Add button between video center and queue edge
-- [ ] Mobile portrait (425x888) layout match:
-    - [ ] Header/footer remain overlay layers
-    - [ ] Video top half and queue lower half behavior
-    - [ ] Add button centered above footer (on-screen, not clipped)
-    - [ ] Footer text/stats visibility pass for title + metadata
-- [ ] Landscape mobile parity:
-    - [ ] Use desktop-like layout behavior in landscape as requested
-- [ ] Verification:
-    - [ ] `npm run check`
-    - [ ] quick responsive pass for 425x888 portrait + landscape
+- [x] Create reusable icon system:
+    - [x] Build `Icon.svelte` with props (`name`, `size`, `color`, `strokeWidth`, `className`)
+    - [x] Add icon registry from `docs/reference/*.svg` (`skip`, `seed`, `clear`, `add`, `clients`, `queue`, `dark`, `light`)
+    - [x] Ensure all icons use `currentColor` for fill/stroke mapping
+- [x] Header alignment to screenshot:
+    - [x] Left cluster: live-dot + `ROCOLA`
+    - [x] Right cluster: admin icons, theme icon, clients icon + count, queue icon + count
+    - [x] Match spacing, heights, and top gradient fade from screenshot
+- [x] Desktop layout match:
+    - [x] Keep video full canvas background
+    - [x] Keep queue as right-side floating panel with expected size/position and blur treatment
+    - [x] Position Add button between video center and queue edge
+- [x] Mobile portrait (425x888) layout match:
+    - [x] Header/footer remain overlay layers
+    - [x] Video top half and queue lower half behavior
+    - [x] Add button centered above footer (on-screen, not clipped)
+    - [x] Footer text/stats visibility pass for title + metadata
+- [x] Landscape mobile parity:
+    - [x] Use desktop-like layout behavior in landscape as requested
+- [x] Verification:
+    - [x] `npm run check`
+    - [x] quick responsive pass for 425x888 portrait + landscape
+
+## Mobile Recovery Pass (2026-02-17)
+- [x] Re-assert portrait mobile structure:
+    - [x] Header/Footer stay overlay layers
+    - [x] Video fixed to top 50dvh
+    - [x] Queue fixed below video, full width, no side gap
+- [x] Re-assert landscape mobile parity with desktop:
+    - [x] Right-side floating queue panel with desktop-like insets
+    - [x] Queue sizing and scroll behavior consistent with desktop
+- [x] FAB placement correction:
+    - [x] `fab-center` remains centered only for empty queue mode
+    - [x] `fab-near-queue` stays right-side and lower above footer on portrait
+- [x] Verification and close:
+    - [x] `npm run check` passes
+- [x] Post-fix regression:
+    - [x] Fix CSS cascade-layer precedence so portrait overrides beat queue base rules
