@@ -133,6 +133,10 @@
 	}
 </script>
 
+{#if mode === 'center' && !isOpen && !hideTrigger}
+	<p class="empty-queue-callout">Queue's asleep. Wake it with a banger.</p>
+{/if}
+
 <button
 	class="fab"
 	class:pulse
@@ -267,7 +271,7 @@
 	@layer add-layout, add-responsive, add-motion;
 
 	@layer add-layout {
-	.fab {
+		.fab {
 		position: fixed;
 		width: var(--size-9);
 		height: var(--size-9);
@@ -282,19 +286,36 @@
 		cursor: pointer;
 		z-index: var(--layer-5);
 		transition: transform var(--transition-duration-1), background var(--transition-duration-1), color var(--transition-duration-1);
-	}
-	.fab-center {
-		left: 50%;
-		top: 50%;
+		}
+		.empty-queue-callout {
+			position: fixed;
+			left: 50%;
+			top: 50%;
+			transform: translate(-50%, calc(-50% - 74px));
+			margin: 0;
+			padding: 0 var(--size-2);
+			font-size: var(--font-size-0);
+			letter-spacing: 0.04em;
+			text-transform: uppercase;
+			color: color-mix(in srgb, var(--text-main) 86%, transparent);
+			text-align: center;
+			z-index: var(--layer-5);
+			pointer-events: none;
+			white-space: nowrap;
+		}
+		.fab-center {
+			left: 50%;
+			top: 50%;
 		margin-left: calc(var(--size-9) / -2);
 		margin-top: calc(var(--size-9) / -2);
 	}
-	.fab-near-queue {
-		top: 50%;
-		right: min(340px, 34vw);
-		margin-right: var(--size-3);
-		margin-top: calc(var(--size-9) / -2);
-	}
+		.fab-near-queue {
+			top: auto;
+			right: var(--size-3);
+			bottom: calc(120px + var(--size-3) - var(--size-9));
+			margin: 0;
+			transform: none;
+		}
 	:global([data-theme='light']) .fab {
 		background: #000000;
 		color: #ffffff;
@@ -504,17 +525,25 @@
 	}
 	}
 
-	@layer add-responsive {
-	@media (max-width: 1023px) and (orientation: portrait) {
-		.fab-center {
-			left: 50%;
-			top: auto;
-			right: auto;
-			bottom: calc(var(--mobile-footer-h, 124px) - 10px + env(safe-area-inset-bottom, 0px));
-			margin: 0;
-			transform: translateX(-50%);
-		}
-		.fab-near-queue {
+		@layer add-responsive {
+			@media (max-width: 1023px) and (orientation: portrait) {
+				.empty-queue-callout {
+					top: 50%;
+					bottom: auto;
+					transform: translate(-50%, calc(-50% - 74px));
+					white-space: nowrap;
+					max-width: none;
+				}
+				.fab-center {
+					left: 50%;
+					top: 50%;
+				right: auto;
+				bottom: auto;
+				margin-left: calc(var(--size-9) / -2);
+				margin-top: calc(var(--size-9) / -2);
+				transform: none;
+			}
+			.fab-near-queue {
 			left: auto;
 			top: auto;
 			right: var(--size-3);
@@ -523,11 +552,12 @@
 			transform: none;
 		}
 	}
-	@media (max-width: 1023px) and (orientation: landscape) {
-		.fab-near-queue {
-			right: min(340px, 40vw);
+		@media (max-width: 1023px) and (orientation: landscape) {
+			.fab-near-queue {
+				right: var(--size-3);
+				bottom: calc(104px + var(--size-3) - var(--size-9));
+			}
 		}
-	}
 	@container add-modal (max-width: 640px) {
 		.modal-backdrop {
 			align-items: flex-end;

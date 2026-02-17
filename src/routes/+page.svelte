@@ -26,6 +26,7 @@
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const connectionState = $derived(playerState.connectionState || 'connecting');
+	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
 	const konami = [
 		'arrowup',
 		'arrowup',
@@ -268,8 +269,8 @@
 	<AddToQueue
 		onqueued={refreshQueue}
 		hideTrigger={isVideoPaused}
-		pulse={playerState.queue.length === 0}
-		mode={playerState.queue.length === 0 ? 'center' : 'nearQueue'}
+		pulse={isIdleState}
+		mode={isIdleState ? 'center' : 'nearQueue'}
 	/>
 </div>
 
