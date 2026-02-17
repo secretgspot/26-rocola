@@ -4,40 +4,59 @@
 
 <div class="toast {level}">
 	<div class="toast-content">
-		<span class="level-tag">[{level.toUpperCase()}]</span>
+		{#if level && level !== 'plain'}
+			<span class="level-tag">[{level.toUpperCase()}]</span>
+		{/if}
 		<span class="message">{message}</span>
 	</div>
 </div>
 
 <style>
-	.toast {
-		background: var(--bg-panel);
-		color: var(--text-main);
-		padding: var(--size-2) var(--size-3);
-		font-family: var(--font-mono);
-		font-size: var(--font-size-1);
-		font-weight: var(--font-weight-6);
-		animation: var(--animation-slide-in-right);
-		min-width: 250px;
-		pointer-events: auto;
-		border: 0;
-	}
+		.toast {
+			background: var(--bg-panel);
+			color: var(--text-main);
+			padding: 2px var(--size-3);
+			font-family: var(--font-monospace-code);
+			font-size: var(--font-size-0);
+			font-weight: var(--font-weight-1);
+			animation: toastDropIn 180ms ease-out both;
+			min-width: 250px;
+			pointer-events: auto;
+			border: 0;
+		}
 
-	.toast.error {
-		background: var(--bg-dark);
-		color: #ffffff;
-		border: 1px solid #ffffff;
-	}
+		.toast.error {
+			background: var(--bg-dark);
+			color: #ffffff;
+			border: 1px solid #ffffff;
+		}
+		.toast.plain {
+			min-width: 0;
+			width: fit-content;
+		}
 
-	.toast-content {
-		display: flex;
-		align-items: center;
-		gap: var(--size-3);
-	}
+		.toast-content {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			gap: var(--size-3);
+		}
+		.message { text-align: left; }
 
-	.level-tag {
-		font-weight: var(--font-weight-8);
-		font-size: var(--font-size-0);
-		letter-spacing: 0.1em;
-	}
-</style>
+		.level-tag {
+			font-weight: var(--font-weight-8);
+			font-size: var(--font-size-0);
+			letter-spacing: 0.1em;
+		}
+
+		@keyframes toastDropIn {
+			from {
+				opacity: 0;
+				transform: translateY(-10px);
+			}
+			to {
+				opacity: 1;
+				transform: translateY(0);
+			}
+		}
+	</style>

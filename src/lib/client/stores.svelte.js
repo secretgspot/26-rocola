@@ -199,7 +199,7 @@ export async function initRealtime() {
 						
 						const added = items.find(it => it && (it.queueId === payload.id || it.songId === payload.songId));
 						if (added) {
-							addToast({ message: `Queued: ${added.title}`, level: 'success' });
+							addToast({ message: added.title, level: 'queued' });
 						}
 					}
 					

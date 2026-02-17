@@ -199,7 +199,7 @@
 							const res = await fetch('/api/debug/clear', { method: 'POST' });
 							const data = await res.json();
 							if (data.ok) {
-								addToast({ message: 'CLEARED', level: 'success' });
+								addToast({ message: 'Queue cleared!', level: 'plain' });
 								playerState.currentSong = null;
 								refreshQueue();
 							} else {
@@ -482,14 +482,14 @@
 
 	.toasts-layer {
 		position: fixed;
-		top: 50%;
-		left: var(--size-2);
-		transform: translateY(-50%);
-		z-index: var(--layer-important);
-		padding: var(--size-3);
+		top: calc(56px + var(--size-2));
+		left: var(--size-4);
+		transform: none;
+		z-index: 2;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: var(--size-1);
+		gap: 2px;
 		pointer-events: none;
 		align-items: flex-start;
 	}
@@ -541,10 +541,10 @@
 			background: color-mix(in srgb, var(--bg-dark) 92%, transparent);
 		}
 		.toasts-layer {
-			top: 70px;
-			left: var(--size-1);
+			top: calc(56px + var(--size-1));
+			left: var(--size-3);
 			transform: none;
-			padding: var(--size-1);
+			padding: 0;
 		}
 	}
 
