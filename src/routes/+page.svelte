@@ -313,6 +313,7 @@
 			color-mix(in srgb, var(--queue-fade-void) 70%, transparent) 40%,
 			transparent 100%
 		);
+		color: var(--text-main);
 	}
 	.logo {
 		display: flex;
@@ -400,6 +401,7 @@
 		--icon-stroke-width: 2;
 		opacity: 0.6;
 		transition: opacity var(--transition-duration-1) ease;
+		color: var(--text-main);
 	}
 	.top-bar button {
 		all: unset;
@@ -418,6 +420,11 @@
 	}
 	.btn-skip:active {
 		opacity: 1;
+	}
+	:global([data-theme='light']) .btn-skip,
+	:global([data-theme='light']) .theme-toggle {
+		opacity: 0.9;
+		color: var(--text-main);
 	}
 
 	.video-layer {

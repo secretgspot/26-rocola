@@ -29,8 +29,8 @@
 			.replace(/<\?xml[\s\S]*?\?>/g, '')
 			.replace(/<!--[\s\S]*?-->/g, '')
 			.replace(/(width|height)="[^"]*"/g, '')
-			.replace(/fill="#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})"/g, 'fill="currentColor"')
-			.replace(/stroke="#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})"/g, 'stroke="currentColor"')
+			.replace(/\bfill="(?!none\b)[^"]*"/gi, 'fill="currentColor"')
+			.replace(/\bstroke="(?!none\b)[^"]*"/gi, 'stroke="currentColor"')
 			.replace(/stroke-width="[^"]*"/g, `stroke-width="${strokeWidth}"`)
 			.trim();
 	}
@@ -68,6 +68,7 @@
 		width: 100%;
 		height: 100%;
 		display: block;
+		fill: currentColor;
+		stroke: currentColor;
 	}
 </style>
-

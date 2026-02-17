@@ -141,7 +141,7 @@
 	onclick={open}
 	class:hidden={isOpen || hideTrigger}
 >
-	<Icon name="add" size={30} color="currentColor" strokeWidth={1.9} />
+	<Icon name="add" size={30} color="var(--fab-icon-color)" strokeWidth={1.9} />
 </button>
 
 {#if isOpen}
@@ -273,6 +273,7 @@
 		height: var(--size-9);
 		background: var(--text-main);
 		color: var(--bg-dark);
+		--fab-icon-color: var(--bg-dark);
 		border: 0;
 		border-radius: 9px;
 		display: flex;
@@ -295,8 +296,9 @@
 		margin-top: calc(var(--size-9) / -2);
 	}
 	:global([data-theme='light']) .fab {
-		background: var(--text-main);
-		color: var(--bg-dark);
+		background: #000000;
+		color: #ffffff;
+		--fab-icon-color: #ffffff;
 	}
 	.fab:hover { transform: scale(1.04); }
 	.fab.hidden { opacity: 0; pointer-events: none; }

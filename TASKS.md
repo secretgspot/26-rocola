@@ -147,3 +147,7 @@
     - [x] `npm run check` passes
 - [x] Post-fix regression:
     - [x] Fix CSS cascade-layer precedence so portrait overrides beat queue base rules
+ - [x] Light theme icon contrast fix:
+    - [x] Normalize SVG fill/stroke to `currentColor` for all icon assets
+    - [x] Ensure header controls use theme text color in light mode
+    - [x] Ensure FAB icon contrasts with FAB background in light mode
