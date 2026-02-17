@@ -9,11 +9,25 @@
 	/** @type {any} */
 	let player = $state(null);
 	let playbackProgress = $state(0);
+	let allowSound = $state(false);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
 	/** @type {number | null} */
 	let lastStartedAt = $state(null);
+
+	function tryUnmuteAndPlay() {
+		if (!player || !allowSound) return;
+		try {
+			const raw = player._raw;
+			if (raw && typeof raw.unMute === 'function') {
+				raw.unMute();
+			}
+			player.play?.();
+		} catch {
+			// ignore
+		}
+	}
 
 	// Get the "official" server-side elapsed time
 	function getServerElapsed() {
@@ -33,7 +47,7 @@
 		const initialVideoId = untrack(() => playerState.currentSong?.videoId);
 		const seekTo = untrack(() => getServerElapsed());
 		
-		createPlayer(el.id, { 
+			createPlayer(el.id, { 
 			videoId: initialVideoId,
 			onStateChange: (e) => {
 				// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
@@ -43,6 +57,8 @@
 					onnext?.();
 				}
 				if (e.data === 1) {
+					// Keep audio unlocked across song transitions once user has interacted.
+					tryUnmuteAndPlay();
 					// When switching to Playing, sync if we drifted too much or were paused
 					const current = p.getCurrentTime();
 					const correct = getServerElapsed();
@@ -71,6 +87,31 @@
 	});
 
 	$effect(() => {
+		if (typeof window === 'undefined') return;
+		if (window.sessionStorage.getItem('rocola-audio-unlocked') === '1') {
+			allowSound = true;
+		}
+		const unlockAudio = () => {
+			allowSound = true;
+			window.sessionStorage.setItem('rocola-audio-unlocked', '1');
+			tryUnmuteAndPlay();
+		};
+
+		window.addEventListener('pointerdown', unlockAudio, { once: true });
+		window.addEventListener('keydown', unlockAudio, { once: true });
+		window.addEventListener('touchstart', unlockAudio, { once: true });
+		return () => {
+			window.removeEventListener('pointerdown', unlockAudio);
+			window.removeEventListener('keydown', unlockAudio);
+			window.removeEventListener('touchstart', unlockAudio);
+		};
+	});
+
+	$effect(() => {
+		tryUnmuteAndPlay();
+	});
+
+	$effect(() => {
 		const current = playerState.currentSong;
 		if (!player || !current?.videoId) return;
 
@@ -82,10 +123,12 @@
 			if (isNewVideo) {
 				player.load(current.videoId, true);
 				if (seekTo > 2) player.seek(seekTo);
+				tryUnmuteAndPlay();
 			} else if (isNewStart) {
 				// Song restarted or time shifted
 				player.seek(seekTo);
 				player.play();
+				tryUnmuteAndPlay();
 			}
 			lastLoadedVideoId = current.videoId;
 			lastStartedAt = current.startedAt ?? null;

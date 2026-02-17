@@ -36,7 +36,8 @@ export async function createPlayer(elementId, options = {}) {
       videoId: options.videoId || '',
       playerVars: {
         autoplay: 1,
-        mute: 0,
+        // Start muted so autoplay is reliably allowed after refresh.
+        mute: 1,
         rel: 0,
         modestbranding: 1,
         controls: 0, // hide UI controls to emulate a jukebox

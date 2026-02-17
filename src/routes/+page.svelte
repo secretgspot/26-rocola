@@ -29,6 +29,7 @@
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const connectionState = $derived(playerState.connectionState || 'connecting');
+	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
 	const konami = [
 		'arrowup',
@@ -230,11 +231,11 @@
 		{/each}
 	</div>
 
-	<header class="top-bar">
-		<div class="logo">
-			<div class="live-dot {connectionState}" aria-hidden="true"></div>
-			<span class="logo-text">ROCOLA</span>
-		</div>
+		<header class="top-bar">
+			<div class="logo">
+				<div class="live-dot {connectionState}" aria-hidden="true" title={connectionTooltip}></div>
+				<span class="logo-text">ROCOLA</span>
+			</div>
 		<div class="header-meta">
 			{#if import.meta.env.DEV || isAdmin}
 				<div class="admin-panel">
@@ -295,13 +296,15 @@
 			<button class="theme-toggle btn-skip btn-theme" onclick={toggleTheme} aria-label="Toggle theme">
 				<Icon name={theme === 'dark' ? 'dark' : 'light'} size={20} color="currentColor" strokeWidth={1.8} />
 			</button>
-			<div class="status">
-				<Icon name="clients" size={18} color="currentColor" strokeWidth={1.6} />
-				<span class="count">{playerState.clientCount.toString().padStart(2, '0')}</span>
-				<span class="queue-count" aria-label="Queue count">
-					<Icon name="queue" size={18} color="currentColor" strokeWidth={1.8} />
-					<span class="count">{playerState.queue.length.toString().padStart(2, '0')}</span>
-				</span>
+				<div class="status">
+					<span title="Connected clients">
+						<Icon name="clients" size={18} color="currentColor" strokeWidth={1.6} />
+					</span>
+					<span class="count">{playerState.clientCount.toString().padStart(2, '0')}</span>
+					<span class="queue-count" aria-label="Queue count" title="Songs waiting in queue">
+						<Icon name="queue" size={18} color="currentColor" strokeWidth={1.8} />
+						<span class="count">{playerState.queue.length.toString().padStart(2, '0')}</span>
+					</span>
 			</div>
 		</div>
 	</header>
