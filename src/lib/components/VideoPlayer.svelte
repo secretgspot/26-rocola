@@ -12,6 +12,7 @@
 	let allowSound = $state(false);
 	let nextRequestedForQueueId = $state(null);
 	let lastResumeAttemptAt = $state(0);
+	let lastTransitionKey = $state(null);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -29,6 +30,10 @@
 		} catch {
 			// ignore
 		}
+	}
+
+	function clamp(value, min, max) {
+		return Math.max(min, Math.min(max, value));
 	}
 
 	function requestNextOnce() {
@@ -68,14 +73,15 @@
 					if (e.data === 1) {
 						// Keep audio unlocked across song transitions once user has interacted.
 						tryUnmuteAndPlay();
-						// When switching to Playing, sync if we drifted too much or were paused
+						// When switching to Playing, do a tight correction.
 						const current = p.getCurrentTime();
 						const correct = getServerElapsed();
 						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 3;
-						if (!nearEnd && Math.abs(current - correct) > 2.2) {
-							console.log('[VideoPlayer] Syncing playback to server time', { current, correct });
-							p.seek(correct);
+						const drift = correct - current;
+						if (!nearEnd && Number.isFinite(drift) && Math.abs(drift) > 0.25) {
+							if (Math.abs(drift) > 2.5) p.seek(correct);
+							else p.seek(current + clamp(drift, -0.4, 0.4));
 						}
 					}
 			},
@@ -128,21 +134,25 @@
 
 		const isNewVideo = current.videoId !== lastLoadedVideoId;
 		const isNewStart = current.startedAt && current.startedAt !== lastStartedAt;
+		const transitionKey = `${current.queueId || current.id || current.videoId}:${current.startedAt || 0}`;
+		const isNewTransition = transitionKey !== lastTransitionKey;
 
-			if (isNewVideo || isNewStart) {
+			if (isNewVideo || isNewStart || isNewTransition) {
 				const seekTo = getServerElapsed();
 				if (isNewVideo) {
 					player.load(current.videoId, true);
-					if (seekTo > 2) player.seek(seekTo);
-				tryUnmuteAndPlay();
-			} else if (isNewStart) {
-				// Song restarted or time shifted
-				player.seek(seekTo);
-				player.play();
-				tryUnmuteAndPlay();
-			}
+					// startedAt is second-based in storage; avoid jumping nearly 1s ahead.
+					if (seekTo > 1.05) player.seek(seekTo);
+					tryUnmuteAndPlay();
+				} else if (isNewStart || isNewTransition) {
+					// Transition lock: align exactly once per (queueId, startedAt).
+					player.seek(seekTo);
+					player.play();
+					tryUnmuteAndPlay();
+				}
 				lastLoadedVideoId = current.videoId;
 				lastStartedAt = current.startedAt ?? null;
+				lastTransitionKey = transitionKey;
 				nextRequestedForQueueId = null;
 				playbackProgress = 0;
 			}
@@ -154,6 +164,7 @@
 		let frame;
 		let lastUpdate = 0;
 		let lastSync = 0;
+		let lastHardSync = 0;
 		let lastStateCheck = 0;
 
 		const update = (time) => {
@@ -164,17 +175,25 @@
 				if (player && playerState.currentSong) {
 					// Determine duration: Player is most accurate, fallback to metadata
 					let duration = 0;
+					let hasNativeDuration = false;
 					const raw = player._raw;
 					if (raw && typeof raw.getDuration === 'function') {
 						duration = raw.getDuration();
+						hasNativeDuration = duration > 0;
 					}
 					if ((!duration || duration === 0) && playerState.currentSong.duration) {
 						duration = playerState.currentSong.duration;
 					}
 
 						if (duration > 0) {
-							const elapsed = getServerElapsed();
-							playbackProgress = (elapsed / duration) * 100;
+							const elapsedServer = getServerElapsed();
+							const elapsedPlayer = player.getCurrentTime?.();
+							// UI should reflect what viewer actually sees.
+							const elapsedUi =
+								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer) && elapsedPlayer >= 0
+									? elapsedPlayer
+									: elapsedServer;
+							playbackProgress = (elapsedUi / duration) * 100;
 
 						// Clamp to 100%
 						if (playbackProgress > 100) playbackProgress = 100;
@@ -210,14 +229,16 @@
 						}
 
 							// Fallback auto-advance if ended event is missed.
-							if (elapsed >= duration + 1.5) {
+							// Keep this tight when we have native player duration.
+							const endGraceSec = hasNativeDuration ? 0.35 : 1.2;
+							if (elapsedServer >= duration + endGraceSec) {
 								requestNextOnce();
 							}
 						}
 					}
 				}
 				// Periodic drift correction (avoid aggressive micro-seeks)
-				if (time - lastSync > 1500 && player && playerState.currentSong) {
+				if (time - lastSync > 1200 && player && playerState.currentSong) {
 					lastSync = time;
 					try {
 						const current = player.getCurrentTime?.();
@@ -226,13 +247,32 @@
 						const duration =
 							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 4;
+						const drift = correct - current;
 						if (
 							state === 1 &&
 							!nearEnd &&
 							typeof current === 'number' &&
-							Math.abs(current - correct) > 1.3
+							Number.isFinite(drift) &&
+							Math.abs(drift) > 0.25
 						) {
-							player.seek(correct);
+							player.seek(current + clamp(drift, -0.35, 0.35));
+						}
+					} catch {
+						// ignore
+					}
+				}
+				// Hard sync every ~3s: full seek if drift is significant.
+				if (time - lastHardSync > 3000 && player && playerState.currentSong) {
+					lastHardSync = time;
+					try {
+						const state = player.getPlayerState?.();
+						const current = player.getCurrentTime?.();
+						const correct = getServerElapsed();
+						if (state === 1 && typeof current === 'number' && Number.isFinite(current)) {
+							const drift = correct - current;
+							if (Math.abs(drift) > 1.2) {
+								player.seek(correct);
+							}
 						}
 					} catch {
 						// ignore

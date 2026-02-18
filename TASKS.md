@@ -180,3 +180,11 @@
 - [x] Add `withReadRetry` helper for transient Neon disconnects
 - [x] Apply read retry to `GET /api/queue` and `GET /api/queue/current`
 - [x] Verify with `npm run check`
+
+## Realtime Sync Tightening (2026-02-18)
+- [x] Tighten drift budget to ~250ms during active playback
+- [x] Add capped micro-seek corrections for smoother resync (`<= 350ms` seek steps)
+- [x] Add periodic hard sync (full seek) when drift exceeds 1.2s
+- [x] Add transition lock keyed by `(queueId, startedAt)` to avoid duplicate/missed transition handling
+- [x] Keep progress bar aligned to actual player time while sync remains server-driven
+- [x] Verify with `npm run check`
