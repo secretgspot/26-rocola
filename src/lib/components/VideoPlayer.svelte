@@ -13,6 +13,8 @@
 	let nextRequestedForQueueId = $state(null);
 	let lastResumeAttemptAt = $state(0);
 	let lastTransitionKey = $state(null);
+	let transitionAtMs = $state(0);
+	let pendingJoinSeekTo = $state(null);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -34,6 +36,13 @@
 
 	function clamp(value, min, max) {
 		return Math.max(min, Math.min(max, value));
+	}
+
+	function nowMs() {
+		if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+			return performance.now();
+		}
+		return Date.now();
 	}
 
 	function requestNextOnce() {
@@ -73,6 +82,17 @@
 					if (e.data === 1) {
 						// Keep audio unlocked across song transitions once user has interacted.
 						tryUnmuteAndPlay();
+
+						// Apply pending join seek once (late-join correction) after player is ready.
+						if (typeof pendingJoinSeekTo === 'number' && pendingJoinSeekTo > 0.6) {
+							p.seek(pendingJoinSeekTo);
+							pendingJoinSeekTo = null;
+							return;
+						}
+
+						const inWarmup = nowMs() - transitionAtMs < 2200;
+						if (inWarmup) return;
+
 						// When switching to Playing, do a tight correction.
 						const current = p.getCurrentTime();
 						const correct = getServerElapsed();
@@ -141,8 +161,8 @@
 				const seekTo = getServerElapsed();
 				if (isNewVideo) {
 					player.load(current.videoId, true);
-					// startedAt is second-based in storage; avoid jumping nearly 1s ahead.
-					if (seekTo > 1.05) player.seek(seekTo);
+					// Keep initial playback smooth: defer non-trivial seek until first "playing" state.
+					pendingJoinSeekTo = seekTo > 1.2 ? seekTo : null;
 					tryUnmuteAndPlay();
 				} else if (isNewStart || isNewTransition) {
 					// Transition lock: align exactly once per (queueId, startedAt).
@@ -153,6 +173,7 @@
 				lastLoadedVideoId = current.videoId;
 				lastStartedAt = current.startedAt ?? null;
 				lastTransitionKey = transitionKey;
+				transitionAtMs = nowMs();
 				nextRequestedForQueueId = null;
 				playbackProgress = 0;
 			}
@@ -240,7 +261,9 @@
 				// Periodic drift correction (avoid aggressive micro-seeks)
 				if (time - lastSync > 1200 && player && playerState.currentSong) {
 					lastSync = time;
-					try {
+					const inWarmup = nowMs() - transitionAtMs < 2200;
+					if (!inWarmup) {
+						try {
 						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
 						const state = player.getPlayerState?.();
@@ -257,14 +280,17 @@
 						) {
 							player.seek(current + clamp(drift, -0.35, 0.35));
 						}
-					} catch {
-						// ignore
+						} catch {
+							// ignore
+						}
 					}
 				}
 				// Hard sync every ~3s: full seek if drift is significant.
 				if (time - lastHardSync > 3000 && player && playerState.currentSong) {
 					lastHardSync = time;
-					try {
+					const inWarmup = nowMs() - transitionAtMs < 2600;
+					if (!inWarmup) {
+						try {
 						const state = player.getPlayerState?.();
 						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
@@ -274,8 +300,9 @@
 								player.seek(correct);
 							}
 						}
-					} catch {
-						// ignore
+						} catch {
+							// ignore
+						}
 					}
 				}
 				// Ensure playback follows server even if user paused locally, but do not spam restart
