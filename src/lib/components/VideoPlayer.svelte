@@ -95,8 +95,9 @@
 		});
 	}
 
-	function requestNextOnce() {
+	function requestNextOnce(minTrackAgeMs = 0) {
 		if (!canControl) return;
+		if (minTrackAgeMs > 0 && transitionAtMs > 0 && nowMs() - transitionAtMs < minTrackAgeMs) return;
 		const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
 		if (!qid) return;
 		if (nextRequestedForQueueId === qid) return;
@@ -198,7 +199,7 @@
 						if (!nearEnd && Number.isFinite(drift)) {
 							const now = nowMs();
 							const canSeek = now - lastSeekAtMs > 320;
-							if (inWarmup && Math.abs(drift) > 0.45 && canSeek) {
+							if (inWarmup && Math.abs(drift) > 1.2 && canSeek) {
 								p.seek(correct);
 								lastSeekAtMs = now;
 								hardSyncCount += 1;
@@ -245,6 +246,13 @@
 								// ignore
 							}
 						}, 600);
+						return;
+					}
+					if (action === 'skip') {
+						// Song was marked unavailable server-side; do not consume the next track.
+						// Let controller recovery promote the next playable item.
+						addToast({ message: `PLAYBACK BLOCKED -> RECOVER`, level: 'error' });
+						refreshQueue();
 						return;
 					}
 					addToast({ message: `PLAYBACK BLOCKED -> SKIP`, level: 'error' });
@@ -363,6 +371,10 @@
 							const elapsedServer = getServerElapsed();
 							const elapsedPlayer = player.getCurrentTime?.();
 							const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+							const activeVideoId = player?._raw?.getVideoData?.()?.video_id || null;
+							const targetVideoId = playerState.currentSong?.videoId || null;
+							const sameVideoLoaded =
+								Boolean(activeVideoId) && Boolean(targetVideoId) && activeVideoId === targetVideoId;
 							// If local playback is blocked, keep HUD driven by server timeline.
 							const elapsedUi =
 								localPlaybackBlocked
@@ -413,23 +425,31 @@
 									? elapsedPlayer >= duration - 0.6
 									: false;
 							const farPastEndByServer = elapsedServer >= duration + 8;
-							if (elapsedServer >= duration + endGraceSec && (nearEndByPlayer || farPastEndByServer)) {
-								requestNextOnce();
+							if (
+								sameVideoLoaded &&
+								elapsedServer >= duration + endGraceSec &&
+								(nearEndByPlayer || farPastEndByServer)
+							) {
+								requestNextOnce(1200);
 							}
 							// Pre-end handoff: avoid YouTube end-screen flash between tracks.
 							const preEndTriggerSec = 1.1;
 							const elapsedForPreEnd =
 								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer)
-									? Math.max(elapsedServer, elapsedPlayer)
+									? elapsedPlayer
 									: elapsedServer;
 							if (
 								canControl &&
 								qid &&
+								sameVideoLoaded &&
+								hasNativeDuration &&
+								duration >= 8 &&
+								elapsedForPreEnd >= 1.5 &&
 								preEndAdvanceForQueueId !== qid &&
 								elapsedForPreEnd >= Math.max(0, duration - preEndTriggerSec)
 							) {
 								preEndAdvanceForQueueId = qid;
-								requestNextOnce();
+								requestNextOnce(1200);
 							}
 						} else if (localPlaybackBlocked) {
 							// Keep HUD alive even when duration is unknown on blocked embeds.
@@ -466,7 +486,7 @@
 							!nearEnd &&
 							typeof current === 'number' &&
 							Number.isFinite(drift) &&
-							Math.abs(drift) > (inWarmup ? 0.55 : 0.22)
+							Math.abs(drift) > (inWarmup ? 1.4 : 0.22)
 						) {
 							const now = nowMs();
 							if (now - lastSeekAtMs > 420) {

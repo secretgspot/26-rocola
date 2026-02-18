@@ -237,6 +237,13 @@
     - [x] Add footer note: local embed blocked while timeline remains live
     - [x] Make `/api/queue/current` recovery writes controller-only (read endpoint no longer mutates playback for passive clients)
     - [x] Add client convergence guard that force-loads target video if iframe/videoId diverges from live store state
+    - [x] Add pre-end handoff to suppress YouTube end-screen recommendations
+    - [x] Tune pre-end threshold to `1.1s` before end for cleaner transitions
+    - [x] Prevent double-skip after blocked-video auto-skip by avoiding `queue/next` consume path on `unavailable -> skip`
+    - [x] Reduce early-playback stutter by relaxing warmup drift-correction thresholds
+    - [x] Guard pre-end handoff against short/unknown-duration tracks to prevent sub-second auto-skip
+    - [x] Gate auto-advance to only fire when player's active `video_id` matches current queue video
+    - [x] Add minimum track-age guard before any auto-advance trigger can consume next
 
 ## Next Planned Hardening
 - [ ] Add dedicated unit tests for controller lease race/takeover scenarios
