@@ -422,7 +422,9 @@
 					</span>
 				</button>
 				<div class="help-modal" role="dialog" aria-modal="true" aria-label="How Rocola works">
-					<LandingPage />
+					<div class="help-content">
+						<LandingPage />
+					</div>
 				</div>
 			</div>
 		{/if}
@@ -591,21 +593,35 @@
 		inset: 0;
 		z-index: var(--layer-important);
 		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding-top: 56px;
-		padding-bottom: var(--mobile-footer-h, 124px);
+		align-items: stretch;
+		justify-content: stretch;
+		padding: 0;
 		background: transparent;
 	}
 	.help-modal {
-		width: min(90vw, 1400px);
-		height: calc(100dvh - 56px - var(--mobile-footer-h, 124px) - var(--size-3));
-		max-height: calc(100dvh - 56px - var(--mobile-footer-h, 124px) - var(--size-3));
+		width: 100dvw;
+		height: 100dvh;
+		max-height: none;
 		overflow-x: auto;
 		overflow-y: auto;
-		padding: var(--size-4);
-		background: linear-gradient(90deg, #000000 63%, transparent);
-		border-radius: 9px;
+		padding: 0;
+		display: flex;
+		align-items: stretch;
+		background: linear-gradient(42deg, #000000 63%, transparent);
+		border-radius: 0;
+		border: 0;
+	}
+	.help-content {
+		width: 100%;
+		min-height: 100%;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding-top: calc(56px + var(--size-3));
+		padding-bottom: calc(var(--mobile-footer-h, 124px) + var(--size-3));
+		padding-left: var(--size-5);
+		padding-right: var(--size-5);
+		box-sizing: border-box;
 	}
 	.help-close-fixed {
 		background: transparent;
@@ -636,6 +652,20 @@
 	.help-close-fixed:hover .close-icon-main { fill: #b32020; filter: drop-shadow(0 0 8px rgba(179, 32, 32, 0.85)); }
 	.help-close-fixed:active .close-icon-soft { fill: #ffb0b0; filter: drop-shadow(0 0 8px rgba(255, 106, 106, 0.95)); }
 	.help-close-fixed:active .close-icon-main { fill: #d92b2b; filter: drop-shadow(0 0 10px rgba(217, 43, 43, 0.95)); }
+	@media (max-width: 640px) {
+		.help-content {
+			min-height: auto;
+			align-items: flex-start;
+			padding-left: var(--size-2);
+			padding-right: var(--size-2);
+			padding-top: calc(56px + var(--size-2));
+			padding-bottom: calc(var(--mobile-footer-h, 124px) + var(--size-2));
+		}
+		.help-close-fixed {
+			right: var(--size-2);
+			top: calc(56px + var(--size-1));
+		}
+	}
 	.btn-help.active {
 		color: var(--text-main);
 		opacity: 1;
