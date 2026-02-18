@@ -34,7 +34,13 @@ describe('/api/realtime/star POST', () => {
 		expect(data.ok).toBe(true);
 		expect(broadcastMock).toHaveBeenCalledWith(
 			'star_burst',
-			expect.objectContaining({ source: 'coords', x: 0.33, y: 0.77, count: 1 })
+			expect.objectContaining({
+				source: 'coords',
+				clientId: expect.any(String),
+				x: 0.33,
+				y: 0.77,
+				count: 1
+			})
 		);
 	});
 });

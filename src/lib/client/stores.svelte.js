@@ -207,6 +207,22 @@ let syncInterval = null;
 let currentSyncInterval = null;
 let refreshInFlight = null;
 let refreshTimer = null;
+let cachedReactionClientId = null;
+
+export function getReactionClientId() {
+	if (cachedReactionClientId) return cachedReactionClientId;
+	if (typeof window === 'undefined') return 'server';
+	const key = 'rocola-reaction-client-id';
+	const existing = window.sessionStorage.getItem(key);
+	if (existing) {
+		cachedReactionClientId = existing;
+		return existing;
+	}
+	const id = crypto.randomUUID();
+	window.sessionStorage.setItem(key, id);
+	cachedReactionClientId = id;
+	return id;
+}
 
 function scheduleRefresh(delayMs = 80) {
 	if (refreshTimer) clearTimeout(refreshTimer);
@@ -242,6 +258,9 @@ function resolveLocalStarAnchor() {
 
 export function addStarBurst(payload = {}) {
 	const id = crypto.randomUUID();
+	const localClientId = getReactionClientId();
+	const isRemoteTap =
+		typeof payload?.clientId === 'string' && payload.clientId !== localClientId;
 	const localAnchor = payload?.source === 'star_button' ? resolveLocalStarAnchor() : null;
 	const burst = {
 		id,
@@ -257,7 +276,8 @@ export function addStarBurst(payload = {}) {
 				: typeof payload.y === 'number'
 					? payload.y
 					: 0.76,
-		particles: payload.particles || makeParticles(payload.count || 1)
+		particles: payload.particles || makeParticles(payload.count || 1),
+		fromBehind: isRemoteTap
 	};
 	playerState.starBursts = [...playerState.starBursts, burst].slice(-24);
 	setTimeout(() => {

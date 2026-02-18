@@ -3,7 +3,13 @@ import { dev } from '$app/environment';
 /** @type {import('@sveltejs/kit').Handle} */
 export async function handle({ event, resolve }) {
 	// IP Tracking
-	const clientIp = event.getClientAddress() || '127.0.0.1';
+	let clientIp = '127.0.0.1';
+	try {
+		clientIp = event.getClientAddress() || '127.0.0.1';
+	} catch {
+		// Some dev/internal requests in Vite may not provide a resolvable client address.
+		clientIp = '127.0.0.1';
+	}
 	event.locals.clientIp = clientIp;
 	event.locals.userAgent = event.request.headers.get('user-agent') || 'unknown';
 

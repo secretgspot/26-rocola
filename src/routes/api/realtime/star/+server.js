@@ -11,7 +11,8 @@ export async function POST(event) {
 		const x = typeof body?.x === 'number' ? Math.max(0, Math.min(1, body.x)) : 0.82;
 		const y = typeof body?.y === 'number' ? Math.max(0, Math.min(1, body.y)) : 0.76;
 		const source = body?.source === 'star_button' ? 'star_button' : 'coords';
-		await broadcast('star_burst', { source, x, y, count: 1 });
+		const clientId = typeof body?.clientId === 'string' ? body.clientId.slice(0, 80) : 'unknown';
+		await broadcast('star_burst', { source, clientId, x, y, count: 1 });
 		return json({ ok: true });
 	} catch (err) {
 		console.error('[Realtime star] failed', err);

@@ -1,5 +1,6 @@
 <script>
 	import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
+	import { getReactionClientId } from '$lib/client/stores.svelte.js';
 	import { fade, scale } from 'svelte/transition';
 	import StripeCheckout from './StripeCheckout.svelte';
 	import Icon from './Icon.svelte';
@@ -134,7 +135,7 @@
 	}
 
 	function star() {
-		onstar?.({ source: 'star_button' });
+		onstar?.({ source: 'star_button', clientId: getReactionClientId() });
 	}
 </script>
 
