@@ -47,6 +47,18 @@ export const playerState = $state({
 });
 
 /**
+ * Smooth server clock offset updates to avoid jitter-induced seek corrections.
+ * @param {number} serverNowMs
+ */
+function updateClockOffset(serverNowMs) {
+	const sample = serverNowMs / 1000 - Date.now() / 1000;
+	if (!Number.isFinite(sample)) return;
+	const prev = playerState.clockOffsetSec || 0;
+	// Bootstrap quickly, then smooth.
+	playerState.clockOffsetSec = prev === 0 ? sample : prev * 0.85 + sample * 0.15;
+}
+
+/**
  * Normalizes a queue item from various potential shapes (flat, {left,right}, {song})
  * @param {any} item
  * @returns {Song | null}
@@ -101,6 +113,8 @@ export function filterQueue(items, current) {
 }
 
 export async function refreshQueue() {
+	if (refreshInFlight) return refreshInFlight;
+	refreshInFlight = (async () => {
 	try {
 		const [qRes, cRes] = await Promise.all([
 			fetch('/api/queue'),
@@ -109,11 +123,11 @@ export async function refreshQueue() {
 		
 		/** @type {Song | null} */
 		let current = null;
-		if (cRes.ok) {
-			const data = await cRes.json();
-			if (data.serverNowMs) {
-				playerState.clockOffsetSec = data.serverNowMs / 1000 - Date.now() / 1000;
-			}
+			if (cRes.ok) {
+				const data = await cRes.json();
+				if (data.serverNowMs) {
+					updateClockOffset(data.serverNowMs);
+				}
 			if (data.ok && data.current) {
 				current = normalizeQueueItem(data.current);
 				if (current) {
@@ -141,6 +155,10 @@ export async function refreshQueue() {
 	} catch (err) {
 		console.error('[Store] Refresh error:', err);
 	}
+	})().finally(() => {
+		refreshInFlight = null;
+	});
+	return refreshInFlight;
 }
 
 /**
@@ -159,6 +177,16 @@ export function addToast({ message, level = 'info', ttl = 3500 }) {
 let initialized = false;
 let syncInterval = null;
 let currentSyncInterval = null;
+let refreshInFlight = null;
+let refreshTimer = null;
+
+function scheduleRefresh(delayMs = 80) {
+	if (refreshTimer) clearTimeout(refreshTimer);
+	refreshTimer = setTimeout(() => {
+		refreshTimer = null;
+		refreshQueue();
+	}, delayMs);
+}
 
 export async function initRealtime() {
 	if (initialized) return;
@@ -174,6 +202,8 @@ export async function initRealtime() {
 			if (payload?.queue) {
 				playerState.currentTurn = payload.currentTurn || 0;
 				playerState.queue = filterQueue(payload.queue, playerState.currentSong);
+			} else {
+				scheduleRefresh(80);
 			}
 		});
 
@@ -190,38 +220,25 @@ export async function initRealtime() {
 		});
 		
 		ws.on('song_added', (payload) => {
-			fetch('/api/queue')
-				.then(r => r.json())
-				.then(data => {
-					if (data.ok && data.queue) {
-						const items = data.queue.map(normalizeQueueItem);
-						playerState.queue = filterQueue(items, playerState.currentSong);
-						
-						const added = items.find(it => it && (it.queueId === payload.id || it.songId === payload.songId));
-						if (added) {
-							addToast({ message: added.title, level: 'queued' });
-						}
-					}
-					
-					if (!playerState.currentSong) {
-						refreshQueue();
-					}
-				});
+			if (payload?.title) {
+				addToast({ message: payload.title, level: 'queued' });
+			}
+			scheduleRefresh(playerState.currentSong ? 80 : 0);
 		});
 		
 		ws.on('song_playing', (payload) => {
 			console.debug('[RT] song_playing received', payload);
 			if (payload?.serverNowMs) {
-				playerState.clockOffsetSec = payload.serverNowMs / 1000 - Date.now() / 1000;
+				updateClockOffset(payload.serverNowMs);
 			}
 			const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
 			if (currentId !== payload.queueId) {
 				playerState.previousSong = playerState.currentSong;
 				if (payload?.song) {
 					playerState.currentSong = normalizeQueueItem(payload.song);
-					refreshQueue();
+					scheduleRefresh(50);
 				} else {
-					refreshQueue();
+					scheduleRefresh(50);
 				}
 			} else {
 				// Just update startedAt if same song
@@ -233,8 +250,8 @@ export async function initRealtime() {
 		
 		ws.on('song_ended', (payload) => {
 			playerState.previousSong = playerState.currentSong;
-			playerState.currentSong = null;
-			refreshQueue();
+			// Avoid forcing null between tracks; wait for song_playing/refresh to prevent reload flicker.
+			scheduleRefresh(50);
 		});
 
 	} catch (e) {
@@ -244,18 +261,21 @@ export async function initRealtime() {
 	// Periodic sync to keep clients aligned (handles missed realtime events)
 	if (!syncInterval) {
 		syncInterval = setInterval(() => {
+			if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 			refreshQueue();
 		}, 5000);
 	}
 	// Frequent current-song sync to keep playback time aligned
 	if (!currentSyncInterval) {
 		currentSyncInterval = setInterval(async () => {
+			if (!playerState.currentSong) return;
+			if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
 			try {
 				const res = await fetch('/api/queue/current');
 				if (!res.ok) return;
 				const data = await res.json();
 				if (data.serverNowMs) {
-					playerState.clockOffsetSec = data.serverNowMs / 1000 - Date.now() / 1000;
+					updateClockOffset(data.serverNowMs);
 				}
 				if (data.ok && data.current) {
 					const current = normalizeQueueItem(data.current);
@@ -273,6 +293,9 @@ export async function initRealtime() {
 
 	// Sync when tab regains focus
 	if (typeof window !== 'undefined') {
-		window.addEventListener('focus', refreshQueue);
+		window.addEventListener('focus', () => scheduleRefresh(0));
+		document.addEventListener('visibilitychange', () => {
+			if (document.visibilityState === 'visible') scheduleRefresh(0);
+		});
 	}
 }

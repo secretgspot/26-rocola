@@ -151,3 +151,17 @@
     - [x] Normalize SVG fill/stroke to `currentColor` for all icon assets
     - [x] Ensure header controls use theme text color in light mode
     - [x] Ensure FAB icon contrasts with FAB background in light mode
+
+## Playback Stability Pass (2026-02-18)
+- [x] End-of-track duplicate transition prevention
+    - [x] Add one-shot guard for `onnext` per queue item in `VideoPlayer`
+    - [x] Keep duration-based advance as fallback only (`duration + 1.5s`) and gate it
+- [x] Drift/seek stability tuning
+    - [x] Relax drift correction threshold/frequency to reduce micro-seek stutter
+    - [x] Throttle forced resume attempts to avoid play/seek loops
+- [x] Realtime transition smoothing
+    - [x] Stop nulling `currentSong` immediately on `song_ended` client event
+    - [x] Use scheduled refresh on transition events to avoid burst reloads
+- [x] Queue advance backend sequencing
+    - [x] Compute post-play queue in-memory inside transaction (remove extra queue query)
+    - [x] Broadcast `queue_changed` after setting next playback state for non-empty queue

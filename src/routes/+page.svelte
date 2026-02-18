@@ -220,6 +220,7 @@
 
 <div
 	class="app-container"
+	role="presentation"
 	onpointerenter={handleQueuePointerEnter}
 	onpointermove={handleQueuePointerMove}
 	onpointerleave={handleQueuePointerLeave}

@@ -10,6 +10,8 @@
 	let player = $state(null);
 	let playbackProgress = $state(0);
 	let allowSound = $state(false);
+	let nextRequestedForQueueId = $state(null);
+	let lastResumeAttemptAt = $state(0);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -27,6 +29,14 @@
 		} catch {
 			// ignore
 		}
+	}
+
+	function requestNextOnce() {
+		const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+		if (!qid) return;
+		if (nextRequestedForQueueId === qid) return;
+		nextRequestedForQueueId = qid;
+		onnext?.();
 	}
 
 	// Get the "official" server-side elapsed time
@@ -49,24 +59,25 @@
 		
 			createPlayer(el.id, { 
 			videoId: initialVideoId,
-			onStateChange: (e) => {
-				// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
-				onplaystate?.({ paused: e.data === 2 });
-				if (e.data === 0) {
-					// Native player end - strictly fallback, we rely on server time mostly
-					onnext?.();
-				}
-				if (e.data === 1) {
-					// Keep audio unlocked across song transitions once user has interacted.
-					tryUnmuteAndPlay();
-					// When switching to Playing, sync if we drifted too much or were paused
-					const current = p.getCurrentTime();
-					const correct = getServerElapsed();
-					if (Math.abs(current - correct) > 2) {
-						console.log('[VideoPlayer] Syncing playback to server time', { current, correct });
-						p.seek(correct);
+				onStateChange: (e) => {
+					// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
+					onplaystate?.({ paused: e.data === 2 });
+					if (e.data === 0) {
+						requestNextOnce();
 					}
-				}
+					if (e.data === 1) {
+						// Keep audio unlocked across song transitions once user has interacted.
+						tryUnmuteAndPlay();
+						// When switching to Playing, sync if we drifted too much or were paused
+						const current = p.getCurrentTime();
+						const correct = getServerElapsed();
+						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+						const nearEnd = duration > 0 && correct > duration - 3;
+						if (!nearEnd && Math.abs(current - correct) > 2.2) {
+							console.log('[VideoPlayer] Syncing playback to server time', { current, correct });
+							p.seek(correct);
+						}
+					}
 			},
 			onError: (e) => {
 				addToast({ message: `ERROR: PLAYBACK_FAILED`, level: 'error' });
@@ -118,11 +129,11 @@
 		const isNewVideo = current.videoId !== lastLoadedVideoId;
 		const isNewStart = current.startedAt && current.startedAt !== lastStartedAt;
 
-		if (isNewVideo || isNewStart) {
-			const seekTo = getServerElapsed();
-			if (isNewVideo) {
-				player.load(current.videoId, true);
-				if (seekTo > 2) player.seek(seekTo);
+			if (isNewVideo || isNewStart) {
+				const seekTo = getServerElapsed();
+				if (isNewVideo) {
+					player.load(current.videoId, true);
+					if (seekTo > 2) player.seek(seekTo);
 				tryUnmuteAndPlay();
 			} else if (isNewStart) {
 				// Song restarted or time shifted
@@ -130,11 +141,12 @@
 				player.play();
 				tryUnmuteAndPlay();
 			}
-			lastLoadedVideoId = current.videoId;
-			lastStartedAt = current.startedAt ?? null;
-			playbackProgress = 0;
-		}
-	});
+				lastLoadedVideoId = current.videoId;
+				lastStartedAt = current.startedAt ?? null;
+				nextRequestedForQueueId = null;
+				playbackProgress = 0;
+			}
+		});
 
 	$effect(() => {
 		// Main loop: Update progress bar based on SERVER time, not player time
@@ -197,41 +209,55 @@
 							});
 						}
 
-						// Auto-advance if we've exceeded duration (Server-side logic simulation)
-						if (elapsed >= duration) {
-							console.log('[VideoPlayer] Song duration exceeded (server time), requesting next...');
-							onnext?.();
+							// Fallback auto-advance if ended event is missed.
+							if (elapsed >= duration + 1.5) {
+								requestNextOnce();
+							}
 						}
 					}
 				}
-			}
-			// Periodic drift correction (target < 250ms)
-			if (time - lastSync > 800 && player && playerState.currentSong) {
-				lastSync = time;
-				try {
-					const current = player.getCurrentTime?.();
-					const correct = getServerElapsed();
-					if (typeof current === 'number' && Math.abs(current - correct) > 0.2) {
-						player.seek(correct);
-					}
-				} catch {
-					// ignore
-				}
-			}
-			// Ensure playback follows server even if user paused locally
-			if (time - lastStateCheck > 500 && player && playerState.currentSong) {
-				lastStateCheck = time;
-				try {
-					const state = player.getPlayerState?.();
-					if (state === 2) {
+				// Periodic drift correction (avoid aggressive micro-seeks)
+				if (time - lastSync > 1500 && player && playerState.currentSong) {
+					lastSync = time;
+					try {
+						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
-						player.seek(correct);
-						player.play();
+						const state = player.getPlayerState?.();
+						const duration =
+							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+						const nearEnd = duration > 0 && correct > duration - 4;
+						if (
+							state === 1 &&
+							!nearEnd &&
+							typeof current === 'number' &&
+							Math.abs(current - correct) > 1.3
+						) {
+							player.seek(correct);
+						}
+					} catch {
+						// ignore
 					}
-				} catch {
-					// ignore
 				}
-			}
+				// Ensure playback follows server even if user paused locally, but do not spam restart
+				if (time - lastStateCheck > 900 && player && playerState.currentSong) {
+					lastStateCheck = time;
+					try {
+						const state = player.getPlayerState?.();
+						if (state === 2) {
+							const correct = getServerElapsed();
+							if (time - lastResumeAttemptAt > 2500) {
+								lastResumeAttemptAt = time;
+								const current = player.getCurrentTime?.();
+								if (typeof current === 'number' && Math.abs(current - correct) > 1.2) {
+									player.seek(correct);
+								}
+								player.play();
+							}
+						}
+					} catch {
+						// ignore
+					}
+				}
 			frame = requestAnimationFrame(update);
 		};
 

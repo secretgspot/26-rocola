@@ -416,9 +416,8 @@
 	.tier-card { background: transparent; border: 0; padding: var(--size-3); cursor: pointer; text-align: left; transition: all var(--transition-duration-1); display: flex; flex-direction: column; gap: var(--size-1); color: var(--text-main); border-radius: 9px; }
 	.tier-card.active {
 		background: transparent;
-		border: 1px solid var(--border-bright);
+		border: 0;
 		box-shadow:
-			inset 0 0 0 1px color-mix(in srgb, var(--border-bright) 65%, transparent),
 			0 0 16px color-mix(in srgb, var(--border-bright) 65%, transparent);
 		opacity: 1;
 		filter: none;
@@ -428,7 +427,6 @@
 	.tier-card.free { box-shadow: inset 2px 0 0 var(--text-muted); }
 	.tier-card.silver {
 		--glow-color: var(--tier-silver);
-		border: 1px solid color-mix(in srgb, var(--tier-silver) 58%, transparent);
 		box-shadow:
 			inset 2px 0 0 var(--tier-silver),
 			0 0 5px color-mix(in srgb, var(--tier-silver) 40%, transparent);
@@ -436,7 +434,6 @@
 	}
 	.tier-card.gold {
 		--glow-color: var(--tier-gold);
-		border: 1px solid color-mix(in srgb, var(--tier-gold) 68%, transparent);
 		box-shadow:
 			inset 2px 0 0 var(--tier-gold),
 			0 0 7px color-mix(in srgb, var(--tier-gold) 55%, transparent);
@@ -444,7 +441,6 @@
 	}
 	.tier-card.platinum {
 		--glow-color: #7de3ff;
-		border: 1px solid color-mix(in srgb, #7de3ff 78%, transparent);
 		box-shadow:
 			inset 2px 0 0 #7de3ff,
 			0 0 18px color-mix(in srgb, #7de3ff 72%, transparent);
@@ -460,9 +456,8 @@
 	.tier-card.active.gold,
 	.tier-card.active.platinum,
 	.tier-card.active.free {
-		border-color: var(--border-bright);
 		box-shadow:
-			inset 0 0 0 1px color-mix(in srgb, var(--border-bright) 65%, transparent),
+			inset 2px 0 0 currentColor,
 			0 0 18px color-mix(in srgb, var(--border-bright) 72%, transparent);
 		opacity: 1;
 		filter: none;

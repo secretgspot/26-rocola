@@ -299,12 +299,6 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 		updatedAt: createdAt
 	});
 
-	// Broadcast updates
-	const { queue: snapshot } = await getQueue();
-	await broadcast('song_added', { id: qId, songId: song.id, tier: normalizedTier, baseRank });
-	await broadcast('queue_changed', { queue: snapshot, currentTurn });
-	invalidateQueueCache();
-
 	if (normalizedTier === 'free') {
 		await db.insert(freeSubmissions).values({
 			id: crypto.randomUUID(),
@@ -315,16 +309,39 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 		});
 	}
 
-	if (snapshot.length === 1 && snapshot[0].id === qId) {
+	const playback = await getPlaybackState();
+	const shouldStartPlayback = !playback?.currentQueueId;
+	const startedAt = shouldStartPlayback ? Math.floor(Date.now() / 1000) : null;
+
+	if (shouldStartPlayback) {
 		await setPlaybackState({
 			currentQueueId: qId,
 			songId: song.id,
-			startedAt: Math.floor(Date.now() / 1000),
-			song: { ...song, queueId: qId, songId: song.id, startedAt: Math.floor(Date.now() / 1000) }
+			startedAt,
+			song: {
+				...song,
+				id: qId,
+				queueId: qId,
+				songId: song.id,
+				tier: normalizedTier,
+				playsRemainingToday,
+				lastPlayedTurn: initialLastPlayed,
+				startedAt
+			}
 		});
 	}
 
-	return { id: qId, song };
+	await broadcast('song_added', {
+		id: qId,
+		songId: song.id,
+		tier: normalizedTier,
+		baseRank,
+		title: song.title || 'Unknown Title'
+	});
+	await broadcast('queue_changed', { currentTurn });
+	invalidateQueueCache();
+
+	return { id: qId, song, startedAt, startedNow: shouldStartPlayback };
 }
 
 /**
@@ -376,14 +393,26 @@ export async function advanceQueue(fromQueueId = null) {
 				playedAt: now
 			});
 
-			const { queue: afterRows, currentTurn } = await getQueue({
+			const simulated = rows.map((r) => ({ ...r, song: r.song ? { ...r.song } : r.song }));
+			const currentIdx = simulated.findIndex((r) => r.id === current.id);
+			if (currentIdx !== -1) {
+				simulated[currentIdx].playsRemainingToday = Math.max(0, current.playsRemainingToday - 1);
+				simulated[currentIdx].lastPlayedTurn = nextTurn;
+				simulated[currentIdx].updatedAt = now;
+			}
+
+			const eligible = simulated.filter(
+				(r) => (r.playsRemainingToday || 0) > 0 && ((r.song?.isAvailable ?? 1) === 1)
+			);
+			const afterRows = buildFairOrder({
+				rows: eligible,
+				effectiveBaseTurn: nextTurn,
+				currentQueueId: null,
 				pinCurrent: false,
-				effectiveBaseTurnOverride: nextTurn,
-				initialPremiumStreak: current.tier !== 'free' ? 1 : 0,
-				dbClient: tx
+				initialPremiumStreak: current.tier !== 'free' ? 1 : 0
 			});
 
-			return { ok: true, current, afterRows, currentTurn, nextTurn, now };
+			return { ok: true, current, afterRows, currentTurn: nextTurn, nextTurn, now };
 		} finally {
 			await tx.execute(sql`select pg_advisory_unlock(912734)`);
 		}
@@ -399,10 +428,6 @@ export async function advanceQueue(fromQueueId = null) {
 
 	const { current, afterRows, currentTurn, nextTurn, now } = result;
 
-	await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
-	await broadcast('queue_changed', { queue: afterRows, currentTurn });
-	invalidateQueueCache();
-
 	if (afterRows.length > 0) {
 		const next = selectNextAfterCurrent(afterRows, nextTurn, current);
 		await setPlaybackState({
@@ -411,15 +436,20 @@ export async function advanceQueue(fromQueueId = null) {
 			startedAt: now,
 			song: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now }
 		});
+		await broadcast('queue_changed', { currentTurn });
+		invalidateQueueCache();
 		return { 
-			ok: true, 
-			played: { queueId: current.id, songId: current.song.id }, 
-			next: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now } 
-		};
+				ok: true, 
+				played: { queueId: current.id, songId: current.song.id }, 
+				next: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now } 
+			};
 	} else {
+		await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
 		await setPlaybackState({ currentQueueId: null, startedAt: null });
-		return { ok: true, message: 'Queue exhausted' };
-	}
+			await broadcast('queue_changed', { currentTurn });
+			invalidateQueueCache();
+			return { ok: true, message: 'Queue exhausted' };
+		}
 }
 
 function selectNextAfterCurrent(rows, turn, current) {
