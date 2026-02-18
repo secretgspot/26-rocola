@@ -624,20 +624,16 @@
 		opacity: 1;
 		transform: scale(1.04);
 	}
-	.btn-help :global(svg rect) {
-		opacity: 0.4;
-		transition: opacity var(--transition-duration-1) ease;
+	.btn-help :global(svg path:first-child) {
+		opacity: 0.45;
 	}
-	.btn-help :global(svg path),
-	.btn-help :global(svg circle) {
-		opacity: 1;
-		transition: opacity var(--transition-duration-1) ease;
-	}
-	.btn-help.active :global(svg rect) {
+	.btn-help :global(svg path:nth-child(n+2)) {
 		opacity: 1;
 	}
-	.btn-help.active :global(svg path),
-	.btn-help.active :global(svg circle) {
+	.btn-help.active :global(svg path:first-child) {
+		opacity: 1;
+	}
+	.btn-help.active :global(svg path:nth-child(n+2)) {
 		opacity: 0.45;
 	}
 
