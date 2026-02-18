@@ -23,7 +23,12 @@ export async function POST(event) {
 	if (!videoId) return json({ ok: false, error: 'videoId required' }, { status: 400 });
 
 	try {
-		const result = await addToQueue({ videoId, ...metadata }, tier, locals.clientIp || 'anon');
+		const result = await addToQueue(
+			{ videoId, ...metadata },
+			tier,
+			locals.clientIp || 'anon',
+			{ bypassFreeDailyLimit: Boolean(locals.isAdmin) }
+		);
 		return json({ ok: true, id: result.id });
 	} catch (err) {
 		if (err?.code === 'FREE_TIER_DAILY_DUPLICATE') {

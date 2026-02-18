@@ -149,7 +149,7 @@ export async function POST(event) {
 				metadata
 			};
 
-			await addToQueue(songData, tier, 'seed-script');
+			await addToQueue(songData, tier, 'seed-script', { bypassFreeDailyLimit: true });
 			added.push({ videoId, title: metadata.title, tier });
 		});
 

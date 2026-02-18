@@ -206,11 +206,12 @@ function parseDuration(duration) {
  * Add a song to the queue.
  * Optimized: specific lookup for videoId instead of fetching all songs.
  */
-export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
+export async function addToQueue(songData, tier = 'free', ipAddress = 'anon', options = {}) {
 	const { videoId, title, thumbnail, channelTitle, metadata } = songData;
 	const duration = parseDuration(songData.duration || metadata?.duration);
 	const normalizedTier = String(tier || 'free').toLowerCase();
 	const todayUtc = new Date().toISOString().slice(0, 10);
+	const bypassFreeDailyLimit = options?.bypassFreeDailyLimit === true;
 
 	// Targeted lookup for existing song
 	const existingSongs = await db.select().from(songs).where(eq(songs.videoId, videoId)).limit(1);
@@ -251,7 +252,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon') {
 	}
 
 	// Add to queue
-	if (normalizedTier === 'free') {
+	if (normalizedTier === 'free' && !bypassFreeDailyLimit) {
 		const priorFreeSubmissions = await db
 			.select({ id: freeSubmissions.id })
 			.from(freeSubmissions)
