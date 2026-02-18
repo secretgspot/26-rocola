@@ -152,6 +152,8 @@
 	class:fab-near-queue={mode === 'nearQueue'}
 	onclick={open}
 	class:hidden={isOpen || hideTrigger}
+	aria-label="Add a video to queue"
+	title="Add a video to the queue"
 >
 	<Icon name="add" size={30} color="var(--fab-icon-color)" strokeWidth={1.9} />
 </button>
@@ -164,6 +166,7 @@
 	class:hidden={isOpen || hideTrigger || hideStar}
 	bind:this={starBtnEl}
 	aria-label="Send star reaction"
+	title="Send a live star reaction"
 >
 	<Icon name="stars" size={24} color="var(--fab-icon-color)" strokeWidth={1.8} />
 </button>
@@ -295,17 +298,17 @@
 		position: fixed;
 		width: var(--size-9);
 		height: var(--size-9);
-		background: var(--text-main);
-		color: var(--bg-dark);
-		--fab-icon-color: var(--bg-dark);
-		border: 0;
+		background: linear-gradient(0deg, var(--bg-dark), transparent);
+		color: var(--text-main);
+		--fab-icon-color: var(--text-main);
+		border: 1px solid color-mix(in srgb, var(--text-main) 34%, transparent);
 		border-radius: 9px;
 		display: flex;
 		align-items: center;
 		justify-content: center;
 		cursor: pointer;
 		z-index: var(--layer-5);
-		transition: transform var(--transition-duration-1), background var(--transition-duration-1), color var(--transition-duration-1);
+		transition: transform var(--transition-duration-1), background var(--transition-duration-1), color var(--transition-duration-1), border-color var(--transition-duration-1);
 		}
 		.empty-queue-callout {
 			position: fixed;
@@ -349,19 +352,18 @@
 			margin: 0;
 			transform: none;
 		}
-		.fab-star {
+	.fab-star {
 			opacity: 0.86;
 		}
 		.fab-star:hover {
 			transform: scale(1.06);
 			opacity: 1;
 		}
-	:global([data-theme='light']) .fab {
-		background: #000000;
-		color: #ffffff;
-		--fab-icon-color: #ffffff;
+	.fab:hover {
+		transform: scale(1.04);
+		border-color: color-mix(in srgb, var(--text-main) 68%, transparent);
+		background: linear-gradient(0deg, var(--bg-dark), transparent);
 	}
-	.fab:hover { transform: scale(1.04); }
 	.fab.hidden { opacity: 0; pointer-events: none; }
 	.fab.pulse {
 		animation: fabPulse 1.4s ease-in-out infinite;
