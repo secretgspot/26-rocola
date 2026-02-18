@@ -37,6 +37,7 @@
 	let localPlaybackBlockedAt = $state(0);
 	let lastBlockedRefreshAt = $state(0);
 	let lastForcedLoadAt = $state(0);
+	let preEndAdvanceForQueueId = $state(null);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -324,6 +325,7 @@
 				localPlaybackBlocked = false;
 				onlocalblockstate?.({ blocked: false });
 				nextRequestedForQueueId = null;
+				preEndAdvanceForQueueId = null;
 				playbackProgress = 0;
 				emitSyncTelemetry(true);
 			}
@@ -360,6 +362,7 @@
 						if (duration > 0) {
 							const elapsedServer = getServerElapsed();
 							const elapsedPlayer = player.getCurrentTime?.();
+							const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
 							// If local playback is blocked, keep HUD driven by server timeline.
 							const elapsedUi =
 								localPlaybackBlocked
@@ -411,6 +414,21 @@
 									: false;
 							const farPastEndByServer = elapsedServer >= duration + 8;
 							if (elapsedServer >= duration + endGraceSec && (nearEndByPlayer || farPastEndByServer)) {
+								requestNextOnce();
+							}
+							// Pre-end handoff: avoid YouTube end-screen flash between tracks.
+							const preEndTriggerSec = 1.1;
+							const elapsedForPreEnd =
+								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer)
+									? Math.max(elapsedServer, elapsedPlayer)
+									: elapsedServer;
+							if (
+								canControl &&
+								qid &&
+								preEndAdvanceForQueueId !== qid &&
+								elapsedForPreEnd >= Math.max(0, duration - preEndTriggerSec)
+							) {
+								preEndAdvanceForQueueId = qid;
 								requestNextOnce();
 							}
 						} else if (localPlaybackBlocked) {
