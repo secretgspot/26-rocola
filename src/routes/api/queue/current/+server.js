@@ -4,7 +4,7 @@ import { getPlaybackState, setPlaybackState } from '$lib/server/services/playbac
 import { db } from '$lib/server/db/index.js';
 import { withReadRetry } from '$lib/server/db/retry.js';
 import { queue, songs } from '$lib/server/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { and, eq, gt } from 'drizzle-orm';
 
 export async function GET() {
 	try {
@@ -16,7 +16,13 @@ export async function GET() {
 					.select({ queue: queue, song: songs })
 					.from(queue)
 					.innerJoin(songs, eq(queue.songId, songs.id))
-					.where(eq(queue.id, playback.currentQueueId))
+					.where(
+						and(
+							eq(queue.id, playback.currentQueueId),
+							eq(songs.isAvailable, 1),
+							gt(queue.playsRemainingToday, 0)
+						)
+					)
 					.limit(1)
 			);
 

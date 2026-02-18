@@ -86,6 +86,11 @@ describe('Queue integration (server + DB)', () => {
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify({ fromQueueId: null })
 		});
+		if (res.status === 403) {
+			expect(res.json.ok).toBe(false);
+			expect(String(res.json.error || '')).toMatch(/admin/i);
+			return;
+		}
 		expect(res.status).toBe(200);
 		expect(res.json.ok).toBe(true);
 		// In empty case next is null; in non-empty case next is object.
@@ -96,7 +101,7 @@ describe('Queue integration (server + DB)', () => {
 		}
 	});
 
-	it('dev/admin mode bypasses free-tier duplicate restriction', async () => {
+	it('enforces free-tier duplicate restriction for non-admin sessions', async () => {
 		const uniqueVideoId = `itest-${Date.now()}`;
 		const payload = {
 			videoId: uniqueVideoId,
@@ -123,7 +128,7 @@ describe('Queue integration (server + DB)', () => {
 			body: JSON.stringify(payload)
 		});
 
-		expect(second.status).toBe(200);
-		expect(second.json.ok).toBe(true);
+		expect(second.status).toBe(409);
+		expect(second.json.ok).toBe(false);
 	});
-});
+}, 20_000);

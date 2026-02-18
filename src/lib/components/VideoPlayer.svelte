@@ -3,7 +3,7 @@
 	import { createPlayer } from '$lib/client/youtube-player';
 	import { playerState, addToast } from '$lib/client/stores.svelte.js';
 
-	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry } = $props();
+	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry, canControl = false } = $props();
 
 	let el = $state();
 	/** @type {any} */
@@ -23,6 +23,7 @@
 	let transitionCount = $state(0);
 	let lastTransitionLatencyMs = $state(0);
 	let lastSeekAtMs = $state(0);
+	let lastErrorQueueId = $state(null);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -81,11 +82,37 @@
 	}
 
 	function requestNextOnce() {
+		if (!canControl) return;
 		const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
 		if (!qid) return;
 		if (nextRequestedForQueueId === qid) return;
 		nextRequestedForQueueId = qid;
 		onnext?.();
+	}
+
+	async function reportUnavailableFromPlaybackError(errorPayload) {
+		const current = playerState.currentSong;
+		if (!current?.queueId && !current?.songId) return;
+		const queueId = current.queueId || current.id || null;
+		if (queueId && lastErrorQueueId === queueId) return;
+		lastErrorQueueId = queueId;
+		const errorCode = typeof errorPayload?.data === 'number' ? errorPayload.data : null;
+		try {
+			await fetch('/api/queue/unavailable', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					queueId,
+					songId: current.songId || null,
+					videoId: current.videoId || null,
+					reason: 'youtube_playback_error',
+					errorCode,
+					details: errorPayload || null
+				})
+			});
+		} catch {
+			// ignore
+		}
 	}
 
 	// Get the "official" server-side elapsed time
@@ -169,11 +196,18 @@
 						}
 					}
 			},
-			onError: (e) => {
-				addToast({ message: `ERROR: PLAYBACK_FAILED`, level: 'error' });
-				onnext?.();
-			}
-		}).then(res => {
+				onError: (e) => {
+					const errorVideoId = e?.target?.getVideoData?.()?.video_id || null;
+					const currentVideoId = playerState.currentSong?.videoId || null;
+					// Ignore stale player errors from a previously loaded video.
+					if (errorVideoId && currentVideoId && errorVideoId !== currentVideoId) {
+						return;
+					}
+					addToast({ message: `PLAYBACK BLOCKED -> SKIP`, level: 'error' });
+					reportUnavailableFromPlaybackError(e);
+					requestNextOnce();
+				}
+			}).then(res => {
 			p = res;
 			player = res;
 			if (initialVideoId) {
@@ -243,6 +277,7 @@
 				lastTransitionKey = transitionKey;
 				transitionAtMs = nowMs();
 				transitionPlaybackReportedForKey = null;
+				lastErrorQueueId = null;
 				nextRequestedForQueueId = null;
 				playbackProgress = 0;
 				emitSyncTelemetry(true);
@@ -322,7 +357,12 @@
 							// Fallback auto-advance if ended event is missed.
 							// Keep this tight when we have native player duration.
 							const endGraceSec = hasNativeDuration ? 0.35 : 1.2;
-							if (elapsedServer >= duration + endGraceSec) {
+							const nearEndByPlayer =
+								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer)
+									? elapsedPlayer >= duration - 0.6
+									: false;
+							const farPastEndByServer = elapsedServer >= duration + 8;
+							if (elapsedServer >= duration + endGraceSec && (nearEndByPlayer || farPastEndByServer)) {
 								requestNextOnce();
 							}
 						}

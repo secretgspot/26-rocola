@@ -28,10 +28,12 @@
 	let isVideoPaused = $state(false);
 	let helpOpen = $state(false);
 	let queueVisible = $state(false);
+	let isController = $state(false);
 	let queueHideTimer = null;
 	let isMobileViewport = $state(false);
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
+	const canControl = $derived(isAdmin && isController);
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
@@ -75,6 +77,32 @@
 		return () => media.removeEventListener('change', update);
 	});
 
+	$effect(() => {
+		if (!isAdmin || typeof window === 'undefined') {
+			isController = false;
+			return;
+		}
+		let timer;
+		let alive = true;
+		const tick = async () => {
+			try {
+				const res = await fetch('/api/admin/controller', { method: 'POST' });
+				const info = await res.json().catch(() => ({}));
+				if (!alive) return;
+				isController = Boolean(info?.isController);
+			} catch {
+				if (!alive) return;
+				isController = false;
+			}
+			timer = setTimeout(tick, 1800);
+		};
+		tick();
+		return () => {
+			alive = false;
+			if (timer) clearTimeout(timer);
+		};
+	});
+
 	function toggleTheme() {
 		theme = theme === 'dark' ? 'light' : 'dark';
 		if (typeof window !== 'undefined') {
@@ -114,8 +142,8 @@
 					key: e.key,
 					targetTagName: target?.tagName || null,
 					isHelpOpen: helpOpen,
-					isAdmin,
-					isDev: import.meta.env.DEV,
+					isAdmin: canControl,
+					isDev: false,
 					adminIndex,
 					konami
 				});
@@ -293,9 +321,12 @@
 			<div class="logo">
 				<div class="live-dot {connectionState}" aria-hidden="true" title={connectionTooltip}></div>
 				<span class="logo-text">ROCOLA</span>
+				{#if canControl}
+					<span class="ctrl-badge" title="Active controller">CTRL</span>
+				{/if}
 			</div>
 		<div class="header-meta">
-			{#if import.meta.env.DEV || isAdmin}
+			{#if canControl}
 				<div class="admin-panel">
 					<button
 						class="btn-skip btn-next"
@@ -385,6 +416,7 @@
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}
+					{canControl}
 					onsynctelemetry={handleSyncTelemetry} />
 			</svelte:boundary>
 		{:else}
@@ -510,6 +542,12 @@
 		font-weight: var(--font-weight-1);
 		text-transform: uppercase;
 		letter-spacing: 0;
+	}
+	.ctrl-badge {
+		font-size: var(--font-size-00);
+		letter-spacing: 0.08em;
+		color: var(--status-good);
+		opacity: 0.9;
 	}
 	.theme-toggle {
 		background: transparent;

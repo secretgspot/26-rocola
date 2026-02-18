@@ -12,6 +12,7 @@ declare global {
 			clientIp: string;
 			sessionId: string;
 			isAdmin: boolean;
+			isDev: boolean;
 			userAgent: string;
 		}
 		// interface PageData {}

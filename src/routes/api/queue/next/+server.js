@@ -1,12 +1,20 @@
 import { json } from '@sveltejs/kit';
 import { advanceQueue } from '$lib/server/services/queue.js';
-import { checkRate } from '$lib/server/security.js';
+import { checkRate, isAdminRequest } from '$lib/server/security.js';
+import { isActiveController } from '$lib/server/controller.js';
 
 /**
  * POST to advance the queue: mark the current song as played and return the next one
  * @returns {Promise<Response>}
  */
 export async function POST(event) {
+	if (!isAdminRequest(event, { allowDev: false })) {
+		return json({ ok: false, error: 'Admin required' }, { status: 403 });
+	}
+	if (!isActiveController(event)) {
+		return json({ ok: false, error: 'Controller required' }, { status: 409 });
+	}
+
 	const limited = checkRate(event, 'queue-next', 60, 60 * 1000, 'ip+session');
 	if (!limited.ok) return json(limited.body, { status: limited.status });
 
