@@ -1,9 +1,18 @@
 <script>
 	import { untrack } from 'svelte';
 	import { createPlayer } from '$lib/client/youtube-player';
-	import { playerState, addToast } from '$lib/client/stores.svelte.js';
+	import { playerState, addToast, refreshQueue } from '$lib/client/stores.svelte.js';
 
-	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry, onendedsignal, canControl = false } = $props();
+	let {
+		onnext,
+		ontimeupdate,
+		onstatsupdate,
+		onplaystate,
+		onsynctelemetry,
+		onendedsignal,
+		onlocalblockstate,
+		canControl = false
+	} = $props();
 
 	let el = $state();
 	/** @type {any} */
@@ -24,6 +33,10 @@
 	let lastTransitionLatencyMs = $state(0);
 	let lastSeekAtMs = $state(0);
 	let lastErrorQueueId = $state(null);
+	let localPlaybackBlocked = $state(false);
+	let localPlaybackBlockedAt = $state(0);
+	let lastBlockedRefreshAt = $state(0);
+	let lastForcedLoadAt = $state(0);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -145,6 +158,10 @@
 				onStateChange: (e) => {
 					// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
 					onplaystate?.({ paused: e.data === 2 });
+					if (e.data === 1 || e.data === 3 || e.data === 5) {
+						localPlaybackBlocked = false;
+						onlocalblockstate?.({ blocked: false });
+					}
 					if (e.data === 0) {
 						onendedsignal?.();
 					}
@@ -203,6 +220,18 @@
 					const currentVideoId = playerState.currentSong?.videoId || null;
 					// Ignore stale player errors from a previously loaded video.
 					if (errorVideoId && currentVideoId && errorVideoId !== currentVideoId) {
+						return;
+					}
+					localPlaybackBlocked = true;
+					localPlaybackBlockedAt = Date.now();
+					onlocalblockstate?.({
+						blocked: true,
+						canControl,
+						errorCode: typeof e?.data === 'number' ? e.data : null
+					});
+					if (!canControl) {
+						addToast({ message: `LOCAL PLAYBACK BLOCKED`, level: 'error' });
+						refreshQueue();
 						return;
 					}
 					const action = await reportUnavailableFromPlaybackError(e);
@@ -274,7 +303,8 @@
 
 			if (isNewVideo || isNewStart || isNewTransition) {
 				const seekTo = getServerElapsed();
-				if (isNewVideo) {
+				const shouldHardLoad = isNewVideo || localPlaybackBlocked;
+				if (shouldHardLoad) {
 					player.load(current.videoId, true);
 					// Keep initial playback smooth: defer non-trivial seek until first "playing" state.
 					pendingJoinSeekTo = seekTo > 1.2 ? seekTo : null;
@@ -291,6 +321,8 @@
 				transitionAtMs = nowMs();
 				transitionPlaybackReportedForKey = null;
 				lastErrorQueueId = null;
+				localPlaybackBlocked = false;
+				onlocalblockstate?.({ blocked: false });
 				nextRequestedForQueueId = null;
 				playbackProgress = 0;
 				emitSyncTelemetry(true);
@@ -305,11 +337,12 @@
 		let lastSync = 0;
 		let lastHardSync = 0;
 		let lastStateCheck = 0;
+		let lastConvergenceCheck = 0;
 
 		const update = (time) => {
 			// Update at ~5fps is enough for the progress bar but we can go faster for smoothness
 			// requestAnimationFrame runs at 60fps usually.
-			if (time - lastUpdate > 100) {
+				if (time - lastUpdate > 100) {
 				lastUpdate = time;
 				if (player && playerState.currentSong) {
 					// Determine duration: Player is most accurate, fallback to metadata
@@ -327,11 +360,13 @@
 						if (duration > 0) {
 							const elapsedServer = getServerElapsed();
 							const elapsedPlayer = player.getCurrentTime?.();
-							// UI should reflect what viewer actually sees.
+							// If local playback is blocked, keep HUD driven by server timeline.
 							const elapsedUi =
-								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer) && elapsedPlayer >= 0
-									? elapsedPlayer
-									: elapsedServer;
+								localPlaybackBlocked
+									? elapsedServer
+									: typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer) && elapsedPlayer >= 0
+										? elapsedPlayer
+										: elapsedServer;
 							playbackProgress = (elapsedUi / duration) * 100;
 
 						// Clamp to 100%
@@ -378,8 +413,22 @@
 							if (elapsedServer >= duration + endGraceSec && (nearEndByPlayer || farPastEndByServer)) {
 								requestNextOnce();
 							}
+						} else if (localPlaybackBlocked) {
+							// Keep HUD alive even when duration is unknown on blocked embeds.
+							const elapsedServer = getServerElapsed();
+							const pseudo = ((elapsedServer % 12) / 12) * 100;
+							playbackProgress = pseudo;
+							ontimeupdate?.({ progress: playbackProgress });
 						}
 					}
+				}
+				if (
+					localPlaybackBlocked &&
+					!canControl &&
+					time - lastBlockedRefreshAt > 1200
+				) {
+					lastBlockedRefreshAt = time;
+					refreshQueue();
 				}
 				// Periodic drift correction (avoid aggressive micro-seeks)
 				if (time - lastSync > 900 && player && playerState.currentSong) {
@@ -454,6 +503,29 @@
 								}
 								player.play();
 							}
+						}
+					} catch {
+						// ignore
+					}
+				}
+				// Convergence safety: if iframe is on a different video than store state, force-load target.
+				if (time - lastConvergenceCheck > 1200 && player && playerState.currentSong?.videoId) {
+					lastConvergenceCheck = time;
+					try {
+						const liveVideoId = player?._raw?.getVideoData?.()?.video_id || null;
+						const targetVideoId = playerState.currentSong.videoId;
+						if (
+							liveVideoId &&
+							targetVideoId &&
+							liveVideoId !== targetVideoId &&
+							time - lastForcedLoadAt > 1200
+						) {
+							lastForcedLoadAt = time;
+							const seekTo = getServerElapsed();
+							player.load(targetVideoId, true);
+							pendingJoinSeekTo = seekTo > 1.2 ? seekTo : null;
+							localPlaybackBlocked = false;
+							onlocalblockstate?.({ blocked: false });
 						}
 					} catch {
 						// ignore

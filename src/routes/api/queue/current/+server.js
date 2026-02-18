@@ -5,8 +5,9 @@ import { db } from '$lib/server/db/index.js';
 import { withReadRetry } from '$lib/server/db/retry.js';
 import { queue, songs } from '$lib/server/db/schema.js';
 import { and, eq, gt } from 'drizzle-orm';
+import { isActiveController } from '$lib/server/controller.js';
 
-export async function GET() {
+export async function GET(event) {
 	try {
 		let playback = await withReadRetry(() => getPlaybackState());
 
@@ -47,10 +48,9 @@ export async function GET() {
 
 		const top = rows[0];
 
-		// If no song is recorded as playing, or it's a different song than the top of queue
-		// we "start" this one now. 
-		// Note: this is a bit aggressive but ensures sync for the first person joining an idle system.
-		if (!playback.currentQueueId || playback.currentQueueId !== top.id) {
+		// Recovery write is controller-only to avoid split-brain transitions from passive clients.
+		const canRecoverPlayback = await isActiveController(event);
+		if (canRecoverPlayback && (!playback.currentQueueId || playback.currentQueueId !== top.id)) {
 			const nowMs = Date.now();
 			await setPlaybackState({ 
 				songId: top.song.id, 
@@ -65,8 +65,8 @@ export async function GET() {
 			...top, 
 			queueId: top.id, 
 			songId: top.song.id,
-			startedAt: playback.startedAt,
-			startedAtMs: playback.startedAtMs
+			startedAt: playback.currentQueueId === top.id ? playback.startedAt : null,
+			startedAtMs: playback.currentQueueId === top.id ? playback.startedAtMs : null
 		};
 		
 		return json({ ok: true, current, serverNowMs: Date.now() });

@@ -5,7 +5,8 @@
 		song = null,
 		bitrate = 0,
 		buffer = 0,
-		progress = 0
+		progress = 0,
+		localBlocked = false
 	} = $props();
 </script>
 
@@ -19,6 +20,9 @@
 				<span class="divider">|</span>
 				<span class="vid-id">{song.videoId}</span>
 			</div>
+			{#if localBlocked}
+				<div class="blocked-note text-muted">LOCAL EMBED BLOCKED · FOLLOWING LIVE TIMELINE</div>
+			{/if}
 		</div>
 		<div class="meta-stats">
 			{#if song.tier && song.tier !== 'free'}
@@ -94,6 +98,11 @@
 			display: flex;
 			gap: var(--size-3);
 			overflow: hidden;
+		}
+		.blocked-note {
+			font-size: var(--font-size-00);
+			margin-top: 2px;
+			letter-spacing: 0.08em;
 		}
 		.meta-footer span {
 			white-space: nowrap;

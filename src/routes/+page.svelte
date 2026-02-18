@@ -26,6 +26,7 @@
 	let clearPending = $state(false);
 	let theme = $state('dark');
 	let isVideoPaused = $state(false);
+	let localPlaybackBlocked = $state(false);
 	let helpOpen = $state(false);
 	let queueVisible = $state(false);
 	let isController = $state(false);
@@ -185,6 +186,10 @@
 
 	function handlePlayState(e) {
 		isVideoPaused = Boolean(e?.paused);
+	}
+
+	function handleLocalBlockState(e) {
+		localPlaybackBlocked = Boolean(e?.blocked);
 	}
 
 	function handleSyncTelemetry(e) {
@@ -434,6 +439,7 @@
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}
+					onlocalblockstate={handleLocalBlockState}
 					{canControl}
 					onsynctelemetry={handleSyncTelemetry} />
 			</svelte:boundary>
@@ -456,6 +462,7 @@
 		{bitrate}
 		{buffer}
 		progress={playbackProgress}
+		localBlocked={localPlaybackBlocked}
 	/>
 
 	<AddToQueue

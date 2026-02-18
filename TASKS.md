@@ -231,6 +231,12 @@
 - [x] Extend songs schema for playback error observability (`errorCount`, `lastErrorCode`, `lastErrorAt`)
 - [x] Push schema updates to Neon (`npm run db:push`)
 - [x] Verify with `npm run check`, unit tests, integration tests
+- [x] Add non-controller blocked-playback resilience:
+    - [x] Keep HUD/progress alive during local embed-blocked playback
+    - [x] Force hard reload on transition after local playback block (unstick stale iframe errors)
+    - [x] Add footer note: local embed blocked while timeline remains live
+    - [x] Make `/api/queue/current` recovery writes controller-only (read endpoint no longer mutates playback for passive clients)
+    - [x] Add client convergence guard that force-loads target video if iframe/videoId diverges from live store state
 
 ## Next Planned Hardening
 - [ ] Add dedicated unit tests for controller lease race/takeover scenarios
