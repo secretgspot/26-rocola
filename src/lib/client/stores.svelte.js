@@ -75,8 +75,8 @@ function updateClockOffset(serverNowMs) {
 	const sample = serverNowMs / 1000 - Date.now() / 1000;
 	if (!Number.isFinite(sample)) return;
 	const prev = playerState.clockOffsetSec || 0;
-	// Bootstrap quickly, then smooth.
-	playerState.clockOffsetSec = prev === 0 ? sample : prev * 0.85 + sample * 0.15;
+	// Bootstrap quickly, then smooth while remaining responsive to drift changes.
+	playerState.clockOffsetSec = prev === 0 ? sample : prev * 0.75 + sample * 0.25;
 }
 
 /**

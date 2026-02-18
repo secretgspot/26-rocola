@@ -22,6 +22,7 @@
 	let hardSyncCount = $state(0);
 	let transitionCount = $state(0);
 	let lastTransitionLatencyMs = $state(0);
+	let lastSeekAtMs = $state(0);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -139,21 +140,30 @@
 							return;
 						}
 
-						const inWarmup = nowMs() - transitionAtMs < 2200;
-						if (inWarmup) return;
-
 						// When switching to Playing, do a tight correction.
 						const current = p.getCurrentTime();
 						const correct = getServerElapsed();
 						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 3;
 						const drift = correct - current;
+						const inWarmup = nowMs() - transitionAtMs < 1800;
 						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
-						if (!nearEnd && Number.isFinite(drift) && Math.abs(drift) > 0.25) {
-							if (Math.abs(drift) > 2.5) p.seek(correct);
-							else {
-								p.seek(current + clamp(drift, -0.4, 0.4));
-								microSyncCount += 1;
+						if (!nearEnd && Number.isFinite(drift)) {
+							const now = nowMs();
+							const canSeek = now - lastSeekAtMs > 320;
+							if (inWarmup && Math.abs(drift) > 0.45 && canSeek) {
+								p.seek(correct);
+								lastSeekAtMs = now;
+								hardSyncCount += 1;
+							} else if (!inWarmup && Math.abs(drift) > 0.22 && canSeek) {
+								if (Math.abs(drift) > 2.5) {
+									p.seek(correct);
+									hardSyncCount += 1;
+								} else {
+									p.seek(current + clamp(drift, -0.45, 0.45));
+									microSyncCount += 1;
+								}
+								lastSeekAtMs = now;
 							}
 							emitSyncTelemetry();
 						}
@@ -319,11 +329,9 @@
 					}
 				}
 				// Periodic drift correction (avoid aggressive micro-seeks)
-				if (time - lastSync > 1200 && player && playerState.currentSong) {
+				if (time - lastSync > 900 && player && playerState.currentSong) {
 					lastSync = time;
-					const inWarmup = nowMs() - transitionAtMs < 2200;
-					if (!inWarmup) {
-						try {
+					try {
 						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
 						const state = player.getPlayerState?.();
@@ -331,44 +339,51 @@
 							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 4;
 						const drift = correct - current;
+						const inWarmup = nowMs() - transitionAtMs < 1800;
 						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
 						if (
 							state === 1 &&
 							!nearEnd &&
 							typeof current === 'number' &&
 							Number.isFinite(drift) &&
-							Math.abs(drift) > 0.25
+							Math.abs(drift) > (inWarmup ? 0.55 : 0.22)
 						) {
-							player.seek(current + clamp(drift, -0.35, 0.35));
-							microSyncCount += 1;
+							const now = nowMs();
+							if (now - lastSeekAtMs > 420) {
+								if (inWarmup || Math.abs(drift) > 0.95) {
+									player.seek(correct);
+									hardSyncCount += 1;
+								} else {
+									player.seek(current + clamp(drift, -0.4, 0.4));
+									microSyncCount += 1;
+								}
+								lastSeekAtMs = now;
+							}
 							emitSyncTelemetry();
 						}
-						} catch {
-							// ignore
-						}
+					} catch {
+						// ignore
 					}
 				}
 				// Hard sync every ~3s: full seek if drift is significant.
-				if (time - lastHardSync > 3000 && player && playerState.currentSong) {
+				if (time - lastHardSync > 2400 && player && playerState.currentSong) {
 					lastHardSync = time;
-					const inWarmup = nowMs() - transitionAtMs < 2600;
-					if (!inWarmup) {
-						try {
+					try {
 						const state = player.getPlayerState?.();
 						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
 						if (state === 1 && typeof current === 'number' && Number.isFinite(current)) {
 							const drift = correct - current;
 							if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
-							if (Math.abs(drift) > 1.2) {
+							if (Math.abs(drift) > 0.9) {
 								player.seek(correct);
 								hardSyncCount += 1;
+								lastSeekAtMs = nowMs();
 								emitSyncTelemetry();
 							}
 						}
-						} catch {
-							// ignore
-						}
+					} catch {
+						// ignore
 					}
 				}
 				// Ensure playback follows server even if user paused locally, but do not spam restart
