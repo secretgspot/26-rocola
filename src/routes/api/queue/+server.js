@@ -1,11 +1,12 @@
 import { json } from '@sveltejs/kit';
 import { getQueue, addToQueue } from '$lib/server/services/queue.js';
 import { checkRate } from '$lib/server/security.js';
+import { withReadRetry } from '$lib/server/db/retry.js';
 
 
 export async function GET() {
 	try {
-		const { queue, currentTurn } = await getQueue();
+		const { queue, currentTurn } = await withReadRetry(() => getQueue());
 		return json({ ok: true, queue, currentTurn });
 	} catch (err) {
 		console.error(err);

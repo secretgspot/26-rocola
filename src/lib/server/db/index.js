@@ -17,5 +17,19 @@ if (!databaseUrl) {
 }
 
 neonConfig.webSocketConstructor = ws;
-const pool = new Pool({ connectionString: databaseUrl });
+
+/** @type {Pool | undefined} */
+let pool = globalThis.__rocolaNeonPool;
+
+if (!pool) {
+	pool = new Pool({ connectionString: databaseUrl });
+	// Neon/pg can emit idle-client socket errors during dev HMR reconnects.
+	// If unhandled, Node treats them as fatal and exits the dev server.
+	pool.on('error', (err) => {
+		console.warn('[db] pool idle client error:', err?.message || err);
+	});
+
+	globalThis.__rocolaNeonPool = pool;
+}
+
 export const db = drizzle(pool, { schema });

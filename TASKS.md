@@ -172,3 +172,11 @@
 - [x] Render star burst overlay on all connected clients
 - [x] Update effect to one-star-per-click with upward launch from button origin
 - [x] Hide `STAR` button when there is no active playback
+- [x] Increase first-frame star size to match button-scale appearance
+
+## Dev Stability Hardening (2026-02-18)
+- [x] Reuse a global Neon `Pool` across Vite HMR reloads
+- [x] Add `pool.on('error')` handler to avoid dev server crash on idle socket termination
+- [x] Add `withReadRetry` helper for transient Neon disconnects
+- [x] Apply read retry to `GET /api/queue` and `GET /api/queue/current`
+- [x] Verify with `npm run check`

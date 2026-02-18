@@ -198,7 +198,8 @@ function makeParticles(count = 1) {
 		delay: 0,
 		dur: 760 + Math.round(Math.random() * 260),
 		scale: 0.95 + Math.random() * 0.25,
-		rot: -8 + Math.random() * 16
+		rot: -8 + Math.random() * 16,
+		size: 44 + Math.round(Math.random() * 8)
 	}));
 }
 

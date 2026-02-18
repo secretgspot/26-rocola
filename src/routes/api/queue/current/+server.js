@@ -2,20 +2,23 @@ import { json } from '@sveltejs/kit';
 import { getQueue } from '$lib/server/services/queue.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { db } from '$lib/server/db/index.js';
+import { withReadRetry } from '$lib/server/db/retry.js';
 import { queue, songs } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 export async function GET() {
 	try {
-		let playback = await getPlaybackState();
+		let playback = await withReadRetry(() => getPlaybackState());
 
 		if (playback?.currentQueueId) {
-			const rows = await db
-				.select({ queue: queue, song: songs })
-				.from(queue)
-				.innerJoin(songs, eq(queue.songId, songs.id))
-				.where(eq(queue.id, playback.currentQueueId))
-				.limit(1);
+			const rows = await withReadRetry(() =>
+				db
+					.select({ queue: queue, song: songs })
+					.from(queue)
+					.innerJoin(songs, eq(queue.songId, songs.id))
+					.where(eq(queue.id, playback.currentQueueId))
+					.limit(1)
+			);
 
 			if (rows[0]) {
 				const top = rows[0].queue;
@@ -30,7 +33,7 @@ export async function GET() {
 			}
 		}
 
-		const { queue: rows } = await getQueue();
+		const { queue: rows } = await withReadRetry(() => getQueue());
 		if (!rows || rows.length === 0) {
 			return json({ ok: true, current: null, serverNowMs: Date.now() });
 		}
@@ -47,7 +50,7 @@ export async function GET() {
 				currentQueueId: top.id, 
 				startedAt: now 
 			});
-			playback = await getPlaybackState();
+			playback = await withReadRetry(() => getPlaybackState());
 		}
 		
 		const current = { 

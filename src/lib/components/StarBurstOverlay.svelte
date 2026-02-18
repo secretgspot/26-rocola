@@ -8,7 +8,7 @@
 			{#each burst.particles as p, idx (idx)}
 				<span
 					class="star"
-					style={`--dx:${p.dx}px;--dy:${p.dy}px;--delay:${p.delay}ms;--dur:${p.dur}ms;--scale:${p.scale};--rot:${p.rot}deg;`}
+					style={`--dx:${p.dx}px;--dy:${p.dy}px;--delay:${p.delay}ms;--dur:${p.dur}ms;--scale:${p.scale};--rot:${p.rot}deg;--size:${p.size || 46}px;`}
 				></span>
 			{/each}
 		</div>
@@ -32,7 +32,7 @@
 		position: absolute;
 		left: 0;
 		top: 0;
-		font-size: 18px;
+		font-size: var(--size, 46px);
 		transform: translate(-50%, -50%) scale(var(--scale, 1));
 		opacity: 0;
 		filter: drop-shadow(0 0 8px color-mix(in srgb, var(--tier-gold) 60%, transparent));
@@ -45,7 +45,7 @@
 	@keyframes burst {
 		0% {
 			opacity: 0;
-			transform: translate(-50%, -50%) scale(0.5) rotate(0deg);
+			transform: translate(-50%, -50%) scale(0.92) rotate(0deg);
 		}
 		12% {
 			opacity: 1;
