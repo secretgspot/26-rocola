@@ -13,6 +13,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import LandingPage from '$lib/components/LandingPage.svelte';
 	import StarBurstOverlay from '$lib/components/StarBurstOverlay.svelte';
+	import { getShortcutDecision } from '$lib/client/shortcuts.js';
 
 	let { data } = $props();
 
@@ -108,34 +109,37 @@
 	$effect(() => {
 		if (typeof window === 'undefined') return;
 			const handler = (e) => {
-				const target = e.target;
-				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
-				const key = String(e.key || '').toLowerCase();
-				if ((import.meta.env.DEV || isAdmin) && key === 'n') {
-					e.preventDefault();
+				const target = /** @type {HTMLElement | null} */ (e.target);
+				const decision = getShortcutDecision({
+					key: e.key,
+					targetTagName: target?.tagName || null,
+					isHelpOpen: helpOpen,
+					isAdmin,
+					isDev: import.meta.env.DEV,
+					adminIndex,
+					konami
+				});
+
+				adminIndex = decision.nextAdminIndex;
+
+				if (decision.action === 'none') return;
+
+				e.preventDefault();
+				if (decision.action === 'skip') {
 					advance();
 					return;
 				}
-				if (key === 'h') {
-					e.preventDefault();
+				if (decision.action === 'toggle_help') {
 					toggleHelp();
 					return;
 				}
-				if (key === 'escape' && helpOpen) {
-					e.preventDefault();
+				if (decision.action === 'close_help') {
 					helpOpen = false;
 					return;
 				}
-				const expected = konami[adminIndex];
-			if (key === expected) {
-				adminIndex += 1;
-				if (adminIndex >= konami.length) {
-					adminIndex = 0;
+				if (decision.action === 'enable_admin') {
 					enableAdmin();
 				}
-			} else {
-				adminIndex = key === konami[0] ? 1 : 0;
-			}
 		};
 
 		window.addEventListener('keydown', handler);

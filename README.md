@@ -107,6 +107,13 @@ How to run the integration test:
 npm run test:integration
 ```
 
+Optional auto-start mode:
+
+```powershell
+$env:INTEGRATION_START_SERVER = "1"
+npm run test:integration
+```
+
 Note: This test is lightweight and expects a running server and direct DB access (dev scenario).
 
 ---

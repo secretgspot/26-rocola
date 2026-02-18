@@ -210,3 +210,7 @@
 - [x] Add DB indexes for queue/filtering/history/session/free-submission hot paths
 - [x] Push Drizzle schema changes to Neon (`npm run db:push`)
 - [x] Add unit tests for playback precision + star route behavior
+- [x] Refactor global keyboard shortcuts into testable helper module
+- [x] Add unit tests for shortcut behavior (`H`, `N`, Konami progression)
+- [x] Improve integration test workflow with optional auto-start (`INTEGRATION_START_SERVER=1`)
+- [x] Verify test suite: `npm run check`, unit tests, integration tests
