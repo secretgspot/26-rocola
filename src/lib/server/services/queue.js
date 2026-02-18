@@ -312,13 +312,14 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon', op
 
 	const playback = await getPlaybackState();
 	const shouldStartPlayback = !playback?.currentQueueId;
-	const startedAt = shouldStartPlayback ? Math.floor(Date.now() / 1000) : null;
+	const startedAtMs = shouldStartPlayback ? Date.now() : null;
+	const startedAt = typeof startedAtMs === 'number' ? Math.floor(startedAtMs / 1000) : null;
 
 	if (shouldStartPlayback) {
 		await setPlaybackState({
 			currentQueueId: qId,
 			songId: song.id,
-			startedAt,
+			startedAtMs,
 			song: {
 				...song,
 				id: qId,
@@ -327,7 +328,8 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon', op
 				tier: normalizedTier,
 				playsRemainingToday,
 				lastPlayedTurn: initialLastPlayed,
-				startedAt
+				startedAt,
+				startedAtMs
 			}
 		});
 	}
@@ -342,7 +344,7 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon', op
 	await broadcast('queue_changed', { currentTurn });
 	invalidateQueueCache();
 
-	return { id: qId, song, startedAt, startedNow: shouldStartPlayback };
+	return { id: qId, song, startedAt, startedAtMs, startedNow: shouldStartPlayback };
 }
 
 /**
@@ -367,13 +369,20 @@ export async function advanceQueue(fromQueueId = null) {
 				if (found) current = found;
 			}
 
-			if (fromQueueId && playingId && fromQueueId !== playingId) {
-				return {
-					ok: true,
-					message: 'Already advanced',
-					next: { ...current.song, ...current, queueId: current.id, songId: current.songId, startedAt: playback.startedAt }
-				};
-			}
+				if (fromQueueId && playingId && fromQueueId !== playingId) {
+					return {
+						ok: true,
+						message: 'Already advanced',
+						next: {
+							...current.song,
+							...current,
+							queueId: current.id,
+							songId: current.songId,
+							startedAt: playback.startedAt,
+							startedAtMs: playback.startedAtMs
+						}
+					};
+				}
 
 			const now = Math.floor(Date.now() / 1000);
 			const prevTurn = await getGlobalTurn(/** @type {any} */ (tx));
@@ -427,26 +436,41 @@ export async function advanceQueue(fromQueueId = null) {
 		return result;
 	}
 
-	const { current, afterRows, currentTurn, nextTurn, now } = result;
+		const { current, afterRows, currentTurn, nextTurn, now } = result;
+		const nowMs = Date.now();
 
-	if (afterRows.length > 0) {
-		const next = selectNextAfterCurrent(afterRows, nextTurn, current);
-		await setPlaybackState({
-			currentQueueId: next.id,
-			songId: next.song.id,
-			startedAt: now,
-			song: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now }
-		});
-		await broadcast('queue_changed', { currentTurn });
-		invalidateQueueCache();
-		return { 
-				ok: true, 
-				played: { queueId: current.id, songId: current.song.id }, 
-				next: { ...next.song, ...next, queueId: next.id, songId: next.song.id, startedAt: now } 
-			};
-	} else {
-		await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
-		await setPlaybackState({ currentQueueId: null, startedAt: null });
+		if (afterRows.length > 0) {
+			const next = selectNextAfterCurrent(afterRows, nextTurn, current);
+			await setPlaybackState({
+				currentQueueId: next.id,
+				songId: next.song.id,
+				startedAtMs: nowMs,
+				song: {
+					...next.song,
+					...next,
+					queueId: next.id,
+					songId: next.song.id,
+					startedAt: Math.floor(nowMs / 1000),
+					startedAtMs: nowMs
+				}
+			});
+			await broadcast('queue_changed', { currentTurn });
+			invalidateQueueCache();
+			return { 
+					ok: true, 
+					played: { queueId: current.id, songId: current.song.id }, 
+					next: {
+						...next.song,
+						...next,
+						queueId: next.id,
+						songId: next.song.id,
+						startedAt: Math.floor(nowMs / 1000),
+						startedAtMs: nowMs
+					}
+				};
+		} else {
+			await broadcast('song_ended', { songId: current.songId, queueId: current.id, playedAt: now });
+			await setPlaybackState({ currentQueueId: null, startedAtMs: null });
 			await broadcast('queue_changed', { currentTurn });
 			invalidateQueueCache();
 			return { ok: true, message: 'Queue exhausted' };

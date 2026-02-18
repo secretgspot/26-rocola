@@ -37,7 +37,8 @@
 - **Interleaving rule**: if last played was premium and any free exists, choose free next.
 
 ### Playback State
-- Persisted in DB (`playback_state`): `currentQueueId`, `startedAt`.
+- Persisted in DB (`playback_state`): `currentQueueId`, `startedAt`, `startedAtMs`.
+- `startedAtMs` is the sync source of truth for tighter cross-client alignment.
 - Clients sync via Ably events + periodic `GET /api/queue/current`.
 
 ### Realtime
@@ -48,6 +49,9 @@
 ### Admin
 - Admin-only controls: **skip, seed, clear** (hidden from regular users).
 - Admin mode enabled via secret code; dev mode always enabled.
+- Dev/Admin keyboard shortcuts:
+  - `N` = skip next
+  - `H` = help menu toggle
 
 ## 4. Risks & Mitigations
 

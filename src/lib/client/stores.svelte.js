@@ -13,6 +13,7 @@ import { connectRealtime } from '$lib/client/realtime.js';
  * @property {string} tier
  * @property {number} [duration]
  * @property {number} [startedAt]
+ * @property {number} [startedAtMs]
  * @property {number} [lastPlayedTurn]
  */
 
@@ -82,6 +83,9 @@ export function normalizeQueueItem(item) {
 		tier: left.tier ?? 'free',
 		duration: left.duration ?? song?.duration ?? 0,
 		startedAt: left.startedAt ?? item.startedAt ?? null,
+		startedAtMs:
+			left.startedAtMs ?? item.startedAtMs ??
+			(typeof (left.startedAt ?? item.startedAt) === 'number' ? (left.startedAt ?? item.startedAt) * 1000 : null),
 		lastPlayedTurn: left.lastPlayedTurn ?? 0,
 		song: song
 	};
@@ -137,7 +141,11 @@ export async function refreshQueue() {
 					const newId = current.queueId || current.id;
 					
 					// Update if ID changed OR if we got a new startedAt
-					if (currentId !== newId || current.startedAt !== playerState.currentSong?.startedAt) {
+					if (
+						currentId !== newId ||
+						current.startedAtMs !== playerState.currentSong?.startedAtMs ||
+						current.startedAt !== playerState.currentSong?.startedAt
+					) {
 						console.debug('[Store] Updating currentSong', { currentId, newId, startedAt: current.startedAt });
 						playerState.currentSong = current;
 					}
@@ -273,6 +281,9 @@ export async function initRealtime() {
 				// Just update startedAt if same song
 				if (playerState.currentSong) {
 					playerState.currentSong.startedAt = payload.startedAt;
+					playerState.currentSong.startedAtMs =
+						payload.startedAtMs ??
+						(typeof payload.startedAt === 'number' ? payload.startedAt * 1000 : playerState.currentSong.startedAtMs);
 				}
 			}
 		});
@@ -314,7 +325,11 @@ export async function initRealtime() {
 					const current = normalizeQueueItem(data.current);
 					const currentId = playerState.currentSong?.queueId || playerState.currentSong?.id;
 					const newId = current?.queueId || current?.id;
-					if (currentId !== newId || current.startedAt !== playerState.currentSong?.startedAt) {
+					if (
+						currentId !== newId ||
+						current.startedAtMs !== playerState.currentSong?.startedAtMs ||
+						current.startedAt !== playerState.currentSong?.startedAt
+					) {
 						playerState.currentSong = current;
 					}
 				}

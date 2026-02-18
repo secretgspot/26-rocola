@@ -6,6 +6,7 @@ A tiny SvelteKit + Drizzle + SQLite jukebox demo used for local development and 
 - YouTube-backed player (iframe wrapper)
 - Real-time sync via WebSocket broadcasts
 - Real-time star reactions (shared across all connected clients)
+- Millisecond playback timeline sync (`startedAtMs`) for tighter cross-client alignment
 - Dev-friendly seeding and debug utilities
 
 ---
@@ -53,6 +54,14 @@ The following features are available only when `NODE_ENV === 'development'` (or 
 - Reactions are broadcast to all connected clients in realtime.
 - Star animation launches upward from the star button origin.
 - Star button is hidden when playback is idle (no active song).
+
+---
+
+## Operator Shortcuts (Dev/Admin)
+
+- `H` — toggle help menu.
+- `N` — skip to next song (dev mode or admin mode only).
+- `Up Up Down Down Left Right Left Right A B` — enable admin mode.
 
 
 ---

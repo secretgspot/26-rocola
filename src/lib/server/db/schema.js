@@ -1,4 +1,4 @@
-import { bigint, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
+import { bigint, index, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
 // Songs table
 export const songs = pgTable('songs', {
@@ -27,7 +27,11 @@ export const queue = pgTable('queue', {
 	promotionExpiresAt: integer('promotionExpiresAt'),
 	createdAt: integer('createdAt').notNull(),
 	updatedAt: integer('updatedAt').notNull(),
-});
+}, (table) => ({
+	queueOrderIdx: index('queue_order_idx').on(table.baseRank),
+	queuePlayableIdx: index('queue_playable_idx').on(table.playsRemainingToday, table.lastPlayedTurn, table.tier),
+	queueSongIdx: index('queue_song_idx').on(table.songId)
+}));
 
 // Queue plays / analytics
 export const queuePlays = pgTable('queue_plays', {
@@ -37,7 +41,10 @@ export const queuePlays = pgTable('queue_plays', {
 	playedAt: integer('playedAt').notNull(),
 	skippedAt: integer('skippedAt'),
 	watchedDuration: integer('watchedDuration'),
-});
+}, (table) => ({
+	queuePlaysQueueIdx: index('queue_plays_queue_idx').on(table.queueId),
+	queuePlaysPlayedAtIdx: index('queue_plays_played_at_idx').on(table.playedAt)
+}));
 
 // Daily play counts
 export const dailyPlayCounts = pgTable('daily_play_counts', {
@@ -56,7 +63,13 @@ export const freeSubmissions = pgTable('free_submissions', {
 	songId: uuid('songId').references(() => songs.id),
 	submissionDate: text('submissionDate').notNull(),
 	createdAt: integer('createdAt').notNull(),
-});
+}, (table) => ({
+	freeSubmissionLookupIdx: index('free_submission_lookup_idx').on(
+		table.ipAddress,
+		table.songId,
+		table.submissionDate
+	)
+}));
 
 // Orders / payments
 export const orders = pgTable('orders', {
@@ -81,11 +94,15 @@ export const sessions = pgTable('sessions', {
 	userAgent: text('userAgent'),
 	lastActivityAt: integer('lastActivityAt').notNull(),
 	createdAt: integer('createdAt').notNull(),
-});
+}, (table) => ({
+	sessionsLastActivityIdx: index('sessions_last_activity_idx').on(table.lastActivityAt),
+	sessionsIpIdx: index('sessions_ip_idx').on(table.ipAddress)
+}));
 
 // Playback state (single-row table)
 export const playbackState = pgTable('playback_state', {
 	id: text('id').primaryKey(), // use a single row id: 'global'
 	currentQueueId: uuid('currentQueueId'),
-	startedAt: integer('startedAt')
+	startedAt: integer('startedAt'),
+	startedAtMs: bigint('startedAtMs', { mode: 'number' })
 });

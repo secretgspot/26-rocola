@@ -55,9 +55,14 @@
 
 	// Get the "official" server-side elapsed time
 	function getServerElapsed() {
-		if (playerState.currentSong?.startedAt) {
-			const now = Date.now() / 1000 + (playerState.clockOffsetSec || 0);
-			const elapsed = now - playerState.currentSong.startedAt;
+		const startedAtMs =
+			playerState.currentSong?.startedAtMs ??
+			(typeof playerState.currentSong?.startedAt === 'number'
+				? playerState.currentSong.startedAt * 1000
+				: null);
+		if (startedAtMs) {
+			const nowMs = Date.now() + (playerState.clockOffsetSec || 0) * 1000;
+			const elapsed = (nowMs - startedAtMs) / 1000;
 			return elapsed > 0 ? elapsed : 0;
 		}
 		return 0;
@@ -114,7 +119,8 @@
 			player = res;
 			if (initialVideoId) {
 				lastLoadedVideoId = initialVideoId;
-				lastStartedAt = untrack(() => playerState.currentSong?.startedAt ?? null);
+				lastStartedAt =
+					untrack(() => playerState.currentSong?.startedAtMs ?? playerState.currentSong?.startedAt ?? null);
 				if (seekTo > 0) p.seek(seekTo);
 				p.play();
 			}
@@ -153,8 +159,11 @@
 		if (!player || !current?.videoId) return;
 
 		const isNewVideo = current.videoId !== lastLoadedVideoId;
-		const isNewStart = current.startedAt && current.startedAt !== lastStartedAt;
-		const transitionKey = `${current.queueId || current.id || current.videoId}:${current.startedAt || 0}`;
+		const currentStartedAt =
+			current.startedAtMs ??
+			(typeof current.startedAt === 'number' ? current.startedAt * 1000 : current.startedAt);
+		const isNewStart = currentStartedAt && currentStartedAt !== lastStartedAt;
+		const transitionKey = `${current.queueId || current.id || current.videoId}:${currentStartedAt || 0}`;
 		const isNewTransition = transitionKey !== lastTransitionKey;
 
 			if (isNewVideo || isNewStart || isNewTransition) {
@@ -171,7 +180,7 @@
 					tryUnmuteAndPlay();
 				}
 				lastLoadedVideoId = current.videoId;
-				lastStartedAt = current.startedAt ?? null;
+				lastStartedAt = currentStartedAt ?? null;
 				lastTransitionKey = transitionKey;
 				transitionAtMs = nowMs();
 				nextRequestedForQueueId = null;

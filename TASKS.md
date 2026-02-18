@@ -195,3 +195,18 @@
 - [x] Improve typography hierarchy and scanability with Open Props font families
 - [x] Keep layout wide-scroll friendly for popup container while remaining responsive
 - [x] Verify with `npm run check`
+
+## UI/Interaction Follow-ups (2026-02-18)
+- [x] Add `n/N` keyboard shortcut for skip in dev/admin mode
+- [x] Prevent queue hover/touch reveal when help popup is open
+- [x] Rework help popup shell to full-viewport game-menu style
+- [x] Fix help popup mobile clipping and top alignment
+- [x] Add tooltips to `ADD` and `STAR` action buttons
+- [x] Simplify `ADD`/`STAR` button gradient background and border styling
+
+## Playback + DB Hardening (2026-02-18)
+- [x] Add ms-precision playback state (`playback_state.startedAtMs`) with backward compatibility
+- [x] Use `startedAtMs` in song payloads and client sync math (fallback to second timestamps)
+- [x] Add DB indexes for queue/filtering/history/session/free-submission hot paths
+- [x] Push Drizzle schema changes to Neon (`npm run db:push`)
+- [x] Add unit tests for playback precision + star route behavior

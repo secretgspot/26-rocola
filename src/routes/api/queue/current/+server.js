@@ -27,7 +27,8 @@ export async function GET() {
 					...top,
 					queueId: top.id,
 					songId: rows[0].song.id,
-					startedAt: playback.startedAt
+					startedAt: playback.startedAt,
+					startedAtMs: playback.startedAtMs
 				};
 				return json({ ok: true, current, serverNowMs: Date.now() });
 			}
@@ -44,11 +45,11 @@ export async function GET() {
 		// we "start" this one now. 
 		// Note: this is a bit aggressive but ensures sync for the first person joining an idle system.
 		if (!playback.currentQueueId || playback.currentQueueId !== top.id) {
-			const now = Math.floor(Date.now() / 1000);
+			const nowMs = Date.now();
 			await setPlaybackState({ 
 				songId: top.song.id, 
 				currentQueueId: top.id, 
-				startedAt: now 
+				startedAtMs: nowMs
 			});
 			playback = await withReadRetry(() => getPlaybackState());
 		}
@@ -58,7 +59,8 @@ export async function GET() {
 			...top, 
 			queueId: top.id, 
 			songId: top.song.id,
-			startedAt: playback.startedAt
+			startedAt: playback.startedAt,
+			startedAtMs: playback.startedAtMs
 		};
 		
 		return json({ ok: true, current, serverNowMs: Date.now() });

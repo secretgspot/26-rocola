@@ -79,6 +79,7 @@ rocola/
 - **Typography** — Open Props monospace
 - **Interactions** — minimal, subtle hover feedback
 - **Density** — clean spacing, no excessive boxes or frames
+- **Help UX** — fullscreen game-style help overlay between fixed header/footer
 
 ---
 
@@ -94,3 +95,4 @@ rocola/
 
 - Polish & Security (rate limiting, abuse prevention)
 - Admin observability (queue stats, operations)
+- Realtime observability (drift telemetry p50/p95, transition health counters)

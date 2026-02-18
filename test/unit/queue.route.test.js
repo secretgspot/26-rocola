@@ -113,7 +113,8 @@ describe('/api/queue POST duplicate rules', () => {
 		expect(addToQueue).toHaveBeenCalledWith(
 			expect.objectContaining({ videoId: 'dQw4w9WgXcQ' }),
 			'gold',
-			'127.0.0.1'
+			'127.0.0.1',
+			{ bypassFreeDailyLimit: false }
 		);
 	});
 });
