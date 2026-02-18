@@ -165,6 +165,7 @@
 	}
 
 	function handleQueuePointerEnter(e) {
+		if (helpOpen) return;
 		if (e.pointerType === 'mouse') {
 			queueVisible = true;
 			clearQueueHideTimer();
@@ -172,6 +173,7 @@
 	}
 
 	function handleQueuePointerMove(e) {
+		if (helpOpen) return;
 		if (e.pointerType === 'mouse') {
 			queueVisible = true;
 			clearQueueHideTimer();
@@ -179,6 +181,7 @@
 	}
 
 	function handleQueuePointerLeave(e) {
+		if (helpOpen) return;
 		if (e.pointerType === 'mouse') {
 			queueVisible = false;
 			clearQueueHideTimer();
@@ -186,9 +189,16 @@
 	}
 
 	function handleQueueTouchReveal() {
+		if (helpOpen) return;
 		queueVisible = true;
 		scheduleQueueHide();
 	}
+
+	$effect(() => {
+		if (!helpOpen) return;
+		queueVisible = false;
+		clearQueueHideTimer();
+	});
 
 	$effect(() => {
 		if (playerState.queue.length === 0) {
