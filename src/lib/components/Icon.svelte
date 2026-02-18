@@ -9,6 +9,7 @@ import questionRaw from '$lib/icons/question.svg?raw';
 import seedRaw from '$lib/icons/seed.svg?raw';
 import skipRaw from '$lib/icons/skip.svg?raw';
 import stationsRaw from '$lib/icons/stations.svg?raw';
+import starsRaw from '$lib/icons/stars.svg?raw';
 
 	const RAW = {
 		add: addRaw,
@@ -20,7 +21,8 @@ import stationsRaw from '$lib/icons/stations.svg?raw';
 	queue: queueRaw,
 	seed: seedRaw,
 	skip: skipRaw,
-	stations: stationsRaw
+	stations: stationsRaw,
+	stars: starsRaw
 };
 
 	/**

@@ -4,7 +4,7 @@
 	import StripeCheckout from './StripeCheckout.svelte';
 	import Icon from './Icon.svelte';
 
-	let { onqueued, hideTrigger = false, pulse = false, mode = 'center' } = $props();
+	let { onqueued, onstar, hideTrigger = false, hideStar = false, pulse = false, mode = 'center' } = $props();
 
 	let url = $state('');
 	let validating = $state(false);
@@ -16,6 +16,7 @@
 	let stripeSessionId = $state('');
 	let isProcessingPayment = $state(false);
 	let selectedTier = $state('');
+	let starBtnEl = $state();
 
 	let activeTierConfig = $derived(getTierConfig(selectedTier));
 
@@ -131,6 +132,13 @@
 			}
 		}
 	}
+
+	function star() {
+		const rect = starBtnEl?.getBoundingClientRect?.();
+		const x = rect ? (rect.left + rect.width / 2) / window.innerWidth : 0.82;
+		const y = rect ? (rect.top + rect.height / 2) / window.innerHeight : 0.76;
+		onstar?.({ x, y });
+	}
 </script>
 
 {#if mode === 'center' && !isOpen && !hideTrigger}
@@ -146,6 +154,18 @@
 	class:hidden={isOpen || hideTrigger}
 >
 	<Icon name="add" size={30} color="var(--fab-icon-color)" strokeWidth={1.9} />
+</button>
+
+<button
+	class="fab fab-star"
+	class:fab-center-star={mode === 'center'}
+	class:fab-near-queue-star={mode === 'nearQueue'}
+	onclick={star}
+	class:hidden={isOpen || hideTrigger || hideStar}
+	bind:this={starBtnEl}
+	aria-label="Send star reaction"
+>
+	<Icon name="stars" size={24} color="var(--fab-icon-color)" strokeWidth={1.8} />
 </button>
 
 {#if isOpen}
@@ -315,6 +335,26 @@
 			bottom: calc(120px + var(--size-3) - var(--size-9));
 			margin: 0;
 			transform: none;
+		}
+		.fab-center-star {
+			left: calc(50% - var(--size-9) - var(--size-2));
+			top: 50%;
+			margin-left: calc(var(--size-9) / -2);
+			margin-top: calc(var(--size-9) / -2);
+		}
+		.fab-near-queue-star {
+			top: auto;
+			right: calc(var(--size-3) + var(--size-9) + var(--size-2));
+			bottom: calc(120px + var(--size-3) - var(--size-9));
+			margin: 0;
+			transform: none;
+		}
+		.fab-star {
+			opacity: 0.86;
+		}
+		.fab-star:hover {
+			transform: scale(1.06);
+			opacity: 1;
 		}
 	:global([data-theme='light']) .fab {
 		background: #000000;
@@ -538,7 +578,7 @@
 				margin-top: calc(var(--size-9) / -2);
 				transform: none;
 			}
-			.fab-near-queue {
+				.fab-near-queue {
 			left: auto;
 			top: auto;
 			right: var(--size-3);
@@ -546,10 +586,31 @@
 			margin: 0;
 			transform: none;
 		}
+			.fab-center-star {
+				left: calc(50% - var(--size-9) - var(--size-2));
+				top: 50%;
+				right: auto;
+				bottom: auto;
+				margin-left: calc(var(--size-9) / -2);
+				margin-top: calc(var(--size-9) / -2);
+				transform: none;
+			}
+			.fab-near-queue-star {
+				left: auto;
+				top: auto;
+				right: calc(var(--size-3) + var(--size-9) + var(--size-2));
+				bottom: calc(var(--mobile-footer-h, 124px) - 10px + env(safe-area-inset-bottom, 0px));
+				margin: 0;
+				transform: none;
+			}
 	}
 		@media (max-width: 1023px) and (orientation: landscape) {
 			.fab-near-queue {
 				right: var(--size-3);
+				bottom: calc(104px + var(--size-3) - var(--size-9));
+			}
+			.fab-near-queue-star {
+				right: calc(var(--size-3) + var(--size-9) + var(--size-2));
 				bottom: calc(104px + var(--size-3) - var(--size-9));
 			}
 		}

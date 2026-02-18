@@ -29,6 +29,7 @@ import { connectRealtime } from '$lib/client/realtime.js';
  *   currentSong: Song | null,
  *   previousSong: Song | null,
  *   toasts: Toast[],
+ *   starBursts: any[],
  *   currentTurn: number,
  *   clientCount: number,
  *   clockOffsetSec: number,
@@ -40,6 +41,7 @@ export const playerState = $state({
 	currentSong: null,
 	previousSong: null,
 	toasts: [],
+	starBursts: [],
 	currentTurn: 0,
 	clientCount: 1,
 	clockOffsetSec: 0,
@@ -188,6 +190,32 @@ function scheduleRefresh(delayMs = 80) {
 	}, delayMs);
 }
 
+function makeParticles(count = 1) {
+	const size = Math.max(1, Math.min(6, count));
+	return Array.from({ length: size }).map(() => ({
+		dx: -12 + Math.random() * 24,
+		dy: -(90 + Math.random() * 60),
+		delay: 0,
+		dur: 760 + Math.round(Math.random() * 260),
+		scale: 0.95 + Math.random() * 0.25,
+		rot: -8 + Math.random() * 16
+	}));
+}
+
+export function addStarBurst(payload = {}) {
+	const id = crypto.randomUUID();
+	const burst = {
+		id,
+		x: typeof payload.x === 'number' ? payload.x : 0.82,
+		y: typeof payload.y === 'number' ? payload.y : 0.76,
+		particles: payload.particles || makeParticles(payload.count || 1)
+	};
+	playerState.starBursts = [...playerState.starBursts, burst].slice(-24);
+	setTimeout(() => {
+		playerState.starBursts = playerState.starBursts.filter((b) => b.id !== id);
+	}, 1800);
+}
+
 export async function initRealtime() {
 	if (initialized) return;
 	initialized = true;
@@ -252,6 +280,10 @@ export async function initRealtime() {
 			playerState.previousSong = playerState.currentSong;
 			// Avoid forcing null between tracks; wait for song_playing/refresh to prevent reload flicker.
 			scheduleRefresh(50);
+		});
+
+		ws.on('star_burst', (payload) => {
+			addStarBurst(payload || {});
 		});
 
 	} catch (e) {

@@ -165,3 +165,10 @@
 - [x] Queue advance backend sequencing
     - [x] Compute post-play queue in-memory inside transaction (remove extra queue query)
     - [x] Broadcast `queue_changed` after setting next playback state for non-empty queue
+
+## Realtime Star Reactions (2026-02-18)
+- [x] Add `STAR` action button next to `ADD`
+- [x] Broadcast star reactions to all clients via `/api/realtime/star`
+- [x] Render star burst overlay on all connected clients
+- [x] Update effect to one-star-per-click with upward launch from button origin
+- [x] Hide `STAR` button when there is no active playback

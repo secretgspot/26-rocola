@@ -5,6 +5,7 @@ A tiny SvelteKit + Drizzle + SQLite jukebox demo used for local development and 
 - Queue management (add, advance, per-day plays limit)
 - YouTube-backed player (iframe wrapper)
 - Real-time sync via WebSocket broadcasts
+- Real-time star reactions (shared across all connected clients)
 - Dev-friendly seeding and debug utilities
 
 ---
@@ -42,6 +43,17 @@ The following features are available only when `NODE_ENV === 'development'` (or 
 - **[SEED] Button**: Reads `docs/queue.txt`, fetches metadata, and populates the queue with a 90% Free / 10% Premium distribution.
 - **[FORCE_NEXT] Button**: Immediately advances the queue to the next song, bypassing the current playback.
 - **API Endpoint**: `POST /api/debug/seed` — The backend logic for the SEED button.
+
+---
+
+## Realtime Reactions
+
+- A `STAR` button is shown near `ADD` while a track is actively playing.
+- Each tap sends exactly one star reaction.
+- Reactions are broadcast to all connected clients in realtime.
+- Star animation launches upward from the star button origin.
+- Star button is hidden when playback is idle (no active song).
+
 
 ---
 

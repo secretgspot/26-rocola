@@ -3,7 +3,7 @@
 		playerState,
 		initRealtime,
 		addToast,
-		refreshQueue,
+		refreshQueue
 	} from '$lib/client/stores.svelte.js';
 	import Toast from '$lib/components/Toast.svelte';
 	import Queue from '$lib/components/Queue.svelte';
@@ -12,6 +12,7 @@
 	import NowPlayingOverlay from '$lib/components/NowPlayingOverlay.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import LandingPage from '$lib/components/LandingPage.svelte';
+	import StarBurstOverlay from '$lib/components/StarBurstOverlay.svelte';
 
 	let { data } = $props();
 
@@ -33,6 +34,7 @@
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
+	const hideStarButton = $derived(!playerState.currentSong);
 	const konami = [
 		'arrowup',
 		'arrowup',
@@ -232,6 +234,18 @@
 		}
 		nextPending = false;
 	}
+
+	async function star(payload) {
+		try {
+			await fetch('/api/realtime/star', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload || {})
+			});
+		} catch {
+			// ignore transient errors
+		}
+	}
 </script>
 
 <div
@@ -366,12 +380,15 @@
 		progress={playbackProgress}
 	/>
 
-		<AddToQueue
-			onqueued={refreshQueue}
-			hideTrigger={isVideoPaused}
-			pulse={isIdleState}
-			mode={isIdleState ? 'center' : 'nearQueue'}
-		/>
+	<AddToQueue
+		onqueued={refreshQueue}
+		onstar={star}
+		hideTrigger={isVideoPaused}
+		hideStar={hideStarButton}
+		pulse={isIdleState}
+		mode={isIdleState ? 'center' : 'nearQueue'}
+	/>
+	<StarBurstOverlay bursts={playerState.starBursts} />
 
 		{#if helpOpen}
 			<div
