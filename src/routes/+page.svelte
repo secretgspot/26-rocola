@@ -111,6 +111,11 @@
 				const target = e.target;
 				if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
 				const key = String(e.key || '').toLowerCase();
+				if ((import.meta.env.DEV || isAdmin) && key === 'n') {
+					e.preventDefault();
+					advance();
+					return;
+				}
 				if (key === 'h') {
 					e.preventDefault();
 					toggleHelp();
