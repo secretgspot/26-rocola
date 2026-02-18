@@ -604,7 +604,7 @@
 		overflow-x: auto;
 		overflow-y: auto;
 		padding: var(--size-4);
-		background: linear-gradient(90deg, color-mix(in srgb, var(--bg-dark) 88%, transparent), transparent);
+		background: linear-gradient(90deg, #000000 63%, transparent);
 		border-radius: 9px;
 	}
 	.help-close-fixed {

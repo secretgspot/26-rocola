@@ -7,280 +7,367 @@
 	const queueDepth = $derived(playerState.queue.length);
 	const connection = $derived((playerState.connectionState || 'connecting').toUpperCase());
 	const driftMs = $derived(Math.round(Math.abs(playerState.clockOffsetSec || 0) * 1000));
+	const currentTitle = $derived(playerState.currentSong?.title || 'Waiting for next drop');
 </script>
 
-<section class="lp-alt">
-	<header class="masthead">
-		<div class="kicker">ROCOLA LIVE CONTROL</div>
-		<h1>
-			One link.<br />
-			Whole room.
-		</h1>
-		<p>Submit a video. It enters one shared timeline for everyone. Start free. Upgrade for replay gravity.</p>
+<section class="landing">
+	<header class="hero">
+		<p class="eyebrow">LIVE VIDEO STATION</p>
+		<h1>Anyone can watch.<br />Anyone can steer.</h1>
+		<p class="lead">
+			Rocola is a shared playlist timeline. Submit a YouTube link, choose how hard it should
+			push, and watch it play for everyone at the same time.
+		</p>
 	</header>
 
-	<section class="top-grid">
-		<article class="panel panel-stats">
-			<h2>Live Signal</h2>
-			<div class="metric"><span>ACTIVE</span><strong>{activeUsers.toString().padStart(2, '0')}</strong></div>
-			<div class="metric"><span>QUEUE</span><strong>{queueDepth.toString().padStart(2, '0')}</strong></div>
-			<div class="metric"><span>NETWORK</span><strong>{connection}</strong></div>
-			<div class="metric"><span>SYNC</span><strong>{driftMs}ms</strong></div>
-		</article>
-
-		<article class="panel panel-value">
-			<h2>Why users pay</h2>
-			<ul>
-				<li>More replays per submission</li>
-				<li>Higher queue pressure, still fair</li>
-				<li>Realtime visibility to all listeners</li>
-			</ul>
-		</article>
-	</section>
-
-	<section class="strip strip-process">
-		<h3>Process</h3>
-		<div class="steps">
-			<div><b>01</b><p>Paste YouTube URL</p><small>validate metadata</small></div>
-			<div><b>02</b><p>Choose tier</p><small>free or paid boost</small></div>
-			<div><b>03</b><p>Queue updates live</p><small>all users see it</small></div>
-			<div><b>04</b><p>Playback stays synced</p><small>one timeline</small></div>
+	<section class="live-strip" aria-label="Live status">
+		<div class="metric">
+			<span>ACTIVE</span>
+			<strong>{activeUsers.toString().padStart(2, '0')}</strong>
+		</div>
+		<div class="metric">
+			<span>QUEUE</span>
+			<strong>{queueDepth.toString().padStart(2, '0')}</strong>
+		</div>
+		<div class="metric">
+			<span>LINK</span>
+			<strong>{connection}</strong>
+		</div>
+		<div class="metric">
+			<span>SYNC</span>
+			<strong>{driftMs}ms</strong>
+		</div>
+		<div class="metric now">
+			<span>NOW</span>
+			<strong>{currentTitle}</strong>
 		</div>
 	</section>
 
-	<section class="strip strip-pricing">
-		<h3>Spending</h3>
-		<p class="caption">You buy recurrence and placement pressure, not suppression.</p>
-		<div class="pricing">
+	<section class="story-grid">
+		<article class="story">
+			<h2>How it works</h2>
+			<p>Paste URL.</p>
+			<p>Pick a tier.</p>
+			<p>Join one global queue.</p>
+			<p>Playback stays synchronized across clients.</p>
+		</article>
+		<article class="story">
+			<h2>Why spend</h2>
+			<p>Free is fair and visible.</p>
+			<p>Paid increases replay frequency.</p>
+			<p>No tier can lock the station forever.</p>
+			<p>At least one free song plays between premium songs.</p>
+		</article>
+		<article class="story">
+			<h2>What to expect</h2>
+			<p>Queue updates in realtime.</p>
+			<p>Everyone sees reactions and position shifts.</p>
+			<p>Your song can be skipped if YouTube blocks embed/region/age.</p>
+			<p>No refunds for third-party playback restrictions.</p>
+		</article>
+	</section>
+
+	<section class="pricing" aria-label="Tier pricing">
+		<h2>Tiers</h2>
+		<div class="tiers">
 			{#each tiers as t}
 				<div class="tier {t.id}">
-					<div class="row">
-						<span>{t.label.replaceAll('_', ' ')}</span>
+					<div class="top">
+						<span class="name">{t.label.replaceAll('_', ' ')}</span>
 						<strong>{t.price === 0 ? 'FREE' : `$${t.price}`}</strong>
 					</div>
-					<small>{t.dailyPlays} plays · every {t.gap} turns</small>
+					<p>{t.dailyPlays} plays · minimum {t.gap} turns between repeats</p>
 				</div>
 			{/each}
 		</div>
 	</section>
 
-	<section class="strip strip-faq">
-		<h3>FAQ + Troubleshoot</h3>
-		<div class="faq">
-			<p><strong>Skipped video?</strong> Region lock, age lock, private/deleted, or embed-disabled source.</p>
-			<p><strong>Refunds?</strong> No refunds for third-party playback restrictions.</p>
-			<p><strong>Premium loop forever?</strong> No. Free songs are inserted between premium plays.</p>
-			<p><strong>Free repeat same track?</strong> Limited to once per day per user/IP.</p>
+	<section class="faq" aria-label="FAQ">
+		<h2>Fast answers</h2>
+		<div class="qa">
+			<p><strong>Can I submit free more than once?</strong> Yes, if each free URL is different that day.</p>
+			<p><strong>Can I repeat the same URL?</strong> Free: once/day. Paid: allowed.</p>
+			<p><strong>Why was a song skipped?</strong> Region lock, age lock, private/deleted, embed disabled.</p>
+			<p><strong>Will premium dominate forever?</strong> No. Fairness rules force free tracks between premium runs.</p>
 		</div>
 	</section>
-
-	<footer class="final">
-		<h3>Watch the stream. Bend the stream.</h3>
-		<p>Try free first, then upgrade when you want your submission to come back more often.</p>
-	</footer>
 </section>
 
 <style>
-	.lp-alt {
+	.landing {
 		display: grid;
-		gap: clamp(1rem, 2vw, 2.2rem);
-		min-width: 920px;
-		padding: var(--size-2) 0 var(--size-3);
+		gap: clamp(1rem, 1.6vw, 1.6rem);
+		width: min(100%, 1240px);
+		min-width: 0;
+		padding: var(--size-2) var(--size-2) var(--size-4);
+		--lp-fg: var(--text-main);
+		--lp-muted: var(--text-dim);
+		--lp-line: color-mix(in srgb, var(--text-main) 20%, transparent);
+		--lp-line-soft: color-mix(in srgb, var(--text-main) 16%, transparent);
+		color: var(--lp-fg);
+		container-type: inline-size;
+		container-name: landing;
 	}
 
-	.masthead {
-		background:
-			linear-gradient(120deg, color-mix(in srgb, var(--tier-gold) 24%, var(--bg-dark)) 0%, transparent 55%),
-			linear-gradient(300deg, color-mix(in srgb, var(--tier-platinum) 24%, var(--bg-dark)) 0%, transparent 60%);
-		padding: var(--size-4);
-	}
-	.kicker {
-		font-family: var(--font-rounded-sans);
-		font-size: var(--font-size-00);
-		letter-spacing: 0.12em;
-		color: var(--text-dim);
-	}
-	.masthead h1 {
-		margin: var(--size-2) 0 0;
-		font-family: var(--font-geometric-humanist);
-		font-size: clamp(2.4rem, 6.6vw, 6rem);
-		font-weight: var(--font-weight-3);
-		line-height: 0.9;
-	}
-	.masthead p {
-		margin: var(--size-3) 0 0;
-		font-family: var(--font-neo-grotesque);
-		font-size: var(--font-size-fluid-1);
-		color: var(--text-dim);
-		max-width: 56ch;
-	}
-
-	.top-grid {
+	.hero {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
 		gap: var(--size-2);
 	}
-	.panel {
-		padding: var(--size-3);
-	}
-	.panel h2 {
-		margin: 0 0 var(--size-2);
+	.eyebrow {
+		margin: 0;
 		font-family: var(--font-industrial);
-		font-size: var(--font-size-1);
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
+		font-size: var(--font-size-00);
+		letter-spacing: 0.11em;
+		color: var(--lp-muted);
 	}
-	.panel-stats {
-		background: linear-gradient(160deg, color-mix(in srgb, var(--tier-platinum) 20%, var(--bg-dark)), color-mix(in srgb, var(--bg-dark) 86%, transparent));
+	.hero h1 {
+		margin: 0;
+		font-family: var(--font-geometric-humanist);
+		font-size: clamp(2rem, 5.2vw, 4.4rem);
+		font-weight: var(--font-weight-3);
+		line-height: 0.94;
+		text-wrap: balance;
+	}
+	.lead {
+		margin: 0;
+		max-width: 66ch;
+		font-family: var(--font-humanist);
+		font-size: var(--font-size-2);
+		color: var(--lp-muted);
+	}
+
+	.live-strip {
+		display: grid;
+		grid-template-columns: repeat(4, minmax(0, auto)) 1fr;
+		gap: var(--size-2);
+		padding: var(--size-2) 0;
+		border-top: 1px solid var(--lp-line);
+		border-bottom: 1px solid var(--lp-line);
 	}
 	.metric {
-		display: flex;
-		justify-content: space-between;
-		align-items: baseline;
-		margin-bottom: var(--size-1);
+		display: grid;
+		gap: 2px;
+		min-width: 110px;
+	}
+	.metric span {
 		font-family: var(--font-monospace-code);
 		font-size: var(--font-size-00);
+		color: var(--lp-muted);
+		letter-spacing: 0.08em;
 	}
 	.metric strong {
 		font-family: var(--font-industrial);
-		font-size: var(--font-size-2);
+		font-size: var(--font-size-3);
+		font-weight: var(--font-weight-4);
+		line-height: 1;
 	}
-	.panel-value {
-		background: linear-gradient(160deg, color-mix(in srgb, var(--tier-gold) 22%, var(--bg-dark)), color-mix(in srgb, var(--bg-dark) 86%, transparent));
+	.metric.now {
+		min-width: 0;
 	}
-	.panel-value ul {
-		margin: 0;
-		padding-inline-start: var(--size-4);
-		display: grid;
-		gap: var(--size-1);
-	}
-	.panel-value li {
-		font-family: var(--font-geometric-humanist);
-		font-size: var(--font-size-0);
-		color: var(--text-main);
-	}
-
-	.strip {
-		padding: var(--size-3);
-		background: color-mix(in srgb, var(--bg-dark) 86%, transparent);
-	}
-	.strip h3 {
-		margin: 0 0 var(--size-2);
-		font-family: var(--font-industrial);
+	.metric.now strong {
+		font-family: var(--font-neo-grotesque);
 		font-size: var(--font-size-1);
-		text-transform: uppercase;
-		letter-spacing: 0.08em;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
-	.strip-process { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--status-good) 65%, transparent); }
-	.strip-pricing { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--tier-gold) 65%, transparent); }
-	.strip-faq { box-shadow: inset 0 2px 0 color-mix(in srgb, var(--tier-silver) 65%, transparent); }
 
-	.steps {
+	.story-grid {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, 1fr));
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--size-3);
+	}
+	.story {
+		display: grid;
+		gap: 6px;
+		padding: var(--size-2) 0;
+		border-top: 1px solid var(--lp-line-soft);
+	}
+	.story h2 {
+		margin: 0 0 var(--size-1);
+		font-family: var(--font-rounded-sans);
+		font-size: var(--font-size-2);
+		font-weight: var(--font-weight-4);
+	}
+	.story p {
+		margin: 0;
+		font-family: var(--font-humanist);
+		font-size: var(--font-size-1);
+		color: var(--lp-muted);
+	}
+
+	.pricing {
+		display: grid;
 		gap: var(--size-2);
 	}
-	.steps > div {
-		background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
-		padding: var(--size-2);
-		display: grid;
-		gap: 4px;
-	}
-	.steps b {
-		font-family: var(--font-industrial);
-		font-size: var(--font-size-0);
-		color: var(--tier-platinum);
-	}
-	.steps p {
+	.pricing h2,
+	.faq h2 {
 		margin: 0;
-		font-family: var(--font-neo-grotesque);
-		font-size: var(--font-size-0);
+		font-family: var(--font-rounded-sans);
+		font-size: var(--font-size-2);
+		font-weight: var(--font-weight-4);
 	}
-	.steps small {
-		font-family: var(--font-monospace-code);
-		font-size: var(--font-size-00);
-		color: var(--text-dim);
-	}
-
-	.caption {
-		margin: 0 0 var(--size-2);
-		font-family: var(--font-geometric-humanist);
-		color: var(--text-dim);
-	}
-	.pricing {
+	.tiers {
 		display: grid;
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: var(--size-2);
 	}
 	.tier {
 		padding: var(--size-2);
-		background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
+		border: 1px solid var(--lp-line);
+		border-radius: 9px;
+		background: transparent;
 	}
-	.row {
+	.tier .top {
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
-		gap: var(--size-2);
+		gap: var(--size-1);
+		margin-bottom: var(--size-1);
+	}
+	.tier .name {
 		font-family: var(--font-monospace-code);
 		font-size: var(--font-size-00);
-		text-transform: uppercase;
 		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
-	.row strong {
+	.tier strong {
 		font-family: var(--font-industrial);
-		font-size: var(--font-size-1);
+		font-size: var(--font-size-2);
 	}
-	.tier small {
-		display: block;
-		margin-top: var(--size-1);
-		font-family: var(--font-monospace-code);
-		font-size: var(--font-size-00);
-		color: var(--text-dim);
+	.tier p {
+		margin: 0;
+		font-family: var(--font-humanist);
+		font-size: var(--font-size-0);
+		color: var(--lp-muted);
 	}
-	.tier.free .row span { color: var(--text-muted); }
-	.tier.silver .row span { color: var(--tier-silver); }
-	.tier.gold .row span { color: var(--tier-gold); }
-	.tier.platinum .row span { color: var(--tier-platinum); }
+	.tier.free .name {
+		color: var(--text-muted);
+	}
+	.tier.silver .name {
+		color: var(--tier-silver);
+	}
+	.tier.gold .name {
+		color: var(--tier-gold);
+	}
+	.tier.platinum .name {
+		color: var(--tier-platinum);
+	}
 
 	.faq {
 		display: grid;
-		gap: var(--size-1);
+		gap: var(--size-2);
 	}
-	.faq p {
+	.qa {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		gap: var(--size-2);
+	}
+	.qa p {
 		margin: 0;
 		padding: var(--size-2);
-		background: color-mix(in srgb, var(--bg-dark) 90%, transparent);
-		font-family: var(--font-neo-grotesque);
+		border: 1px solid var(--lp-line-soft);
+		border-radius: 9px;
+		font-family: var(--font-humanist);
 		font-size: var(--font-size-0);
-		color: var(--text-dim);
+		color: var(--lp-muted);
 	}
-	.faq strong {
+	.qa strong {
+		display: block;
+		margin-bottom: 3px;
 		color: var(--text-main);
 		font-family: var(--font-rounded-sans);
+		font-size: var(--font-size-1);
 	}
 
-	.final {
-		padding: var(--size-3);
-		background:
-			linear-gradient(120deg, color-mix(in srgb, var(--tier-platinum) 16%, var(--bg-dark)) 0%, transparent 56%),
-			color-mix(in srgb, var(--bg-dark) 86%, transparent);
-	}
-	.final h3 {
-		margin: 0;
-		font-family: var(--font-humanist);
-		font-size: var(--font-size-fluid-2);
-	}
-	.final p {
-		margin: var(--size-1) 0 0;
-		font-family: var(--font-geometric-humanist);
-		font-size: var(--font-size-0);
-		color: var(--text-dim);
+	@container landing (max-width: 1120px) {
+		.live-strip {
+			grid-template-columns: repeat(4, minmax(0, 1fr));
+		}
+		.metric.now {
+			grid-column: 1 / -1;
+		}
+		.story-grid {
+			grid-template-columns: 1fr 1fr;
+		}
+		.tiers {
+			grid-template-columns: 1fr 1fr;
+		}
+		.qa {
+			grid-template-columns: 1fr;
+		}
 	}
 
-	@media (max-width: 1120px) {
-		.lp-alt { min-width: 860px; }
-		.top-grid,
-		.steps,
-		.pricing { grid-template-columns: 1fr 1fr; }
+	:global([data-theme='light']) .landing {
+		--lp-fg: #f5f7fb;
+		--lp-muted: #cfd6df;
+		--lp-line: color-mix(in srgb, #ffffff 38%, transparent);
+		--lp-line-soft: color-mix(in srgb, #ffffff 28%, transparent);
+	}
+
+	@container landing (max-width: 760px) {
+		.landing {
+			padding-inline: var(--size-1);
+		}
+		.hero h1 {
+			font-size: clamp(1.5rem, 8.2cqi, 2.4rem);
+			line-height: 1;
+		}
+		.lead {
+			font-size: var(--font-size-1);
+		}
+		.live-strip {
+			grid-template-columns: 1fr 1fr;
+			gap: var(--size-1);
+		}
+		.metric {
+			min-width: 0;
+		}
+		.metric strong {
+			font-size: var(--font-size-2);
+		}
+		.metric.now {
+			grid-column: 1 / -1;
+		}
+		.story-grid {
+			grid-template-columns: 1fr;
+			gap: var(--size-2);
+		}
+		.story h2,
+		.pricing h2,
+		.faq h2 {
+			font-size: var(--font-size-1);
+		}
+		.story p {
+			font-size: var(--font-size-0);
+		}
+		.tiers {
+			grid-template-columns: 1fr;
+		}
+		.qa {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.landing {
+			padding-top: var(--size-1);
+			padding-bottom: var(--size-2);
+		}
+		.metric strong {
+			font-size: var(--font-size-1);
+		}
+	}
+
+	@media (max-height: 760px) {
+		.landing {
+			gap: var(--size-2);
+		}
+		.hero {
+			gap: var(--size-1);
+		}
+		.story {
+			padding-block: var(--size-1);
+		}
 	}
 </style>

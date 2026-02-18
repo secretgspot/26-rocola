@@ -188,3 +188,10 @@
 - [x] Add transition lock keyed by `(queueId, startedAt)` to avoid duplicate/missed transition handling
 - [x] Keep progress bar aligned to actual player time while sync remains server-driven
 - [x] Verify with `npm run check`
+
+## Help Landing Refactor (2026-02-18)
+- [x] Redesign help landing to reduce visual noise and remove stacked background shadings
+- [x] Establish clear reading flow: hero -> live strip -> story -> pricing -> FAQ
+- [x] Improve typography hierarchy and scanability with Open Props font families
+- [x] Keep layout wide-scroll friendly for popup container while remaining responsive
+- [x] Verify with `npm run check`
