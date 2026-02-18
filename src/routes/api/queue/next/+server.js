@@ -11,7 +11,7 @@ export async function POST(event) {
 	if (!isAdminRequest(event, { allowDev: false })) {
 		return json({ ok: false, error: 'Admin required' }, { status: 403 });
 	}
-	if (!isActiveController(event)) {
+	if (!(await isActiveController(event))) {
 		return json({ ok: false, error: 'Controller required' }, { status: 409 });
 	}
 

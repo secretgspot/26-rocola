@@ -394,7 +394,12 @@ export async function advanceQueue(fromQueueId = null) {
 				updatedAt: now 
 			}).where(eq(queue.id, current.id));
 
-			await tx.update(songs).set({ totalPlays: (current.song.totalPlays || 0) + 1 }).where(eq(songs.id, current.song.id));
+			await tx.update(songs).set({
+				totalPlays: (current.song.totalPlays || 0) + 1,
+				errorCount: 0,
+				lastErrorCode: null,
+				lastErrorAt: null
+			}).where(eq(songs.id, current.song.id));
 
 			await tx.insert(queuePlays).values({
 				id: crypto.randomUUID(),

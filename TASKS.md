@@ -217,3 +217,23 @@
 - [x] Add client sync observability stats (drift p50/p95, micro/hard sync counts, transition latency)
 - [x] Surface sync observability in help landing live metrics strip
 - [x] README cleanup and script/test workflow refresh
+
+## Authority + Transition Hardening (2026-02-18)
+- [x] Replace in-memory controller lease with DB-backed lease table (`controller_lease`)
+- [x] Add controller claim endpoint and client heartbeat (`/api/admin/controller`)
+- [x] Show `CTRL` badge only on active controller client
+- [x] Enforce controller-only access for playback control endpoints (`/api/queue/next`, `/api/queue/unavailable`)
+- [x] Add server-authoritative playback tick endpoint (`/api/playback/tick`)
+- [x] Poll playback tick from active controller on fixed cadence
+- [x] Add stale-event protection using playback event sequence (`eventSeq`, client-side stale ignore)
+- [x] Add transient playback error policy (retry up to 3 for non-restriction errors)
+- [x] Mark restriction-blocked songs unavailable and force playback unstick
+- [x] Extend songs schema for playback error observability (`errorCount`, `lastErrorCode`, `lastErrorAt`)
+- [x] Push schema updates to Neon (`npm run db:push`)
+- [x] Verify with `npm run check`, unit tests, integration tests
+
+## Next Planned Hardening
+- [ ] Add dedicated unit tests for controller lease race/takeover scenarios
+- [ ] Add integration coverage for controller failover (active tab closed -> standby acquires)
+- [ ] Add admin health widget in UI using `/api/admin/health/realtime`
+- [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence

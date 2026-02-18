@@ -3,7 +3,7 @@
 	import { createPlayer } from '$lib/client/youtube-player';
 	import { playerState, addToast } from '$lib/client/stores.svelte.js';
 
-	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry, canControl = false } = $props();
+	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry, onendedsignal, canControl = false } = $props();
 
 	let el = $state();
 	/** @type {any} */
@@ -98,7 +98,7 @@
 		lastErrorQueueId = queueId;
 		const errorCode = typeof errorPayload?.data === 'number' ? errorPayload.data : null;
 		try {
-			await fetch('/api/queue/unavailable', {
+			const res = await fetch('/api/queue/unavailable', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
@@ -110,8 +110,10 @@
 					details: errorPayload || null
 				})
 			});
+			const data = await res.json().catch(() => ({}));
+			return data?.action || null;
 		} catch {
-			// ignore
+			return null;
 		}
 	}
 
@@ -144,7 +146,7 @@
 					// 0 = Ended, 1 = Playing, 2 = Paused, 3 = Buffering, 5 = Cued
 					onplaystate?.({ paused: e.data === 2 });
 					if (e.data === 0) {
-						requestNextOnce();
+						onendedsignal?.();
 					}
 					if (e.data === 1) {
 						const activeTransitionKey = `${playerState.currentSong?.queueId || playerState.currentSong?.id || playerState.currentSong?.videoId || 'unknown'}:${playerState.currentSong?.startedAtMs || playerState.currentSong?.startedAt || 0}`;
@@ -196,15 +198,26 @@
 						}
 					}
 			},
-				onError: (e) => {
+				onError: async (e) => {
 					const errorVideoId = e?.target?.getVideoData?.()?.video_id || null;
 					const currentVideoId = playerState.currentSong?.videoId || null;
 					// Ignore stale player errors from a previously loaded video.
 					if (errorVideoId && currentVideoId && errorVideoId !== currentVideoId) {
 						return;
 					}
+					const action = await reportUnavailableFromPlaybackError(e);
+					if (action === 'retry') {
+						addToast({ message: `PLAYBACK RETRY`, level: 'info' });
+						setTimeout(() => {
+							try {
+								player?.play?.();
+							} catch {
+								// ignore
+							}
+						}, 600);
+						return;
+					}
 					addToast({ message: `PLAYBACK BLOCKED -> SKIP`, level: 'error' });
-					reportUnavailableFromPlaybackError(e);
 					requestNextOnce();
 				}
 			}).then(res => {

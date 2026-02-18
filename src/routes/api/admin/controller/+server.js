@@ -6,10 +6,10 @@ export async function GET(event) {
 	if (!isAdminRequest(event, { allowDev: false })) {
 		return json({ ok: false, error: 'Admin required' }, { status: 403 });
 	}
-	const current = getControllerState();
+	const current = await getControllerState();
 	return json({
 		ok: true,
-		isController: isActiveController(event),
+		isController: await isActiveController(event),
 		leaseMs: current.leaseMs,
 		expiresAt: current.expiresAt
 	});
@@ -24,6 +24,5 @@ export async function POST(event) {
 
 	const sessionId = event.locals?.sessionId || null;
 	if (!sessionId) return json({ ok: false, error: 'Session required' }, { status: 400 });
-	return json(claimController(sessionId));
+	return json(await claimController(sessionId));
 }
-

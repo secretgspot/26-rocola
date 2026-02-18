@@ -6,6 +6,8 @@ A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe ch
 - Fair queue management (free + premium tiers, gap enforcement)
 - YouTube iframe playback with shared timeline sync (`startedAtMs`)
 - Realtime events (queue changes, song transitions, star reactions)
+- Single active controller lease for authoritative playback control
+- Server-authoritative transition tick (`/api/playback/tick`)
 - Admin/dev controls (seed, skip, clear)
 - Help menu and keyboard shortcuts
 
@@ -55,3 +57,5 @@ npm run test:integration
 ## Notes
 - In dev/admin mode, free-tier daily duplicate restriction is bypassed by design.
 - Realtime playback synchronization now uses millisecond precision where available.
+- Only the active admin controller can execute playback-control actions (`next`, unavailability marking).
+- Controller lease is persisted in DB (`controller_lease`) and renewed via `/api/admin/controller`.

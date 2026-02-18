@@ -96,3 +96,5 @@ rocola/
 - Polish & Security (rate limiting, abuse prevention)
 - Admin observability (queue stats, operations)
 - Realtime observability (drift telemetry p50/p95, transition health counters)
+- Controller failover hardening (race/takeover tests and standby promotion behavior)
+- E2E validation for multi-client convergence under restricted-video errors

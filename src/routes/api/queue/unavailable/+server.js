@@ -9,7 +9,7 @@ import { getPlaybackState, setPlaybackState } from '$lib/server/services/playbac
 import { isActiveController } from '$lib/server/controller.js';
 
 export async function POST(event) {
-	if (!isActiveController(event)) {
+	if (!(await isActiveController(event))) {
 		return json({ ok: false, error: 'Controller required' }, { status: 409 });
 	}
 
@@ -23,9 +23,6 @@ export async function POST(event) {
 		const reason = String(body?.reason || '');
 		const errorCode = typeof body?.errorCode === 'number' ? body.errorCode : null;
 		const restrictionCodes = new Set([100, 101, 150]);
-		if (reason === 'youtube_playback_error' && errorCode !== null && !restrictionCodes.has(errorCode)) {
-			return json({ ok: true, ignored: true });
-		}
 
 		if (!songId && queueId) {
 			const q = await db.select({ songId: queue.songId }).from(queue).where(eq(queue.id, queueId)).limit(1);
@@ -38,14 +35,42 @@ export async function POST(event) {
 		if (!queueId || queueId !== playback?.currentQueueId) {
 			return json({ ok: false, error: 'queue_mismatch' }, { status: 409 });
 		}
+		const songRows = await db
+			.select({ errorCount: songs.errorCount, isAvailable: songs.isAvailable })
+			.from(songs)
+			.where(eq(songs.id, songId))
+			.limit(1);
+		const currentErrorCount = Number(songRows[0]?.errorCount || 0);
 
-		await db.update(songs).set({ isAvailable: 0 }).where(eq(songs.id, songId));
+		// Transient errors are retried a few times before forcing skip/unavailable.
+		if (reason === 'youtube_playback_error' && errorCode !== null && !restrictionCodes.has(errorCode)) {
+			const nextCount = currentErrorCount + 1;
+			await db
+				.update(songs)
+				.set({
+					errorCount: nextCount,
+					lastErrorCode: errorCode,
+					lastErrorAt: Math.floor(Date.now() / 1000)
+				})
+				.where(eq(songs.id, songId));
+
+			if (nextCount < 3) {
+				return json({ ok: true, action: 'retry', retriesLeft: 3 - nextCount });
+			}
+		}
+
+		await db.update(songs).set({
+			isAvailable: 0,
+			errorCount: currentErrorCount + 1,
+			lastErrorCode: errorCode,
+			lastErrorAt: Math.floor(Date.now() / 1000)
+		}).where(eq(songs.id, songId));
 		// If this was the active item, clear playback so next poll can promote a playable track.
 		await setPlaybackState({ currentQueueId: null, startedAtMs: null });
 		invalidateQueueCache();
 		await broadcast('queue_changed', { currentTurn: await getGlobalTurn() });
 
-		return json({ ok: true });
+		return json({ ok: true, action: 'skip' });
 	} catch (err) {
 		console.error('[queue/unavailable] failed', err);
 		return json({ ok: false, error: 'mark_unavailable_failed' }, { status: 500 });

@@ -13,6 +13,9 @@ export const songs = pgTable('songs', {
 	createdAt: integer('createdAt').notNull(),
 	isAvailable: integer('isAvailable').default(1),
 	totalPlays: integer('totalPlays').default(0),
+	errorCount: integer('errorCount').default(0),
+	lastErrorCode: integer('lastErrorCode'),
+	lastErrorAt: integer('lastErrorAt'),
 });
 
 // Queue table
@@ -104,5 +107,14 @@ export const playbackState = pgTable('playback_state', {
 	id: text('id').primaryKey(), // use a single row id: 'global'
 	currentQueueId: uuid('currentQueueId'),
 	startedAt: integer('startedAt'),
-	startedAtMs: bigint('startedAtMs', { mode: 'number' })
+	startedAtMs: bigint('startedAtMs', { mode: 'number' }),
+	eventSeq: bigint('eventSeq', { mode: 'number' }).default(0)
+});
+
+// Active admin controller lease (single-row table)
+export const controllerLease = pgTable('controller_lease', {
+	id: text('id').primaryKey(), // 'global'
+	sessionId: text('sessionId'),
+	expiresAtMs: bigint('expiresAtMs', { mode: 'number' }).notNull(),
+	updatedAtMs: bigint('updatedAtMs', { mode: 'number' }).notNull()
 });

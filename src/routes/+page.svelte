@@ -301,6 +301,23 @@
 			// ignore transient errors
 		}
 	}
+
+	async function tickPlayback() {
+		if (!canControl) return;
+		try {
+			await fetch('/api/playback/tick', { method: 'POST' });
+		} catch {
+			// ignore transient errors
+		}
+	}
+
+	$effect(() => {
+		if (!canControl || typeof window === 'undefined') return;
+		const timer = setInterval(() => {
+			tickPlayback();
+		}, 900);
+		return () => clearInterval(timer);
+	});
 </script>
 
 <div
@@ -413,6 +430,7 @@
 				{/snippet}
 				<VideoPlayer
 					onnext={advance}
+					onendedsignal={tickPlayback}
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}

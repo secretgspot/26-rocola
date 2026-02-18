@@ -43,7 +43,8 @@ import { connectRealtime } from '$lib/client/realtime.js';
  *     hardSyncCount: number,
  *     transitionCount: number,
  *     lastTransitionLatencyMs: number
- *   }
+ *   },
+ *   lastEventSeq: number
  * }}
  */
 export const playerState = $state({
@@ -64,7 +65,8 @@ export const playerState = $state({
 		hardSyncCount: 0,
 		transitionCount: 0,
 		lastTransitionLatencyMs: 0
-	}
+	},
+	lastEventSeq: 0
 });
 
 /**
@@ -325,6 +327,9 @@ export async function initRealtime() {
 		
 		ws.on('song_playing', (payload) => {
 			console.debug('[RT] song_playing received', payload);
+			const seq = Number(payload?.seq || 0);
+			if (seq && seq < (playerState.lastEventSeq || 0)) return;
+			if (seq) playerState.lastEventSeq = seq;
 			if (payload?.serverNowMs) {
 				updateClockOffset(payload.serverNowMs);
 			}
