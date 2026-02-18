@@ -4,20 +4,24 @@
 	import clientsRaw from '$lib/icons/clients.svg?raw';
 	import darkRaw from '$lib/icons/dark.svg?raw';
 	import lightRaw from '$lib/icons/light.svg?raw';
-	import queueRaw from '$lib/icons/queue.svg?raw';
-	import seedRaw from '$lib/icons/seed.svg?raw';
-	import skipRaw from '$lib/icons/skip.svg?raw';
+import queueRaw from '$lib/icons/queue.svg?raw';
+import questionRaw from '$lib/icons/question.svg?raw';
+import seedRaw from '$lib/icons/seed.svg?raw';
+import skipRaw from '$lib/icons/skip.svg?raw';
+import stationsRaw from '$lib/icons/stations.svg?raw';
 
 	const RAW = {
 		add: addRaw,
 		clear: clearRaw,
 		clients: clientsRaw,
 		dark: darkRaw,
-		light: lightRaw,
-		queue: queueRaw,
-		seed: seedRaw,
-		skip: skipRaw
-	};
+	light: lightRaw,
+	question: questionRaw,
+	queue: queueRaw,
+	seed: seedRaw,
+	skip: skipRaw,
+	stations: stationsRaw
+};
 
 	/**
 	 * @param {string} raw
