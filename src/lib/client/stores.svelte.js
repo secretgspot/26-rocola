@@ -34,7 +34,16 @@ import { connectRealtime } from '$lib/client/realtime.js';
  *   currentTurn: number,
  *   clientCount: number,
  *   clockOffsetSec: number,
- *   connectionState: string
+ *   connectionState: string,
+ *   syncStats: {
+ *     driftP50Ms: number,
+ *     driftP95Ms: number,
+ *     sampleCount: number,
+ *     microSyncCount: number,
+ *     hardSyncCount: number,
+ *     transitionCount: number,
+ *     lastTransitionLatencyMs: number
+ *   }
  * }}
  */
 export const playerState = $state({
@@ -46,7 +55,16 @@ export const playerState = $state({
 	currentTurn: 0,
 	clientCount: 1,
 	clockOffsetSec: 0,
-	connectionState: 'connecting'
+	connectionState: 'connecting',
+	syncStats: {
+		driftP50Ms: 0,
+		driftP95Ms: 0,
+		sampleCount: 0,
+		microSyncCount: 0,
+		hardSyncCount: 0,
+		transitionCount: 0,
+		lastTransitionLatencyMs: 0
+	}
 });
 
 /**
@@ -211,12 +229,34 @@ function makeParticles(count = 1) {
 	}));
 }
 
+function resolveLocalStarAnchor() {
+	if (typeof document === 'undefined' || typeof window === 'undefined') return null;
+	const button = document.querySelector('.fab-star:not(.hidden)');
+	const rect = button?.getBoundingClientRect?.();
+	if (!rect) return null;
+	return {
+		x: (rect.left + rect.width / 2) / window.innerWidth,
+		y: (rect.top + rect.height / 2) / window.innerHeight
+	};
+}
+
 export function addStarBurst(payload = {}) {
 	const id = crypto.randomUUID();
+	const localAnchor = payload?.source === 'star_button' ? resolveLocalStarAnchor() : null;
 	const burst = {
 		id,
-		x: typeof payload.x === 'number' ? payload.x : 0.82,
-		y: typeof payload.y === 'number' ? payload.y : 0.76,
+		x:
+			typeof localAnchor?.x === 'number'
+				? localAnchor.x
+				: typeof payload.x === 'number'
+					? payload.x
+					: 0.82,
+		y:
+			typeof localAnchor?.y === 'number'
+				? localAnchor.y
+				: typeof payload.y === 'number'
+					? payload.y
+					: 0.76,
 		particles: payload.particles || makeParticles(payload.count || 1)
 	};
 	playerState.starBursts = [...playerState.starBursts, burst].slice(-24);

@@ -1,169 +1,57 @@
 # Rocola (Minimal Jukebox)
 
-A tiny SvelteKit + Drizzle + SQLite jukebox demo used for local development and experimentation. Focused features:
+A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe checkout, fair queue rotation, and shared playback timeline.
 
-- Queue management (add, advance, per-day plays limit)
-- YouTube-backed player (iframe wrapper)
-- Real-time sync via WebSocket broadcasts
-- Real-time star reactions (shared across all connected clients)
-- Millisecond playback timeline sync (`startedAtMs`) for tighter cross-client alignment
-- Dev-friendly seeding and debug utilities
+## Core Features
+- Fair queue management (free + premium tiers, gap enforcement)
+- YouTube iframe playback with shared timeline sync (`startedAtMs`)
+- Realtime events (queue changes, song transitions, star reactions)
+- Admin/dev controls (seed, skip, clear)
+- Help menu and keyboard shortcuts
 
----
-
-## Quick start ⚡
-
-0. codex resume 019c4612-092d-7712-9ed8-6f15d67ae8cd
-
-1. Install dependencies and run dev server
-
+## Quick Start
+1. Install dependencies:
 ```powershell
 npm install
-npm run dev
-# or (if you use bun)
-bun install
-bun run dev -- --open
 ```
-
-1. Open <http://localhost:5173>
-
-2. (Payments) Start the Stripe Webhook listener in a separate terminal:
-
+2. Start dev server:
 ```powershell
-npm run stripe:listen
+npm run dev
 ```
-
-1. Use the **[SEED]** and **[FORCE_NEXT]** buttons in the header (visible only in dev mode) to pre-populate the queue and skip songs.
-
----
-
-## Developer-Only Features 🛠️
-
-The following features are available only when `NODE_ENV === 'development'` (or when running `npm run dev`):
-
-- **[SEED] Button**: Reads `docs/queue.txt`, fetches metadata, and populates the queue with a 90% Free / 10% Premium distribution.
-- **[FORCE_NEXT] Button**: Immediately advances the queue to the next song, bypassing the current playback.
-- **API Endpoint**: `POST /api/debug/seed` — The backend logic for the SEED button.
-
----
-
-## Realtime Reactions
-
-- A `STAR` button is shown near `ADD` while a track is actively playing.
-- Each tap sends exactly one star reaction.
-- Reactions are broadcast to all connected clients in realtime.
-- Star animation launches upward from the star button origin.
-- Star button is hidden when playback is idle (no active song).
-
----
+3. Open `http://localhost:5173`
 
 ## Operator Shortcuts (Dev/Admin)
+- `H` - toggle help menu
+- `N` - skip to next song (dev/admin only)
+- `Up Up Down Down Left Right Left Right A B` - enable admin mode
 
-- `H` — toggle help menu.
-- `N` — skip to next song (dev mode or admin mode only).
-- `Up Up Down Down Left Right Left Right A B` — enable admin mode.
+## Environment
+- `DATABASE_URL` - Neon Postgres connection string
+- `ABLY_SUPER_API_KEY` - Ably key for token issuance / publish path
+- `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` - Stripe backend
+- `YOUTUBE_API_KEY` - optional metadata enrichment
+- `NODE_ENV` - dev/prod behavior gates
 
+## Scripts
+- `npm run dev` - start dev server
+- `npm run check` - svelte check
+- `npm run db:push` - apply Drizzle schema changes
+- `npm run test` - vitest suite
+- `npm run test:integration` - integration tests (expects running server)
+- `npm run test:e2e` - playwright e2e (browser install required)
 
----
+## Tests
+- Unit tests cover queue routes/services, security, checkout completion, playback precision, star route, shortcuts.
+- Integration tests cover queue/current payload behavior, queue-next response shape, and dev duplicate bypass behavior.
 
-## Environment & important settings 🔧
-
-- DATABASE_URL — path to the SQLite DB file used by the server (required for integration tests and some scripts). Example on Windows PowerShell:
-  - $env:DATABASE_URL = "v:\\Dropbox\\PROJECTS\\_WEB\\_DEV\\26-rocola\\local.db"
-- NODE_ENV — the seed endpoint and certain behavior are guarded to run only when `NODE_ENV === 'development'`.
-- YOUTUBE_API_KEY — optional, used by the YouTube validation endpoint if available.
-
----
-
-## Dev utilities & scripts 🧰
-
-- `scripts/seed_queue.mjs` — offline seed script to insert songs & queue rows.
-- `scripts/check_db.mjs` — prints DB table samples and diagnostics.
-- `scripts/ws_client2.mjs` — simple WS client useful for debugging broadcasts.
-
----
-
-## Tests (small integration test) ✅
-
-A pragmatic integration test is available to validate queue behavior:
-
-- Script: `scripts/test_queue_integration.mjs`
-- Runs: `npm run test:integration` (added to `package.json`)
-
-What it asserts:
-
-- POST `/api/debug/seed` returns OK and seeds items
-- GET `/api/queue/current` returns the current song
-- GET `/api/queue` does *not* include the current song (upcoming list excludes current)
-- If we set `playsRemainingToday = 0` on an upcoming queue item directly in the DB, `/api/queue` should exclude that item
-
-How to run the integration test:
-
-1. Start the dev server (so API endpoints are reachable at localhost:5173)
-2. Ensure `DATABASE_URL` is set in your environment (path to sqlite file)
-3. Run:
-
-```powershell
-npm run test:integration
-```
-
-Optional auto-start mode:
-
+Integration test options:
+- Default: start app separately, then run `npm run test:integration`
+- Auto-start mode:
 ```powershell
 $env:INTEGRATION_START_SERVER = "1"
 npm run test:integration
 ```
 
-Note: This test is lightweight and expects a running server and direct DB access (dev scenario).
-
----
-
-## Key files & where to look 🗺️
-
-- Server & DB
-  - `src/lib/server/db/schema.js` — Drizzle schema
-  - `src/lib/server/db/index.js` — DB connection
-  - `src/routes/api/queue/*` — GET/POST queue, `current`, `next`
-  - `src/routes/api/debug/seed/+server.js` — dev seeding endpoint
-- Client
-  - `src/lib/client/stores.js` — Svelte stores, realtime init, filtering logic
-  - `src/lib/client/websocket.js` — WS helper
-- UI
-  - `src/lib/components/` — `Queue.svelte`, `QueueItem.svelte`, `AddToQueue.svelte`, `VideoPlayer.svelte`, `PlayerControls.svelte`, `Toast.svelte`
-- Scripts
-  - `scripts/seed_queue.mjs`, `scripts/check_db.mjs`, `scripts/test_queue_integration.mjs`
-
----
-
-## Current state & notes for future work 📝
-
-- ✅ Core features implemented: queue, advance, per-day play limits, real-time sync, basic UI with toasts and player integration.
-- ✅ Dev seed endpoint and seed script are available and tested to set a predictable state.
-- ✅ Client filters upcoming queue to exclude the currently playing song and entries with zero `playsRemainingToday`.
-
-Pending / recommended next steps:
-
-- Add proper automated test runner (Vitest) and convert integration script into a tracked test with setup/teardown.
-- Add end-to-end tests for WS broadcasts (song_playing, queue_changed).
-- Add admin confirmation for destructive dev endpoints and more robust auth for production.
-
----
-
-## How to operate (short checklist) 🔁
-
-- Start dev server: `npm run dev`
-- Seed queue during dev: open app -> click **Seed queue (dev)** in the Add UI
-- Advance current song (client): press **Next** in the Player controls
-- Run integration test: set `DATABASE_URL`, start server, `npm run test:integration`
-
----
-
-## Notes for future AI agents 🤖
-
-- Look at `src/lib/client/stores.js` for the logic that filters the queue and syncs with server broadcasts.
-- The dev seed endpoint (`/api/debug/seed`) is the fastest way to achieve a deterministic queue state in development.
-- Tests currently are lightweight; prefer adding Vitest-based unit/integration tests before attempting production changes.
-
----
-
-If you'd like, I can convert the integration script into a Vitest test and add a small CI workflow to run it on PRs. ✅
+## Notes
+- In dev/admin mode, free-tier daily duplicate restriction is bypassed by design.
+- Realtime playback synchronization now uses millisecond precision where available.

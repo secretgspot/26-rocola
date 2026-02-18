@@ -159,6 +159,14 @@
 		isVideoPaused = Boolean(e?.paused);
 	}
 
+	function handleSyncTelemetry(e) {
+		if (!e || typeof e !== 'object') return;
+		playerState.syncStats = {
+			...playerState.syncStats,
+			...e
+		};
+	}
+
 	function clearQueueHideTimer() {
 		if (queueHideTimer) {
 			clearTimeout(queueHideTimer);
@@ -376,7 +384,8 @@
 					onnext={advance}
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
-					onplaystate={handlePlayState} />
+					onplaystate={handlePlayState}
+					onsynctelemetry={handleSyncTelemetry} />
 			</svelte:boundary>
 		{:else}
 			<div class="empty-state">

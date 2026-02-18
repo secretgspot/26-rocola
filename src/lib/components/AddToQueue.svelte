@@ -134,10 +134,7 @@
 	}
 
 	function star() {
-		const rect = starBtnEl?.getBoundingClientRect?.();
-		const x = rect ? (rect.left + rect.width / 2) / window.innerWidth : 0.82;
-		const y = rect ? (rect.top + rect.height / 2) / window.innerHeight : 0.76;
-		onstar?.({ x, y });
+		onstar?.({ source: 'star_button' });
 	}
 </script>
 

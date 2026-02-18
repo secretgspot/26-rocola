@@ -214,3 +214,6 @@
 - [x] Add unit tests for shortcut behavior (`H`, `N`, Konami progression)
 - [x] Improve integration test workflow with optional auto-start (`INTEGRATION_START_SERVER=1`)
 - [x] Verify test suite: `npm run check`, unit tests, integration tests
+- [x] Add client sync observability stats (drift p50/p95, micro/hard sync counts, transition latency)
+- [x] Surface sync observability in help landing live metrics strip
+- [x] README cleanup and script/test workflow refresh

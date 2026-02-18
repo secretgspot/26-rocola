@@ -96,7 +96,7 @@ describe('Queue integration (server + DB)', () => {
 		}
 	});
 
-	it('accepts free-tier add requests with non-500 response', async () => {
+	it('dev/admin mode bypasses free-tier duplicate restriction', async () => {
 		const uniqueVideoId = `itest-${Date.now()}`;
 		const payload = {
 			videoId: uniqueVideoId,
@@ -114,8 +114,8 @@ describe('Queue integration (server + DB)', () => {
 			headers: { 'content-type': 'application/json' },
 			body: JSON.stringify(payload)
 		});
-		expect([200, 409, 429]).toContain(first.status);
-		expect(typeof first.json.ok).toBe('boolean');
+		expect(first.status).toBe(200);
+		expect(first.json.ok).toBe(true);
 
 		const second = await fetchJson('/api/queue', {
 			method: 'POST',
@@ -123,7 +123,7 @@ describe('Queue integration (server + DB)', () => {
 			body: JSON.stringify(payload)
 		});
 
-		expect([200, 409, 429]).toContain(second.status);
-		expect(typeof second.json.ok).toBe('boolean');
+		expect(second.status).toBe(200);
+		expect(second.json.ok).toBe(true);
 	});
 });

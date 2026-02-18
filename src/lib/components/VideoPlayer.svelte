@@ -3,7 +3,7 @@
 	import { createPlayer } from '$lib/client/youtube-player';
 	import { playerState, addToast } from '$lib/client/stores.svelte.js';
 
-	let { onnext, ontimeupdate, onstatsupdate, onplaystate } = $props();
+	let { onnext, ontimeupdate, onstatsupdate, onplaystate, onsynctelemetry } = $props();
 
 	let el = $state();
 	/** @type {any} */
@@ -15,6 +15,13 @@
 	let lastTransitionKey = $state(null);
 	let transitionAtMs = $state(0);
 	let pendingJoinSeekTo = $state(null);
+	let transitionPlaybackReportedForKey = $state(null);
+	let telemetryLastEmitAtMs = $state(0);
+	let driftSamples = $state([]);
+	let microSyncCount = $state(0);
+	let hardSyncCount = $state(0);
+	let transitionCount = $state(0);
+	let lastTransitionLatencyMs = $state(0);
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -43,6 +50,33 @@
 			return performance.now();
 		}
 		return Date.now();
+	}
+
+	function percentile(values, p) {
+		if (!values.length) return 0;
+		const sorted = [...values].sort((a, b) => a - b);
+		const idx = Math.max(0, Math.min(sorted.length - 1, Math.round((sorted.length - 1) * p)));
+		return sorted[idx];
+	}
+
+	function pushDriftSample(absDriftSec) {
+		const ms = Math.max(0, Math.round(absDriftSec * 1000));
+		driftSamples = [...driftSamples.slice(-119), ms];
+	}
+
+	function emitSyncTelemetry(force = false) {
+		const now = nowMs();
+		if (!force && now - telemetryLastEmitAtMs < 900) return;
+		telemetryLastEmitAtMs = now;
+		onsynctelemetry?.({
+			driftP50Ms: percentile(driftSamples, 0.5),
+			driftP95Ms: percentile(driftSamples, 0.95),
+			sampleCount: driftSamples.length,
+			microSyncCount,
+			hardSyncCount,
+			transitionCount,
+			lastTransitionLatencyMs
+		});
 	}
 
 	function requestNextOnce() {
@@ -85,6 +119,16 @@
 						requestNextOnce();
 					}
 					if (e.data === 1) {
+						const activeTransitionKey = `${playerState.currentSong?.queueId || playerState.currentSong?.id || playerState.currentSong?.videoId || 'unknown'}:${playerState.currentSong?.startedAtMs || playerState.currentSong?.startedAt || 0}`;
+						if (transitionPlaybackReportedForKey !== activeTransitionKey) {
+							transitionPlaybackReportedForKey = activeTransitionKey;
+							if (transitionAtMs > 0) {
+								lastTransitionLatencyMs = Math.max(0, Math.round(nowMs() - transitionAtMs));
+								transitionCount += 1;
+								emitSyncTelemetry(true);
+							}
+						}
+
 						// Keep audio unlocked across song transitions once user has interacted.
 						tryUnmuteAndPlay();
 
@@ -104,9 +148,14 @@
 						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 3;
 						const drift = correct - current;
+						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
 						if (!nearEnd && Number.isFinite(drift) && Math.abs(drift) > 0.25) {
 							if (Math.abs(drift) > 2.5) p.seek(correct);
-							else p.seek(current + clamp(drift, -0.4, 0.4));
+							else {
+								p.seek(current + clamp(drift, -0.4, 0.4));
+								microSyncCount += 1;
+							}
+							emitSyncTelemetry();
 						}
 					}
 			},
@@ -183,8 +232,10 @@
 				lastStartedAt = currentStartedAt ?? null;
 				lastTransitionKey = transitionKey;
 				transitionAtMs = nowMs();
+				transitionPlaybackReportedForKey = null;
 				nextRequestedForQueueId = null;
 				playbackProgress = 0;
+				emitSyncTelemetry(true);
 			}
 		});
 
@@ -280,6 +331,7 @@
 							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 4;
 						const drift = correct - current;
+						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
 						if (
 							state === 1 &&
 							!nearEnd &&
@@ -288,6 +340,8 @@
 							Math.abs(drift) > 0.25
 						) {
 							player.seek(current + clamp(drift, -0.35, 0.35));
+							microSyncCount += 1;
+							emitSyncTelemetry();
 						}
 						} catch {
 							// ignore
@@ -305,8 +359,11 @@
 						const correct = getServerElapsed();
 						if (state === 1 && typeof current === 'number' && Number.isFinite(current)) {
 							const drift = correct - current;
+							if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
 							if (Math.abs(drift) > 1.2) {
 								player.seek(correct);
+								hardSyncCount += 1;
+								emitSyncTelemetry();
 							}
 						}
 						} catch {

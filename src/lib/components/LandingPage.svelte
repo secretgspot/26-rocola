@@ -7,6 +7,10 @@
 	const queueDepth = $derived(playerState.queue.length);
 	const connection = $derived((playerState.connectionState || 'connecting').toUpperCase());
 	const driftMs = $derived(Math.round(Math.abs(playerState.clockOffsetSec || 0) * 1000));
+	const syncP95 = $derived(playerState.syncStats?.driftP95Ms || 0);
+	const hardSync = $derived(playerState.syncStats?.hardSyncCount || 0);
+	const transitions = $derived(playerState.syncStats?.transitionCount || 0);
+	const transitionLag = $derived(playerState.syncStats?.lastTransitionLatencyMs || 0);
 	const currentTitle = $derived(playerState.currentSong?.title || 'Waiting for next drop');
 </script>
 
@@ -36,6 +40,18 @@
 		<div class="metric">
 			<span>SYNC</span>
 			<strong>{driftMs}ms</strong>
+		</div>
+		<div class="metric">
+			<span>P95</span>
+			<strong>{syncP95}ms</strong>
+		</div>
+		<div class="metric">
+			<span>HARD</span>
+			<strong>{hardSync}</strong>
+		</div>
+		<div class="metric">
+			<span>XFADE</span>
+			<strong>{transitions}/{transitionLag}ms</strong>
 		</div>
 		<div class="metric now">
 			<span>NOW</span>
@@ -138,7 +154,7 @@
 
 	.live-strip {
 		display: grid;
-		grid-template-columns: repeat(4, minmax(0, auto)) 1fr;
+		grid-template-columns: repeat(7, minmax(0, auto)) 1fr;
 		gap: var(--size-2);
 		padding: var(--size-2) 0;
 		border-top: 1px solid var(--lp-line);
