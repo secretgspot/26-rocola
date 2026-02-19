@@ -29,6 +29,8 @@ import { connectRealtime } from '$lib/client/realtime.js';
  *   queue: Song[],
  *   currentSong: Song | null,
  *   previousSong: Song | null,
+ *   initializing: boolean,
+ *   initLogs: { id: string, ts: number, message: string, level: 'info'|'ok'|'warn'|'error' }[],
  *   toasts: Toast[],
  *   starBursts: any[],
  *   currentTurn: number,
@@ -51,6 +53,8 @@ export const playerState = $state({
 	queue: [],
 	currentSong: null,
 	previousSong: null,
+	initializing: true,
+	initLogs: [],
 	toasts: [],
 	starBursts: [],
 	currentTurn: 0,
@@ -68,6 +72,28 @@ export const playerState = $state({
 	},
 	lastEventSeq: 0
 });
+
+function pushInitLog(message, level = 'info') {
+	const entry = {
+		id: crypto.randomUUID(),
+		ts: Date.now(),
+		message,
+		level: /** @type {'info'|'ok'|'warn'|'error'} */ (level)
+	};
+	playerState.initLogs = [...playerState.initLogs, entry].slice(-18);
+	if (playerState.initializing) {
+		const toastLevel =
+			level === 'error' ? 'error' : level === 'warn' ? 'plain' : level === 'ok' ? 'success' : 'plain';
+		const id = crypto.randomUUID();
+		playerState.toasts = [{ id, message: `INIT: ${message}`, level: toastLevel }, ...playerState.toasts].slice(
+			0,
+			8
+		);
+		setTimeout(() => {
+			playerState.toasts = playerState.toasts.filter((x) => x.id !== id);
+		}, 1400);
+	}
+}
 
 /**
  * Smooth server clock offset updates to avoid jitter-induced seek corrections.
@@ -138,10 +164,12 @@ export function filterQueue(items, current) {
 	return filtered;
 }
 
-export async function refreshQueue() {
+export async function refreshQueue(options = {}) {
+	const logInit = options?.logInit === true;
 	if (refreshInFlight) return refreshInFlight;
 	refreshInFlight = (async () => {
 	try {
+		if (logInit) pushInitLog('REQUEST /api/queue + /api/queue/current');
 		const [qRes, cRes] = await Promise.all([
 			fetch('/api/queue'),
 			fetch('/api/queue/current')
@@ -153,6 +181,12 @@ export async function refreshQueue() {
 				const data = await cRes.json();
 				if (data.serverNowMs) {
 					updateClockOffset(data.serverNowMs);
+				}
+				if (logInit) {
+					pushInitLog(
+						data.ok && data.current ? 'CURRENT_TRACK RESOLVED' : 'CURRENT_TRACK EMPTY',
+						'ok'
+					);
 				}
 			if (data.ok && data.current) {
 				current = normalizeQueueItem(data.current);
@@ -173,6 +207,8 @@ export async function refreshQueue() {
 			} else if (data.ok && !data.current) {
 				playerState.currentSong = null;
 			}
+		} else if (logInit) {
+			pushInitLog(`CURRENT_TRACK FAILED (${cRes.status})`, 'warn');
 		}
 		
 		if (qRes.ok) {
@@ -180,10 +216,15 @@ export async function refreshQueue() {
 			if (data.ok && data.queue) {
 				playerState.currentTurn = data.currentTurn || 0;
 				playerState.queue = filterQueue(data.queue, playerState.currentSong);
+				if (logInit) pushInitLog(`QUEUE READY (${playerState.queue.length})`, 'ok');
+				saveBootCache();
 			}
+		} else if (logInit) {
+			pushInitLog(`QUEUE FAILED (${qRes.status})`, 'warn');
 		}
 	} catch (err) {
 		console.error('[Store] Refresh error:', err);
+		if (logInit) pushInitLog('QUEUE SYNC ERROR', 'error');
 	}
 	})().finally(() => {
 		refreshInFlight = null;
@@ -210,6 +251,47 @@ let currentSyncInterval = null;
 let refreshInFlight = null;
 let refreshTimer = null;
 let cachedReactionClientId = null;
+const BOOT_CACHE_KEY = 'rocola-boot-cache-v1';
+const BOOT_READY_KEY = 'rocola-boot-ready-v1';
+
+function saveBootCache() {
+	if (typeof window === 'undefined') return;
+	try {
+		const payload = {
+			ts: Date.now(),
+			currentSong: playerState.currentSong || null,
+			queue: playerState.queue || [],
+			currentTurn: playerState.currentTurn || 0
+		};
+		window.sessionStorage.setItem(BOOT_CACHE_KEY, JSON.stringify(payload));
+		window.sessionStorage.setItem(BOOT_READY_KEY, '1');
+	} catch {
+		// ignore
+	}
+}
+
+function hydrateBootCache() {
+	if (typeof window === 'undefined') return false;
+	try {
+		const raw = window.sessionStorage.getItem(BOOT_CACHE_KEY);
+		if (!raw) return false;
+		const data = JSON.parse(raw);
+		if (!data || typeof data !== 'object') return false;
+		const ageMs = Date.now() - Number(data.ts || 0);
+		if (!Number.isFinite(ageMs) || ageMs > 1000 * 60 * 10) return false;
+
+		if (data.currentSong) {
+			playerState.currentSong = normalizeQueueItem(data.currentSong);
+		}
+		if (Array.isArray(data.queue)) {
+			playerState.queue = data.queue.map((q) => normalizeQueueItem(q)).filter(Boolean);
+		}
+		playerState.currentTurn = Number(data.currentTurn || 0);
+		return Boolean(playerState.currentSong || playerState.queue.length > 0);
+	} catch {
+		return false;
+	}
+}
 
 export function getReactionClientId() {
 	if (cachedReactionClientId) return cachedReactionClientId;
@@ -290,12 +372,45 @@ export function addStarBurst(payload = {}) {
 export async function initRealtime() {
 	if (initialized) return;
 	initialized = true;
-	
-	refreshQueue();
+	playerState.initializing = true;
+	playerState.initLogs = [];
+	const hadPriorBoot =
+		typeof window !== 'undefined' && window.sessionStorage.getItem(BOOT_READY_KEY) === '1';
+	const resumed = hydrateBootCache();
+	if (hadPriorBoot && resumed) {
+		pushInitLog('FAST RESUME', 'ok');
+		playerState.initializing = false;
+		await refreshQueue({ logInit: false });
+	} else {
+		pushInitLog('BOOT START');
+		await refreshQueue({ logInit: true });
+	}
 
 	try {
+		if (!hadPriorBoot) pushInitLog('REALTIME AUTH/TOKEN');
 		const ws = connectRealtime();
-		refreshQueue();
+		if (!hadPriorBoot) pushInitLog('REALTIME CHANNEL SUBSCRIBE');
+		await refreshQueue({ logInit: !hadPriorBoot });
+
+		let sawRealtimeState = false;
+		const startupRealtimeReady = new Promise((resolve) => {
+			const timer = setTimeout(() => resolve(false), 1500);
+			ws.on('connection_state', (state) => {
+				if (typeof state === 'string') {
+					playerState.connectionState = state;
+					if (!sawRealtimeState && (state === 'connected' || state === 'connecting')) {
+						sawRealtimeState = true;
+						clearTimeout(timer);
+						resolve(true);
+					}
+					if (!sawRealtimeState && (state === 'failed' || state === 'suspended')) {
+						sawRealtimeState = true;
+						clearTimeout(timer);
+						resolve(false);
+					}
+				}
+			});
+		});
 
 		ws.on('queue_changed', (payload) => {
 			if (payload?.queue) {
@@ -363,8 +478,12 @@ export async function initRealtime() {
 			addStarBurst(payload || {});
 		});
 
+		const ready = await startupRealtimeReady;
+		pushInitLog(ready ? 'REALTIME READY' : 'REALTIME DEGRADED', ready ? 'ok' : 'warn');
+
 	} catch (e) {
 		console.warn('[Store] Realtime initialization failed:', e);
+		pushInitLog('REALTIME INIT ERROR', 'error');
 	}
 
 	// Periodic sync to keep clients aligned (handles missed realtime events)
@@ -411,4 +530,6 @@ export async function initRealtime() {
 			if (document.visibilityState === 'visible') scheduleRefresh(0);
 		});
 	}
+	pushInitLog(hadPriorBoot ? 'RESUME COMPLETE' : 'BOOT COMPLETE', 'ok');
+	playerState.initializing = false;
 }

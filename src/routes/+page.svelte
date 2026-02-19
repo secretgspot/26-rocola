@@ -46,6 +46,7 @@
 	const showAdminHealth = $derived(isAdmin || isDevEnv);
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
+	const isInitializing = $derived(Boolean(playerState.initializing));
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
 	const hasActiveQueuePlayback = $derived(Boolean(playerState.currentSong) && playerState.queue.length > 0);
 	const hideStarButton = $derived(!playerState.currentSong);
@@ -562,7 +563,9 @@
 	</header>
 
 	<main class="video-layer min-w-0">
-		{#if playerState.currentSong}
+		{#if isInitializing}
+			<div class="empty-state"></div>
+		{:else if playerState.currentSong}
 			<svelte:boundary onerror={(e) => console.error('Playback Error:', e)}>
 				{#snippet failed(error, reset)}
 					<div class="empty-state">
@@ -588,7 +591,7 @@
 		{/if}
 	</main>
 
-	{#if playerState.queue.length > 0}
+	{#if !isInitializing && playerState.queue.length > 0}
 		<aside class="queue-zone min-w-0" class:visible={queueVisible || isMobileViewport}>
 			<div class="queue-content">
 				<Queue />
@@ -604,14 +607,16 @@
 		localBlocked={localPlaybackBlocked}
 	/>
 
-	<AddToQueue
-		onqueued={refreshQueue}
-		onstar={star}
-		hideTrigger={isVideoPaused}
-		hideStar={hideStarButton}
-		pulse={isIdleState}
-		mode={isIdleState ? 'center' : 'nearQueue'}
-	/>
+	{#if !isInitializing}
+		<AddToQueue
+			onqueued={refreshQueue}
+			onstar={star}
+			hideTrigger={isVideoPaused}
+			hideStar={hideStarButton}
+			pulse={isIdleState}
+			mode={isIdleState ? 'center' : 'nearQueue'}
+		/>
+	{/if}
 	<StarBurstOverlay bursts={playerState.starBursts} />
 
 		{#if helpOpen}
