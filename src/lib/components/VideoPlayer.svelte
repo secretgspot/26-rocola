@@ -37,7 +37,20 @@
 	let localPlaybackBlockedAt = $state(0);
 	let lastBlockedRefreshAt = $state(0);
 	let lastForcedLoadAt = $state(0);
-	let preEndAdvanceForQueueId = $state(null);
+	let localErrorRetryByQueue = $state({});
+
+	const SYNC_CFG = {
+		warmupMs: 4200,
+		warmupStateSeekThresholdSec: 4.0,
+		warmupLoopSeekThresholdSec: 4.0,
+		normalSeekThresholdSec: 1.4,
+		hardSeekThresholdSec: 1.8,
+		hardSeekCadenceMs: 2400,
+		microSeekCadenceMs: 1400,
+		minSeekGapMs: 900,
+		convergenceCheckCadenceMs: 1200,
+		convergenceMinAgeMs: 4200
+	};
 	
 	/** @type {string | null} */
 	let lastLoadedVideoId = $state(null);
@@ -165,6 +178,20 @@
 						onlocalblockstate?.({ blocked: false });
 					}
 					if (e.data === 0) {
+						// Ignore startup/spurious ended pulses, but don't block legitimate ended events
+						// when metadata duration mismatches the real YouTube duration.
+						try {
+							const ageMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
+							const current = p?.getCurrentTime?.();
+							const duration = p?._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+							const nearEnd =
+								typeof current === 'number' && duration > 0
+									? current >= Math.max(0.8, duration - 1.4)
+									: false;
+							if (ageMs < 8000 && !nearEnd) return;
+						} catch {
+							// ignore and fall through
+						}
 						onendedsignal?.();
 					}
 					if (e.data === 1) {
@@ -194,32 +221,18 @@
 						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 3;
 						const drift = correct - current;
-						const inWarmup = nowMs() - transitionAtMs < 1800;
+						const inWarmup = nowMs() - transitionAtMs < SYNC_CFG.warmupMs;
 						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
-						if (!nearEnd && Number.isFinite(drift)) {
-							const now = nowMs();
-							const canSeek = now - lastSeekAtMs > 320;
-							if (inWarmup && Math.abs(drift) > 1.2 && canSeek) {
-								p.seek(correct);
-								lastSeekAtMs = now;
-								hardSyncCount += 1;
-							} else if (!inWarmup && Math.abs(drift) > 0.22 && canSeek) {
-								if (Math.abs(drift) > 2.5) {
-									p.seek(correct);
-									hardSyncCount += 1;
-								} else {
-									p.seek(current + clamp(drift, -0.45, 0.45));
-									microSyncCount += 1;
-								}
-								lastSeekAtMs = now;
-							}
-							emitSyncTelemetry();
-						}
+						// Avoid aggressive seek-on-play; startup stutter is worse than small drift.
+						if (!nearEnd && Number.isFinite(drift)) emitSyncTelemetry();
 					}
 			},
 				onError: async (e) => {
 					const errorVideoId = e?.target?.getVideoData?.()?.video_id || null;
 					const currentVideoId = playerState.currentSong?.videoId || null;
+					const currentQueueId = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+					const errorCode = typeof e?.data === 'number' ? e.data : null;
+					const isRestriction = errorCode === 100 || errorCode === 101 || errorCode === 150;
 					// Ignore stale player errors from a previously loaded video.
 					if (errorVideoId && currentVideoId && errorVideoId !== currentVideoId) {
 						return;
@@ -229,13 +242,35 @@
 					onlocalblockstate?.({
 						blocked: true,
 						canControl,
-						errorCode: typeof e?.data === 'number' ? e.data : null
+						errorCode
 					});
 					if (!canControl) {
 						addToast({ message: `LOCAL PLAYBACK BLOCKED`, level: 'error' });
 						refreshQueue();
 						return;
 					}
+
+					const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
+					const localRetries = currentQueueId ? Number(localErrorRetryByQueue[currentQueueId] || 0) : 0;
+					if (!isRestriction && (trackAgeMs < 2400 || localRetries < 2)) {
+						// Conservative: transient player errors at startup are common.
+						// Retry locally before any server-side unavailable/skip decision.
+						if (currentQueueId) {
+							localErrorRetryByQueue = {
+								...localErrorRetryByQueue,
+								[currentQueueId]: localRetries + 1
+							};
+						}
+						setTimeout(() => {
+							try {
+								player?.play?.();
+							} catch {
+								// ignore
+							}
+						}, 320);
+						return;
+					}
+
 					const action = await reportUnavailableFromPlaybackError(e);
 					if (action === 'retry') {
 						addToast({ message: `PLAYBACK RETRY`, level: 'info' });
@@ -255,8 +290,10 @@
 						refreshQueue();
 						return;
 					}
-					addToast({ message: `PLAYBACK BLOCKED -> SKIP`, level: 'error' });
-					requestNextOnce();
+					// Unknown outcome from unavailable endpoint (network/race/etc):
+					// do not consume next track optimistically; let server authoritative tick recover.
+					addToast({ message: `PLAYBACK ERROR -> RECOVER`, level: 'error' });
+					refreshQueue();
 				}
 			}).then(res => {
 			p = res;
@@ -330,10 +367,10 @@
 				transitionAtMs = nowMs();
 				transitionPlaybackReportedForKey = null;
 				lastErrorQueueId = null;
+				localErrorRetryByQueue = {};
 				localPlaybackBlocked = false;
 				onlocalblockstate?.({ blocked: false });
 				nextRequestedForQueueId = null;
-				preEndAdvanceForQueueId = null;
 				playbackProgress = 0;
 				emitSyncTelemetry(true);
 			}
@@ -370,7 +407,6 @@
 						if (duration > 0) {
 							const elapsedServer = getServerElapsed();
 							const elapsedPlayer = player.getCurrentTime?.();
-							const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
 							const activeVideoId = player?._raw?.getVideoData?.()?.video_id || null;
 							const targetVideoId = playerState.currentSong?.videoId || null;
 							const sameVideoLoaded =
@@ -417,40 +453,9 @@
 							});
 						}
 
-							// Fallback auto-advance if ended event is missed.
-							// Keep this tight when we have native player duration.
-							const endGraceSec = hasNativeDuration ? 0.35 : 1.2;
-							const nearEndByPlayer =
-								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer)
-									? elapsedPlayer >= duration - 0.6
-									: false;
-							const farPastEndByServer = elapsedServer >= duration + 8;
-							if (
-								sameVideoLoaded &&
-								elapsedServer >= duration + endGraceSec &&
-								(nearEndByPlayer || farPastEndByServer)
-							) {
-								requestNextOnce(1200);
-							}
-							// Pre-end handoff: avoid YouTube end-screen flash between tracks.
-							const preEndTriggerSec = 1.1;
-							const elapsedForPreEnd =
-								typeof elapsedPlayer === 'number' && Number.isFinite(elapsedPlayer)
-									? elapsedPlayer
-									: elapsedServer;
-							if (
-								canControl &&
-								qid &&
-								sameVideoLoaded &&
-								hasNativeDuration &&
-								duration >= 8 &&
-								elapsedForPreEnd >= 1.5 &&
-								preEndAdvanceForQueueId !== qid &&
-								elapsedForPreEnd >= Math.max(0, duration - preEndTriggerSec)
-							) {
-								preEndAdvanceForQueueId = qid;
-								requestNextOnce(1200);
-							}
+							// Transition is server-authoritative.
+							// Do not consume next track from client-side duration heuristics.
+							// Server playback tick + ended signal handle advancement.
 						} else if (localPlaybackBlocked) {
 							// Keep HUD alive even when duration is unknown on blocked embeds.
 							const elapsedServer = getServerElapsed();
@@ -468,8 +473,8 @@
 					lastBlockedRefreshAt = time;
 					refreshQueue();
 				}
-				// Periodic drift correction (avoid aggressive micro-seeks)
-				if (time - lastSync > 900 && player && playerState.currentSong) {
+				// Periodic drift correction (conservative; avoid startup stutter)
+				if (time - lastSync > SYNC_CFG.microSeekCadenceMs && player && playerState.currentSong) {
 					lastSync = time;
 					try {
 						const current = player.getCurrentTime?.();
@@ -479,48 +484,26 @@
 							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 4;
 						const drift = correct - current;
-						const inWarmup = nowMs() - transitionAtMs < 1800;
+						const inWarmup = nowMs() - transitionAtMs < SYNC_CFG.warmupMs;
 						if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
+						const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
 						if (
 							state === 1 &&
 							!nearEnd &&
+							trackAgeMs > 6000 &&
 							typeof current === 'number' &&
 							Number.isFinite(drift) &&
-							Math.abs(drift) > (inWarmup ? 1.4 : 0.22)
+							Math.abs(drift) > (inWarmup ? SYNC_CFG.warmupLoopSeekThresholdSec : SYNC_CFG.normalSeekThresholdSec)
 						) {
 							const now = nowMs();
-							if (now - lastSeekAtMs > 420) {
-								if (inWarmup || Math.abs(drift) > 0.95) {
+							if (now - lastSeekAtMs > SYNC_CFG.minSeekGapMs) {
+								if (Math.abs(drift) > SYNC_CFG.hardSeekThresholdSec) {
 									player.seek(correct);
 									hardSyncCount += 1;
-								} else {
-									player.seek(current + clamp(drift, -0.4, 0.4));
-									microSyncCount += 1;
 								}
 								lastSeekAtMs = now;
 							}
 							emitSyncTelemetry();
-						}
-					} catch {
-						// ignore
-					}
-				}
-				// Hard sync every ~3s: full seek if drift is significant.
-				if (time - lastHardSync > 2400 && player && playerState.currentSong) {
-					lastHardSync = time;
-					try {
-						const state = player.getPlayerState?.();
-						const current = player.getCurrentTime?.();
-						const correct = getServerElapsed();
-						if (state === 1 && typeof current === 'number' && Number.isFinite(current)) {
-							const drift = correct - current;
-							if (Number.isFinite(drift)) pushDriftSample(Math.abs(drift));
-							if (Math.abs(drift) > 0.9) {
-								player.seek(correct);
-								hardSyncCount += 1;
-								lastSeekAtMs = nowMs();
-								emitSyncTelemetry();
-							}
 						}
 					} catch {
 						// ignore
@@ -547,16 +530,20 @@
 					}
 				}
 				// Convergence safety: if iframe is on a different video than store state, force-load target.
-				if (time - lastConvergenceCheck > 1200 && player && playerState.currentSong?.videoId) {
+				if (time - lastConvergenceCheck > SYNC_CFG.convergenceCheckCadenceMs && player && playerState.currentSong?.videoId) {
 					lastConvergenceCheck = time;
 					try {
 						const liveVideoId = player?._raw?.getVideoData?.()?.video_id || null;
 						const targetVideoId = playerState.currentSong.videoId;
+						const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
+						const playerStatus = player.getPlayerState?.();
 						if (
+							trackAgeMs >= SYNC_CFG.convergenceMinAgeMs &&
+							(playerStatus === 1 || playerStatus === 2 || playerStatus === 3 || playerStatus === 5) &&
 							liveVideoId &&
 							targetVideoId &&
 							liveVideoId !== targetVideoId &&
-							time - lastForcedLoadAt > 1200
+							time - lastForcedLoadAt > SYNC_CFG.convergenceCheckCadenceMs
 						) {
 							lastForcedLoadAt = time;
 							const seekTo = getServerElapsed();

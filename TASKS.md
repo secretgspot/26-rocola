@@ -244,6 +244,21 @@
     - [x] Guard pre-end handoff against short/unknown-duration tracks to prevent sub-second auto-skip
     - [x] Gate auto-advance to only fire when player's active `video_id` matches current queue video
     - [x] Add minimum track-age guard before any auto-advance trigger can consume next
+    - [x] Refactor sync thresholds into unified `SYNC_CFG` and relax warmup corrections to reduce startup stutter
+    - [x] Add convergence warmup gate so mismatch recovery cannot force-reload during first ~2.6s of a new track
+    - [x] Remove client-side duration-based auto-advance consumption (server-authoritative transitions only)
+    - [x] Increase controller playback tick cadence to `320ms` and tighten server elapsed threshold to `+120ms` for smoother handoff
+    - [x] Expand startup warmup window and drift thresholds to cut first-seconds seek jitter
+    - [x] Add ended-state guard in player (`state=0` ignored unless near actual duration end)
+    - [x] Add startup auto-advance guard in `/api/playback/tick` (no consume in first `1800ms`)
+    - [x] Remove optimistic `queue/next` consume on unknown playback-error outcomes
+    - [x] Fix backend multi-skip race in `advanceQueue` by reading playback state after advisory lock acquisition
+    - [x] Disable seek-on-play and remove aggressive hard-sync loop to reduce startup stutter
+    - [x] Make periodic drift correction conservative (post-6s only, hard seek only on large drift)
+    - [x] Route end transitions through controller-only `/api/queue/next` (from `onendedsignal`) for immediate handoff
+    - [x] Replace strict duration-based ended guard with startup-age + near-end guard to handle metadata mismatch without long end-screens
+    - [x] Add conservative startup error handling in player (local retries before server-side unavailable/skip on non-restriction errors)
+    - [x] Harden ended-event guard further (ignore non-near-end ended pulses during first 8s to prevent random early consumes)
 
 ## Next Planned Hardening
 - [ ] Add dedicated unit tests for controller lease race/takeover scenarios

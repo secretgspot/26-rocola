@@ -46,11 +46,15 @@ export async function POST(event) {
 	}
 
 	const elapsedMs = Date.now() - playback.startedAtMs;
-	if (elapsedMs >= durationSec * 1000 + 350) {
+	// Safety guard: never auto-consume a track in its first moments.
+	// This prevents accidental early skips from transient timing mismatches.
+	if (elapsedMs < 1800) {
+		return json({ ok: true, action: 'noop', reason: 'startup_guard' });
+	}
+	if (elapsedMs >= durationSec * 1000 + 120) {
 		const advanced = await advanceQueue(playback.currentQueueId);
 		return json({ ok: true, action: 'advance', reason: 'elapsed', result: advanced });
 	}
 
 	return json({ ok: true, action: 'noop', reason: 'in_progress' });
 }
-

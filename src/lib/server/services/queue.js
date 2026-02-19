@@ -351,12 +351,11 @@ export async function addToQueue(songData, tier = 'free', ipAddress = 'anon', op
  * Advance the queue to the next song.
  */
 export async function advanceQueue(fromQueueId = null) {
-	const playback = await getPlaybackState();
-	const playingId = playback?.currentQueueId || null;
-
 	const result = await db.transaction(async (tx) => {
 		await tx.execute(sql`select pg_advisory_lock(912734)`);
 		try {
+			const playback = await getPlaybackState();
+			const playingId = playback?.currentQueueId || null;
 			const { queue: rows } = await getQueue({ pinCurrent: true, dbClient: tx });
 
 			if (rows.length === 0) {
@@ -380,7 +379,8 @@ export async function advanceQueue(fromQueueId = null) {
 							songId: current.songId,
 							startedAt: playback.startedAt,
 							startedAtMs: playback.startedAtMs
-						}
+						},
+						currentTurn: await getGlobalTurn(/** @type {any} */ (tx))
 					};
 				}
 

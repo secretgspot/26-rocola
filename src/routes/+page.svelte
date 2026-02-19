@@ -264,6 +264,7 @@
 	});
 
 	async function advance() {
+		if (!canControl) return;
 		if (nextPending) return;
 		nextPending = true;
 		const currentQueueId =
@@ -320,7 +321,7 @@
 		if (!canControl || typeof window === 'undefined') return;
 		const timer = setInterval(() => {
 			tickPlayback();
-		}, 900);
+		}, 320);
 		return () => clearInterval(timer);
 	});
 </script>
@@ -435,7 +436,7 @@
 				{/snippet}
 				<VideoPlayer
 					onnext={advance}
-					onendedsignal={tickPlayback}
+					onendedsignal={advance}
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}
