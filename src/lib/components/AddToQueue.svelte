@@ -350,12 +350,8 @@
 			margin: 0;
 			transform: none;
 		}
-	.fab-star {
-			opacity: 0.86;
-		}
 		.fab-star:hover {
 			transform: scale(1.06);
-			opacity: 1;
 		}
 	.fab:hover {
 		transform: scale(1.04);
