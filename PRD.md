@@ -49,6 +49,10 @@
 - Tick computes elapsed time from DB clock and advances queue as needed.
 - Tick path must be idempotent, lock-protected, and able to catch up after downtime gaps.
 - Tick publishes realtime events so clients remain passive viewers.
+- Status:
+  - Implemented foundation service (`stationTick`) + internal endpoint (`POST /api/station/tick`).
+  - Implemented runtime heartbeat state (`station_runtime`) + admin health exposure.
+  - Remaining: schedule invocation (Vercel Cron) + full no-client progression validation.
 
 ### Realtime
 - **Ably Pub/Sub** events:

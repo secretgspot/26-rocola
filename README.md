@@ -40,6 +40,26 @@ npm run dev
 ```
 3. Open `http://localhost:5173`
 
+## Vercel Cron Setup (for 24/7 station mode)
+When deploying to Vercel, schedule autonomous ticks so playback advances without connected clients.
+
+1. Set both `STATION_TICK_SECRET` and `CRON_SECRET` to the same value in Vercel env vars.
+2. Add a cron job in `vercel.json`:
+```json
+{
+  "crons": [
+    { "path": "/api/station/tick", "schedule": "*/1 * * * *" }
+  ]
+}
+```
+3. Vercel Cron sends:
+- `Authorization: Bearer <CRON_SECRET>`
+The endpoint accepts Bearer tokens, so matching `CRON_SECRET` and `STATION_TICK_SECRET` authorizes cron ticks.
+
+Notes:
+- Local dev does not require cron; you can trigger manually with `POST /api/station/tick`.
+- In production, keep the endpoint secret mandatory.
+
 ## Operator Shortcuts (Dev/Admin)
 - `H` - toggle help menu
 - `N` - skip to next song (dev/admin only)
@@ -50,6 +70,7 @@ npm run dev
 - `ABLY_SUPER_API_KEY` - Ably key for token issuance / publish path
 - `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` - Stripe backend
 - `YOUTUBE_API_KEY` - optional metadata enrichment
+- `STATION_TICK_SECRET` - shared secret for internal station tick endpoint (`/api/station/tick`)
 - `NODE_ENV` - dev/prod behavior gates
 
 ## Scripts
@@ -81,3 +102,7 @@ npm run test:integration
 - Only the active admin controller can execute playback-control actions (`next`, unavailability marking).
 - Controller lease is persisted in DB (`controller_lease`) and renewed via `/api/admin/controller`.
 - Autonomous station mode (cron + server tick) is planned to remove client dependence for automatic queue progression.
+- Phase A/B foundation implemented:
+  - `station_runtime` DB heartbeat state
+  - server tick service: `src/lib/server/services/station.js`
+  - internal tick endpoint: `POST /api/station/tick` (auth via `STATION_TICK_SECRET`)

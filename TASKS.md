@@ -286,14 +286,14 @@
 - [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence
 
 ## Autonomous Station Mode (Always-On Playback)
-- [ ] Phase A: Introduce server scheduler ownership
-    - [ ] Add `station_runtime` table for scheduler heartbeat/lease and last tick time
-    - [ ] Add `stationTick()` server service that advances playback based on DB clock only
-    - [ ] Make `stationTick()` idempotent and safe under concurrent invocations (advisory lock)
+- [x] Phase A: Introduce server scheduler ownership
+    - [x] Add `station_runtime` table for scheduler heartbeat/lease and last tick time
+    - [x] Add `stationTick()` server service that advances playback based on DB clock only
+    - [x] Make `stationTick()` idempotent and safe under concurrent invocations (advisory lock)
 - [ ] Phase B: Add execution path independent of viewers
-    - [ ] Add `/api/station/tick` internal endpoint protected by secret + rate guard
+    - [x] Add `/api/station/tick` internal endpoint protected by secret + rate guard
     - [ ] Add Vercel Cron to call `/api/station/tick` every 15-30s
-    - [ ] Ensure catch-up logic advances multiple songs if downtime gap elapsed
+    - [x] Ensure catch-up logic advances multiple songs if downtime gap elapsed
 - [ ] Phase C: Realtime broadcast from server ticker
     - [ ] Server publishes `song_playing`, `queue_changed`, `song_ended` from autonomous tick path
     - [ ] Clients become passive listeners for normal operation (no client-required progress driving)
@@ -303,8 +303,8 @@
     - [ ] Retain controller lease only for admin command authority
 - [ ] Phase E: Validation + observability
     - [ ] Unit tests for `stationTick()` timing transitions and catch-up
-    - [ ] Integration test: no clients connected -> queue still advances over time
-    - [ ] Add station lag/last tick metrics to health endpoint + help admin stats
+    - [x] Integration test: no clients connected -> queue still advances over time
+    - [x] Add station lag/last tick metrics to health endpoint + help admin stats
     - [ ] Add runbook for cron failure, Neon outage, and replay recovery
 
 ## Installability (2026-02-19)

@@ -118,3 +118,14 @@ export const controllerLease = pgTable('controller_lease', {
 	expiresAtMs: bigint('expiresAtMs', { mode: 'number' }).notNull(),
 	updatedAtMs: bigint('updatedAtMs', { mode: 'number' }).notNull()
 });
+
+// Autonomous station runtime heartbeat (single-row table)
+export const stationRuntime = pgTable('station_runtime', {
+	id: text('id').primaryKey(), // 'global'
+	lastTickAtMs: bigint('lastTickAtMs', { mode: 'number' }).notNull(),
+	lastRunStartedAtMs: bigint('lastRunStartedAtMs', { mode: 'number' }),
+	lastRunFinishedAtMs: bigint('lastRunFinishedAtMs', { mode: 'number' }),
+	lastAdvanceCount: integer('lastAdvanceCount').notNull().default(0),
+	lastError: text('lastError'),
+	updatedAtMs: bigint('updatedAtMs', { mode: 'number' }).notNull()
+});

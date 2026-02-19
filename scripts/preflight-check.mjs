@@ -8,7 +8,7 @@ const required = [
 	['STRIPE_WEBHOOK_SECRET']
 ];
 
-const optional = ['YOUTUBE_API_KEY', 'ADMIN_CODE', 'PUBLIC_APP_URL'];
+const optional = ['YOUTUBE_API_KEY', 'ADMIN_CODE', 'PUBLIC_APP_URL', 'STATION_TICK_SECRET', 'CRON_SECRET'];
 
 function hasValue(name) {
 	return typeof process.env[name] === 'string' && process.env[name].trim().length > 0;
