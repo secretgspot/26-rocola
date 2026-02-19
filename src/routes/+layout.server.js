@@ -1,5 +1,6 @@
 export async function load({ locals }) {
 	return {
-		isAdmin: locals.isAdmin
+		isAdmin: locals.isAdmin,
+		isDev: locals.isDev
 	};
 }

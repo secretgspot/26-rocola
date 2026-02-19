@@ -3,6 +3,15 @@
 	import { playerState } from '$lib/client/stores.svelte.js';
 
 	const tiers = Object.values(TIER_CONFIG).sort((a, b) => a.priority - b.priority);
+	let {
+		showAdminHealth = false,
+		adminHealthState = '',
+		adminHealthError = false,
+		adminHealthCtrl = false,
+		adminHealthLeaseSec = 0,
+		adminHealthTurn = 0,
+		adminHealthSeq = 0
+	} = $props();
 	const activeUsers = $derived(playerState.clientCount || 1);
 	const queueDepth = $derived(playerState.queue.length);
 	const connection = $derived((playerState.connectionState || 'connecting').toUpperCase());
@@ -57,6 +66,31 @@
 			<span>NOW</span>
 			<strong>{currentTitle}</strong>
 		</div>
+		{#if showAdminHealth}
+			<div class="metric" title="Admin realtime health status">
+				<span>ADMIN</span>
+				<strong>
+					<span class="health-dot {adminHealthError ? 'bad' : 'ok'}" aria-hidden="true"></span>
+					{adminHealthState}
+				</strong>
+			</div>
+			<div class="metric" title="Controller ownership">
+				<span>CTRL</span>
+				<strong>{adminHealthCtrl ? 'Y' : 'N'}</strong>
+			</div>
+			<div class="metric" title="Controller lease remaining">
+				<span>LEASE</span>
+				<strong>{adminHealthLeaseSec}s</strong>
+			</div>
+			<div class="metric" title="Global turn">
+				<span>TURN</span>
+				<strong>{adminHealthTurn}</strong>
+			</div>
+			<div class="metric" title="Playback event sequence">
+				<span>SEQ</span>
+				<strong>{adminHealthSeq}</strong>
+			</div>
+		{/if}
 	</section>
 
 	<section class="story-grid">
@@ -189,6 +223,27 @@
 		overflow: hidden;
 		text-overflow: ellipsis;
 	}
+	.metric strong .health-dot {
+		display: inline-flex;
+		align-items: center;
+		margin-right: 6px;
+	}
+	.health-dot {
+		width: 6px;
+		height: 6px;
+		border-radius: 50%;
+		background: var(--status-pending);
+		box-shadow: 0 0 8px color-mix(in srgb, var(--status-pending) 60%, transparent);
+		flex: 0 0 auto;
+	}
+	.health-dot.ok {
+		background: var(--status-good);
+		box-shadow: 0 0 8px color-mix(in srgb, var(--status-good) 60%, transparent);
+	}
+	.health-dot.bad {
+		background: var(--status-bad);
+		box-shadow: 0 0 8px color-mix(in srgb, var(--status-bad) 60%, transparent);
+	}
 
 	.story-grid {
 		display: grid;
@@ -271,7 +326,7 @@
 		color: var(--tier-gold);
 	}
 	.tier.platinum .name {
-		color: var(--tier-platinum);
+		color: #7de3ff;
 	}
 
 	.faq {

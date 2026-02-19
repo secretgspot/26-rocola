@@ -281,5 +281,6 @@
 ## Next Planned Hardening
 - [x] Add dedicated unit tests for controller lease race/takeover scenarios
 - [x] Add integration coverage for controller failover (active tab closed -> standby acquires)
-- [ ] Add admin health widget in UI using `/api/admin/health/realtime`
+- [x] Add admin health widget in UI using `/api/admin/health/realtime`
+    - [x] Place admin health stats in help landing metrics strip (admin/dev only), not header
 - [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence

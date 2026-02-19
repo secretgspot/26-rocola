@@ -36,14 +36,26 @@
 	let tickInFlight = $state(false);
 	let endedInFlight = $state(false);
 	let suppressTickUntilMs = $state(0);
+	let adminHealth = $state(null);
+	let adminHealthError = $state(false);
+	let adminHealthLeaseLeftMs = $state(0);
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
+	const isDevEnv = $derived(Boolean(data?.isDev));
 	const canControl = $derived(isAdmin && isController);
+	const showAdminHealth = $derived(isAdmin || isDevEnv);
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
 	const hasActiveQueuePlayback = $derived(Boolean(playerState.currentSong) && playerState.queue.length > 0);
 	const hideStarButton = $derived(!playerState.currentSong);
+	const adminHealthState = $derived(
+		!isAdmin ? '' : adminHealthError ? 'ERR' : adminHealth?.ok ? 'OK' : '...'
+	);
+	const adminHealthTurn = $derived(Number(adminHealth?.turn ?? 0));
+	const adminHealthSeq = $derived(Number(adminHealth?.playback?.eventSeq ?? 0));
+	const adminHealthLeaseSec = $derived(Math.max(0, Math.ceil(adminHealthLeaseLeftMs / 1000)));
+	const adminHealthCtrl = $derived(Boolean(adminHealth?.controller?.isController));
 	const konami = [
 		'arrowup',
 		'arrowup',
@@ -107,6 +119,49 @@
 			alive = false;
 			if (timer) clearTimeout(timer);
 		};
+	});
+
+	$effect(() => {
+		if (!isAdmin || typeof window === 'undefined') {
+			adminHealth = null;
+			adminHealthError = false;
+			adminHealthLeaseLeftMs = 0;
+			return;
+		}
+		let timer;
+		let alive = true;
+		const poll = async () => {
+			try {
+				const res = await fetch('/api/admin/health/realtime');
+				const info = await res.json().catch(() => ({}));
+				if (!alive) return;
+				if (res.ok && info?.ok) {
+					adminHealth = info;
+					adminHealthError = false;
+					const expiresAt = Number(info?.controller?.expiresAt || 0);
+					adminHealthLeaseLeftMs = Math.max(0, expiresAt - Date.now());
+				} else {
+					adminHealthError = true;
+				}
+			} catch {
+				if (!alive) return;
+				adminHealthError = true;
+			}
+			timer = setTimeout(poll, 2200);
+		};
+		poll();
+		return () => {
+			alive = false;
+			if (timer) clearTimeout(timer);
+		};
+	});
+
+	$effect(() => {
+		if (!isAdmin || typeof window === 'undefined') return;
+		const timer = setInterval(() => {
+			adminHealthLeaseLeftMs = Math.max(0, adminHealthLeaseLeftMs - 250);
+		}, 250);
+		return () => clearInterval(timer);
 	});
 
 	function toggleTheme() {
@@ -590,7 +645,15 @@
 				</button>
 				<div class="help-modal" role="dialog" aria-modal="true" aria-label="How Rocola works">
 					<div class="help-content">
-						<LandingPage />
+						<LandingPage
+							showAdminHealth={showAdminHealth}
+							adminHealthState={adminHealthState}
+							adminHealthError={adminHealthError}
+							adminHealthCtrl={adminHealthCtrl}
+							adminHealthLeaseSec={adminHealthLeaseSec}
+							adminHealthTurn={adminHealthTurn}
+							adminHealthSeq={adminHealthSeq}
+						/>
 					</div>
 				</div>
 			</div>
