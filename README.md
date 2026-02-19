@@ -10,6 +10,19 @@ A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe ch
 - Server-authoritative transition tick (`/api/playback/tick`)
 - Admin/dev controls (seed, skip, clear)
 - Help menu and keyboard shortcuts
+- Installable PWA manifest with desktop/mobile screenshots
+
+## Screenshots
+### Desktop
+![Rocola Desktop](static/screenshots/desktop.png)
+
+### Mobile
+![Rocola Mobile](static/screenshots/mobile-portrait.png)
+
+## Install (PWA)
+- Open Rocola in Chrome/Edge.
+- Use browser install action (`Install app` / `Add to Home Screen`).
+- App metadata comes from `static/manifest.webmanifest` (includes desktop + mobile screenshots).
 
 ## Quick Start
 1. Install dependencies:

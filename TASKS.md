@@ -284,3 +284,11 @@
 - [x] Add admin health widget in UI using `/api/admin/health/realtime`
     - [x] Place admin health stats in help landing metrics strip (admin/dev only), not header
 - [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence
+
+## Installability (2026-02-19)
+- [x] Add web app manifest (`static/manifest.webmanifest`)
+- [x] Include manifest screenshots in new format (desktop + mobile `form_factor`)
+- [x] Add static PWA assets (`static/icons/icon.svg`, screenshot files)
+- [x] Add service worker (`src/service-worker.js`) for installability/offline shell caching
+- [x] Wire manifest + mobile web app meta tags in `src/app.html`
+- [x] Update README with screenshot section and install instructions
