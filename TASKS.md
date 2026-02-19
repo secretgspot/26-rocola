@@ -279,7 +279,7 @@
     - [x] Make `playback/tick` invalid-current path non-consuming (no secondary advance on stale pointer)
 
 ## Next Planned Hardening
-- [ ] Add dedicated unit tests for controller lease race/takeover scenarios
-- [ ] Add integration coverage for controller failover (active tab closed -> standby acquires)
+- [x] Add dedicated unit tests for controller lease race/takeover scenarios
+- [x] Add integration coverage for controller failover (active tab closed -> standby acquires)
 - [ ] Add admin health widget in UI using `/api/admin/health/realtime`
 - [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence
