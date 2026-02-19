@@ -435,7 +435,7 @@
 							aria-busy={nextPending}
 							disabled={nextPending}
 						>
-							<Icon name="skip" size={20} color="currentColor" strokeWidth={1.8} />
+							<Icon name="skip" size={25} color="currentColor" strokeWidth={1.8} />
 						</button>
 					{/if}
 					<button
@@ -457,7 +457,7 @@
 						aria-busy={seedPending}
 						disabled={seedPending}
 					>
-						<Icon name="seed" size={20} color="currentColor" strokeWidth={1.8} />
+						<Icon name="seed" size={25} color="currentColor" strokeWidth={1.8} />
 					</button>
 					{#if hasActiveQueuePlayback}
 						<button
@@ -480,24 +480,24 @@
 							aria-busy={clearPending}
 							disabled={clearPending}
 						>
-							<Icon name="clear" size={20} color="currentColor" strokeWidth={1.8} />
+							<Icon name="clear" size={25} color="currentColor" strokeWidth={1.8} />
 						</button>
 					{/if}
 				</div>
 			{/if}
 				<button class="theme-toggle btn-skip btn-theme" onclick={toggleTheme} aria-label="Toggle theme">
-					<Icon name={theme === 'dark' ? 'dark' : 'light'} size={20} color="currentColor" strokeWidth={1.8} />
+					<Icon name={theme === 'dark' ? 'dark' : 'light'} size={25} color="currentColor" strokeWidth={1.8} />
 				</button>
 				<button class="btn-skip btn-help" class:active={helpOpen} onclick={toggleHelp} aria-label="Help (H)">
-					<Icon name="question" size={20} color="currentColor" strokeWidth={1.8} />
+					<Icon name="question" size={25} color="currentColor" strokeWidth={1.8} />
 				</button>
 					<div class="status">
-						<span title="Connected clients">
-							<Icon name="stations" size={20} color="currentColor" strokeWidth={1.8} />
+						<span class="status-item" title="Connected clients">
+							<Icon name="stations" size={21} color="currentColor" strokeWidth={1.8} />
 						</span>
 						<span class="count">{playerState.clientCount.toString().padStart(2, '0')}</span>
 						<span class="queue-count" aria-label="Queue count" title="Songs waiting in queue">
-							<Icon name="clients" size={20} color="currentColor" strokeWidth={1.8} />
+							<Icon name="clients" size={21} color="currentColor" strokeWidth={1.8} />
 							<span class="count">{playerState.queue.length.toString().padStart(2, '0')}</span>
 						</span>
 				</div>
@@ -689,11 +689,20 @@
 		border-left: 0;
 		padding-left: 0;
 	}
-	.status .count { color: var(--text-dim); letter-spacing: 0.12em; }
+	.status .status-item,
 	.status .queue-count {
 		display: inline-flex;
 		align-items: center;
-		gap: var(--size-1);
+	}
+	.status .count { color: var(--text-dim); letter-spacing: 0.12em; }
+	.status .queue-count { gap: var(--size-1); }
+	.status :global(.icon-root) {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		line-height: 0;
+		vertical-align: middle;
+		flex: 0 0 auto;
 	}
 	.live-dot {
 		width: var(--size-2);
