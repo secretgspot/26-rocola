@@ -7,6 +7,7 @@ import { invalidateQueueCache, getGlobalTurn, advanceQueue } from '$lib/server/s
 import { broadcast } from '$lib/server/realtime.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { isActiveController } from '$lib/server/controller.js';
+import { addPlaybackLog } from '$lib/server/debug/playback-log.js';
 
 export async function POST(event) {
 	if (!(await isActiveController(event))) {
@@ -56,12 +57,33 @@ export async function POST(event) {
 				.where(eq(songs.id, songId));
 
 			if (nextCount < 3) {
+				addPlaybackLog({
+					source: 'server',
+					event: 'unavailable_retry',
+					reason: 'transient_error',
+					queueId,
+					errorCode,
+					sessionId: event.locals?.sessionId || null,
+					clientIp: event.locals?.clientIp || null,
+					controller: true,
+					data: { retriesLeft: 3 - nextCount, nextCount }
+				});
 				return json({ ok: true, action: 'retry', retriesLeft: 3 - nextCount });
 			}
 
 			// Skip this occurrence without permanently blacklisting the song.
 			// This avoids transient YouTube/player errors permanently removing valid tracks.
 			await advanceQueue(queueId);
+			addPlaybackLog({
+				source: 'server',
+				event: 'unavailable_skip',
+				reason: 'transient_threshold',
+				queueId,
+				errorCode,
+				sessionId: event.locals?.sessionId || null,
+				clientIp: event.locals?.clientIp || null,
+				controller: true
+			});
 			return json({ ok: true, action: 'skip' });
 		}
 
@@ -75,10 +97,29 @@ export async function POST(event) {
 		await setPlaybackState({ currentQueueId: null, startedAtMs: null });
 		invalidateQueueCache();
 		await broadcast('queue_changed', { currentTurn: await getGlobalTurn() });
+		addPlaybackLog({
+			source: 'server',
+			event: 'unavailable_marked',
+			reason: 'restriction_or_manual',
+			queueId,
+			errorCode,
+			sessionId: event.locals?.sessionId || null,
+			clientIp: event.locals?.clientIp || null,
+			controller: true
+		});
 
 		return json({ ok: true, action: 'skip' });
 	} catch (err) {
 		console.error('[queue/unavailable] failed', err);
+		addPlaybackLog({
+			source: 'server',
+			event: 'unavailable_error',
+			reason: 'exception',
+			sessionId: event.locals?.sessionId || null,
+			clientIp: event.locals?.clientIp || null,
+			controller: true,
+			data: { message: err?.message || String(err) }
+		});
 		return json({ ok: false, error: 'mark_unavailable_failed' }, { status: 500 });
 	}
 }

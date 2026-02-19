@@ -2,7 +2,7 @@ import { db } from '$lib/server/db/index.js';
 import { queue, songs, queuePlays, freeSubmissions } from '$lib/server/db/schema.js';
 import { broadcast } from '$lib/server/realtime.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
-import { eq, sql, gt, and } from 'drizzle-orm';
+import { eq, sql, gt, and, gte } from 'drizzle-orm';
 import { TIER_CONFIG, getTierConfig } from '$lib/config.js';
 
 const MAX_PREMIUM_STREAK = 1;
@@ -365,7 +365,26 @@ export async function advanceQueue(fromQueueId = null) {
 			let current = rows[0];
 			if (playingId) {
 				const found = rows.find((r) => r.id === playingId);
-				if (found) current = found;
+				if (found) {
+					current = found;
+				} else {
+					// Playback pointer is stale (already advanced elsewhere). Do not consume again.
+					return {
+						ok: true,
+						message: 'Already advanced',
+						next: rows[0]
+							? {
+								...rows[0].song,
+								...rows[0],
+								queueId: rows[0].id,
+								songId: rows[0].songId,
+								startedAt: playback.startedAt,
+								startedAtMs: playback.startedAtMs
+							}
+							: null,
+						currentTurn: await getGlobalTurn(/** @type {any} */ (tx))
+					};
+				}
 			}
 
 				if (fromQueueId && playingId && fromQueueId !== playingId) {
@@ -387,6 +406,39 @@ export async function advanceQueue(fromQueueId = null) {
 			const now = Math.floor(Date.now() / 1000);
 			const prevTurn = await getGlobalTurn(/** @type {any} */ (tx));
 			const nextTurn = prevTurn + 1;
+			const startedAtSec =
+				typeof playback?.startedAt === 'number'
+					? playback.startedAt
+					: typeof playback?.startedAtMs === 'number'
+						? Math.floor(playback.startedAtMs / 1000)
+						: null;
+			if (startedAtSec !== null) {
+				const alreadyPlayed = await tx
+					.select({ id: queuePlays.id })
+					.from(queuePlays)
+					.where(
+						and(
+							eq(queuePlays.queueId, current.id),
+							gte(queuePlays.playedAt, Math.max(0, startedAtSec - 1))
+						)
+					)
+					.limit(1);
+				if (alreadyPlayed.length > 0) {
+					return {
+						ok: true,
+						message: 'Already advanced',
+						next: {
+							...current.song,
+							...current,
+							queueId: current.id,
+							songId: current.songId,
+							startedAt: playback.startedAt,
+							startedAtMs: playback.startedAtMs
+						},
+						currentTurn: prevTurn
+					};
+				}
+			}
 
 			await tx.update(queue).set({ 
 				playsRemainingToday: Math.max(0, current.playsRemainingToday - 1), 

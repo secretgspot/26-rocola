@@ -261,6 +261,22 @@
     - [x] Harden ended-event guard further (ignore non-near-end ended pulses during first 8s to prevent random early consumes)
     - [x] Route `onended` through server tick validation (no direct client consume on ended pulse)
     - [x] Change non-restriction playback errors to temporary skip (advance queue) instead of permanent song blacklisting
+    - [x] Add dedicated controller-only ended endpoint (`/api/playback/ended`) to advance immediately at true end without duration-metadata lag
+    - [x] Add per-queue ended dedupe in player to prevent duplicate consume attempts from repeated ended events
+    - [x] Delay paused-state auto-resume correction for first 5s to reduce startup stutter/thrash
+    - [x] Add startup error gate using observed playback progress before any server-side unavailable/skip action
+    - [x] Add near-end handoff trigger from player time (controller-only) to reduce YouTube end-screen linger
+    - [x] Add structured playback debug log system (`/api/debug/playback-log`) with in-memory ring buffer, read/write/clear endpoints
+    - [x] Instrument server transition paths (`queue/next`, `playback/tick`, `playback/ended`, `queue/unavailable`) with structured event logs
+    - [x] Instrument client/controller playback signals (ended, tick-advance, player errors/retries) into debug log stream
+    - [x] Persist debug log stream to local file `docs/debug/playback-log.ndjson` for post-run forensic analysis
+    - [x] Add idempotency guard in `advanceQueue` using `queue_plays` + playback start time to block duplicate consumes from concurrent end/tick signals
+    - [x] Bind ended-signal queue/video IDs to actively loaded player track (not reactive page state) to prevent stale-end consuming newly started song
+    - [x] Add server `playback/ended` guards for video mismatch and early-ended timing against active track duration
+    - [x] Prevent overlapping controller tick requests and temporarily suppress tick polling after ended signal handoff
+    - [x] Use actively loaded queue/video IDs for near-end handoff payloads (not reactive store IDs)
+    - [x] Prevent stale-playback pointer from consuming next song in `advanceQueue` when current playback queue ID is no longer in eligible rows
+    - [x] Make `playback/tick` invalid-current path non-consuming (no secondary advance on stale pointer)
 
 ## Next Planned Hardening
 - [ ] Add dedicated unit tests for controller lease race/takeover scenarios

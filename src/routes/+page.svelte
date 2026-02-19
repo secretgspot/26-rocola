@@ -32,6 +32,10 @@
 	let isController = $state(false);
 	let queueHideTimer = null;
 	let isMobileViewport = $state(false);
+	let debugLogBusy = $state(false);
+	let tickInFlight = $state(false);
+	let endedInFlight = $state(false);
+	let suppressTickUntilMs = $state(0);
 
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const canControl = $derived(isAdmin && isController);
@@ -267,12 +271,13 @@
 		if (!canControl) return;
 		if (nextPending) return;
 		nextPending = true;
+		const reason = 'manual_or_ui';
 		const currentQueueId =
 			playerState.currentSong?.queueId || playerState.currentSong?.id;
 		const res = await fetch('/api/queue/next', {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ fromQueueId: currentQueueId }),
+			body: JSON.stringify({ fromQueueId: currentQueueId, reason }),
 		});
 		let data = null;
 		try {
@@ -296,6 +301,23 @@
 		nextPending = false;
 	}
 
+	async function writePlaybackDebug(payload) {
+		if (!canControl && !isAdmin) return;
+		if (debugLogBusy) return;
+		debugLogBusy = true;
+		try {
+			await fetch('/api/debug/playback-log', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload || {})
+			});
+		} catch {
+			// ignore debug logging failures
+		} finally {
+			debugLogBusy = false;
+		}
+	}
+
 	async function star(payload) {
 		try {
 			await fetch('/api/realtime/star', {
@@ -310,10 +332,63 @@
 
 	async function tickPlayback() {
 		if (!canControl) return;
+		if (tickInFlight) return;
+		if (Date.now() < suppressTickUntilMs) return;
+		tickInFlight = true;
 		try {
-			await fetch('/api/playback/tick', { method: 'POST' });
+			const res = await fetch('/api/playback/tick', { method: 'POST' });
+			const data = await res.json().catch(() => ({}));
+			if (data?.action === 'advance') {
+				writePlaybackDebug({
+					source: 'client',
+					event: 'tick_advance_seen',
+					reason: data?.reason || 'tick',
+					queueId: playerState.currentSong?.queueId || playerState.currentSong?.id || null,
+					videoId: playerState.currentSong?.videoId || null,
+					progressPct: playbackProgress,
+					data
+				});
+			}
 		} catch {
 			// ignore transient errors
+		} finally {
+			tickInFlight = false;
+		}
+	}
+
+	async function endedPlayback(payload = null) {
+		if (!canControl) return;
+		if (endedInFlight) return;
+		endedInFlight = true;
+		suppressTickUntilMs = Date.now() + 1200;
+		try {
+			const queueId =
+				typeof payload?.queueId === 'string'
+					? payload.queueId
+					: playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+			const videoId =
+				typeof payload?.videoId === 'string'
+					? payload.videoId
+					: playerState.currentSong?.videoId || null;
+			const res = await fetch('/api/playback/ended', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ queueId, videoId })
+			});
+			const data = await res.json().catch(() => ({}));
+			writePlaybackDebug({
+				source: 'client',
+				event: 'ended_signal_sent',
+				reason: data?.reason || data?.action || 'ended',
+				queueId,
+				videoId,
+				progressPct: playbackProgress,
+				data
+			});
+		} catch {
+			// ignore transient errors
+		} finally {
+			endedInFlight = false;
 		}
 	}
 
@@ -436,10 +511,11 @@
 				{/snippet}
 				<VideoPlayer
 					onnext={advance}
-					onendedsignal={tickPlayback}
+					onendedsignal={endedPlayback}
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}
+					ondebug={writePlaybackDebug}
 					onlocalblockstate={handleLocalBlockState}
 					{canControl}
 					onsynctelemetry={handleSyncTelemetry} />

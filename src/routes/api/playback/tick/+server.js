@@ -6,6 +6,7 @@ import { getPlaybackState } from '$lib/server/services/playback.js';
 import { advanceQueue } from '$lib/server/services/queue.js';
 import { db } from '$lib/server/db/index.js';
 import { queue, songs } from '$lib/server/db/schema.js';
+import { addPlaybackLog } from '$lib/server/debug/playback-log.js';
 
 export async function POST(event) {
 	if (!isAdminRequest(event, { allowDev: false })) {
@@ -36,7 +37,19 @@ export async function POST(event) {
 		.limit(1);
 
 	if (!rows[0]) {
-		const advanced = await advanceQueue(playback.currentQueueId);
+		// Stale playback pointer (another transition already moved playback).
+		// Do not consume again from tick path.
+		const advanced = { ok: true, message: 'Already advanced' };
+		addPlaybackLog({
+			source: 'server',
+			event: 'tick_advance',
+			reason: 'invalid_current',
+			queueId: playback.currentQueueId,
+			sessionId: event.locals?.sessionId || null,
+			clientIp: event.locals?.clientIp || null,
+			controller: true,
+			data: { nextQueueId: advanced?.next?.queueId || advanced?.next?.id || null }
+		});
 		return json({ ok: true, action: 'advance', reason: 'invalid_current', result: advanced });
 	}
 
@@ -53,6 +66,20 @@ export async function POST(event) {
 	}
 	if (elapsedMs >= durationSec * 1000 + 120) {
 		const advanced = await advanceQueue(playback.currentQueueId);
+		addPlaybackLog({
+			source: 'server',
+			event: 'tick_advance',
+			reason: 'elapsed',
+			queueId: playback.currentQueueId,
+			videoId: rows[0]?.s?.videoId || null,
+			durationSec,
+			elapsedSec: elapsedMs / 1000,
+			expectedSec: durationSec,
+			sessionId: event.locals?.sessionId || null,
+			clientIp: event.locals?.clientIp || null,
+			controller: true,
+			data: { nextQueueId: advanced?.next?.queueId || advanced?.next?.id || null }
+		});
 		return json({ ok: true, action: 'advance', reason: 'elapsed', result: advanced });
 	}
 

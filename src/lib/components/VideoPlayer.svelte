@@ -11,6 +11,7 @@
 		onsynctelemetry,
 		onendedsignal,
 		onlocalblockstate,
+		ondebug,
 		canControl = false
 	} = $props();
 
@@ -38,6 +39,10 @@
 	let lastBlockedRefreshAt = $state(0);
 	let lastForcedLoadAt = $state(0);
 	let localErrorRetryByQueue = $state({});
+	let endedHandledQueueId = $state(null);
+	let maxObservedPlayerSec = $state(0);
+	let activeLoadedQueueId = $state(null);
+	let activeLoadedVideoId = $state(null);
 
 	const SYNC_CFG = {
 		warmupMs: 4200,
@@ -49,7 +54,8 @@
 		microSeekCadenceMs: 1400,
 		minSeekGapMs: 900,
 		convergenceCheckCadenceMs: 1200,
-		convergenceMinAgeMs: 4200
+		convergenceMinAgeMs: 4200,
+		preEndSignalSec: 0.35
 	};
 	
 	/** @type {string | null} */
@@ -116,6 +122,14 @@
 		if (nextRequestedForQueueId === qid) return;
 		nextRequestedForQueueId = qid;
 		onnext?.();
+	}
+
+	function emitDebug(event, data = {}) {
+		ondebug?.({
+			source: 'player',
+			event,
+			data
+		});
 	}
 
 	async function reportUnavailableFromPlaybackError(errorPayload) {
@@ -192,7 +206,20 @@
 						} catch {
 							// ignore and fall through
 						}
-						onendedsignal?.();
+						const qid = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+						if (qid && endedHandledQueueId === qid) return;
+						endedHandledQueueId = qid;
+						emitDebug('yt_state_ended', {
+							queueId: qid,
+							videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null,
+							durationSec: p?._raw?.getDuration?.() || playerState.currentSong?.duration || null,
+							elapsedSec: p?.getCurrentTime?.() || null,
+							trackAgeMs: transitionAtMs > 0 ? nowMs() - transitionAtMs : null
+						});
+						onendedsignal?.({
+							queueId: qid,
+							videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null
+						});
 					}
 					if (e.data === 1) {
 						const activeTransitionKey = `${playerState.currentSong?.queueId || playerState.currentSong?.id || playerState.currentSong?.videoId || 'unknown'}:${playerState.currentSong?.startedAtMs || playerState.currentSong?.startedAt || 0}`;
@@ -230,7 +257,7 @@
 				onError: async (e) => {
 					const errorVideoId = e?.target?.getVideoData?.()?.video_id || null;
 					const currentVideoId = playerState.currentSong?.videoId || null;
-					const currentQueueId = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+					const currentQueueId = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
 					const errorCode = typeof e?.data === 'number' ? e.data : null;
 					const isRestriction = errorCode === 100 || errorCode === 101 || errorCode === 150;
 					// Ignore stale player errors from a previously loaded video.
@@ -244,6 +271,13 @@
 						canControl,
 						errorCode
 					});
+					emitDebug('yt_error', {
+						queueId: currentQueueId,
+						videoId: currentVideoId,
+						errorCode,
+						isRestriction,
+						trackAgeMs: transitionAtMs > 0 ? nowMs() - transitionAtMs : null
+					});
 					if (!canControl) {
 						addToast({ message: `LOCAL PLAYBACK BLOCKED`, level: 'error' });
 						refreshQueue();
@@ -252,9 +286,9 @@
 
 					const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
 					const localRetries = currentQueueId ? Number(localErrorRetryByQueue[currentQueueId] || 0) : 0;
-					if (!isRestriction && (trackAgeMs < 2400 || localRetries < 2)) {
-						// Conservative: transient player errors at startup are common.
-						// Retry locally before any server-side unavailable/skip decision.
+					if (trackAgeMs < 5000 || maxObservedPlayerSec < 1.6 || (!errorVideoId && trackAgeMs < 9000)) {
+						// Startup guard: avoid server-side skip decisions while track is stabilizing.
+						// Unknown-video errors (missing video_id) are commonly transient.
 						if (currentQueueId) {
 							localErrorRetryByQueue = {
 								...localErrorRetryByQueue,
@@ -267,12 +301,48 @@
 							} catch {
 								// ignore
 							}
-						}, 320);
+						}, 360);
+						emitDebug('yt_error_local_retry', {
+							queueId: currentQueueId,
+							videoId: currentVideoId,
+							errorCode,
+							retryCount: localRetries + 1,
+							reason: 'startup_guard'
+						});
+						return;
+					}
+					if (!isRestriction && localRetries < 3) {
+						// Conservative: transient non-restriction errors can self-heal after retries.
+						if (currentQueueId) {
+							localErrorRetryByQueue = {
+								...localErrorRetryByQueue,
+								[currentQueueId]: localRetries + 1
+							};
+						}
+						setTimeout(() => {
+							try {
+								player?.play?.();
+							} catch {
+								// ignore
+							}
+						}, 420);
+						emitDebug('yt_error_local_retry', {
+							queueId: currentQueueId,
+							videoId: currentVideoId,
+							errorCode,
+							retryCount: localRetries + 1,
+							reason: 'transient_retry'
+						});
 						return;
 					}
 
 					const action = await reportUnavailableFromPlaybackError(e);
 					if (action === 'retry') {
+						emitDebug('unavailable_action_retry', {
+							queueId: currentQueueId,
+							videoId: currentVideoId,
+							errorCode
+						});
 						addToast({ message: `PLAYBACK RETRY`, level: 'info' });
 						setTimeout(() => {
 							try {
@@ -284,6 +354,11 @@
 						return;
 					}
 					if (action === 'skip') {
+						emitDebug('unavailable_action_skip', {
+							queueId: currentQueueId,
+							videoId: currentVideoId,
+							errorCode
+						});
 						// Song was marked unavailable server-side; do not consume the next track.
 						// Let controller recovery promote the next playable item.
 						addToast({ message: `PLAYBACK BLOCKED -> RECOVER`, level: 'error' });
@@ -293,6 +368,11 @@
 					// Unknown outcome from unavailable endpoint (network/race/etc):
 					// do not consume next track optimistically; let server authoritative tick recover.
 					addToast({ message: `PLAYBACK ERROR -> RECOVER`, level: 'error' });
+					emitDebug('unavailable_action_unknown', {
+						queueId: currentQueueId,
+						videoId: currentVideoId,
+						errorCode
+					});
 					refreshQueue();
 				}
 			}).then(res => {
@@ -347,9 +427,11 @@
 		const transitionKey = `${current.queueId || current.id || current.videoId}:${currentStartedAt || 0}`;
 		const isNewTransition = transitionKey !== lastTransitionKey;
 
-			if (isNewVideo || isNewStart || isNewTransition) {
+				if (isNewVideo || isNewStart || isNewTransition) {
 				const seekTo = getServerElapsed();
 				const shouldHardLoad = isNewVideo || localPlaybackBlocked;
+				activeLoadedQueueId = current.queueId || current.id || null;
+				activeLoadedVideoId = current.videoId || null;
 				if (shouldHardLoad) {
 					player.load(current.videoId, true);
 					// Keep initial playback smooth: defer non-trivial seek until first "playing" state.
@@ -367,7 +449,9 @@
 				transitionAtMs = nowMs();
 				transitionPlaybackReportedForKey = null;
 				lastErrorQueueId = null;
+				endedHandledQueueId = null;
 				localErrorRetryByQueue = {};
+				maxObservedPlayerSec = 0;
 				localPlaybackBlocked = false;
 				onlocalblockstate?.({ blocked: false });
 				nextRequestedForQueueId = null;
@@ -407,6 +491,13 @@
 						if (duration > 0) {
 							const elapsedServer = getServerElapsed();
 							const elapsedPlayer = player.getCurrentTime?.();
+							if (
+								typeof elapsedPlayer === 'number' &&
+								Number.isFinite(elapsedPlayer) &&
+								elapsedPlayer > maxObservedPlayerSec
+							) {
+								maxObservedPlayerSec = elapsedPlayer;
+							}
 							const activeVideoId = player?._raw?.getVideoData?.()?.video_id || null;
 							const targetVideoId = playerState.currentSong?.videoId || null;
 							const sameVideoLoaded =
@@ -456,6 +547,25 @@
 							// Transition is server-authoritative.
 							// Do not consume next track from client-side duration heuristics.
 							// Server playback tick + ended signal handle advancement.
+							// Near-end handoff: use player-reported time to avoid prolonged YouTube end-screen.
+							if (
+								canControl &&
+								sameVideoLoaded &&
+								!localPlaybackBlocked &&
+								duration >= 7 &&
+								typeof elapsedPlayer === 'number' &&
+								Number.isFinite(elapsedPlayer) &&
+								elapsedPlayer >= Math.max(1.8, duration - SYNC_CFG.preEndSignalSec)
+							) {
+								const qid = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+								if (!qid || endedHandledQueueId !== qid) {
+									endedHandledQueueId = qid;
+									onendedsignal?.({
+										queueId: qid,
+										videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null
+									});
+								}
+							}
 						} else if (localPlaybackBlocked) {
 							// Keep HUD alive even when duration is unknown on blocked embeds.
 							const elapsedServer = getServerElapsed();
@@ -514,15 +624,21 @@
 					lastStateCheck = time;
 					try {
 						const state = player.getPlayerState?.();
+						const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
 						if (state === 2) {
-							const correct = getServerElapsed();
-							if (time - lastResumeAttemptAt > 2500) {
-								lastResumeAttemptAt = time;
-								const current = player.getCurrentTime?.();
-								if (typeof current === 'number' && Math.abs(current - correct) > 1.2) {
-									player.seek(correct);
+							if (trackAgeMs < 5000) {
+								// Avoid start-of-track pause/seek thrash.
+								// Let the normal loop continue without forcing play/seek yet.
+							} else {
+								const correct = getServerElapsed();
+								if (time - lastResumeAttemptAt > 2500) {
+									lastResumeAttemptAt = time;
+									const current = player.getCurrentTime?.();
+									if (typeof current === 'number' && Math.abs(current - correct) > 1.2) {
+										player.seek(correct);
+									}
+									player.play();
 								}
-								player.play();
 							}
 						}
 					} catch {
