@@ -3,7 +3,7 @@ import { db } from '$lib/server/db/index.js';
 import { queue, songs } from '$lib/server/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { checkRate } from '$lib/server/security.js';
-import { invalidateQueueCache, getGlobalTurn } from '$lib/server/services/queue.js';
+import { invalidateQueueCache, getGlobalTurn, advanceQueue } from '$lib/server/services/queue.js';
 import { broadcast } from '$lib/server/realtime.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { isActiveController } from '$lib/server/controller.js';
@@ -42,7 +42,8 @@ export async function POST(event) {
 			.limit(1);
 		const currentErrorCount = Number(songRows[0]?.errorCount || 0);
 
-		// Transient errors are retried a few times before forcing skip/unavailable.
+		// Transient errors are retried a few times before forcing a temporary skip.
+		// Only hard restriction codes permanently mark a song unavailable.
 		if (reason === 'youtube_playback_error' && errorCode !== null && !restrictionCodes.has(errorCode)) {
 			const nextCount = currentErrorCount + 1;
 			await db
@@ -57,6 +58,11 @@ export async function POST(event) {
 			if (nextCount < 3) {
 				return json({ ok: true, action: 'retry', retriesLeft: 3 - nextCount });
 			}
+
+			// Skip this occurrence without permanently blacklisting the song.
+			// This avoids transient YouTube/player errors permanently removing valid tracks.
+			await advanceQueue(queueId);
+			return json({ ok: true, action: 'skip' });
 		}
 
 		await db.update(songs).set({

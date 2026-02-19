@@ -259,6 +259,8 @@
     - [x] Replace strict duration-based ended guard with startup-age + near-end guard to handle metadata mismatch without long end-screens
     - [x] Add conservative startup error handling in player (local retries before server-side unavailable/skip on non-restriction errors)
     - [x] Harden ended-event guard further (ignore non-near-end ended pulses during first 8s to prevent random early consumes)
+    - [x] Route `onended` through server tick validation (no direct client consume on ended pulse)
+    - [x] Change non-restriction playback errors to temporary skip (advance queue) instead of permanent song blacklisting
 
 ## Next Planned Hardening
 - [ ] Add dedicated unit tests for controller lease race/takeover scenarios

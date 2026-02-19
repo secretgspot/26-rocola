@@ -436,7 +436,7 @@
 				{/snippet}
 				<VideoPlayer
 					onnext={advance}
-					onendedsignal={advance}
+					onendedsignal={tickPlayback}
 					ontimeupdate={handleTimeUpdate}
 					onstatsupdate={handleStatsUpdate}
 					onplaystate={handlePlayState}
