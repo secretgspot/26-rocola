@@ -16,8 +16,10 @@ function normalize(code) {
 }
 
 export async function POST(event) {
-	const limited = checkRate(event, 'admin-enable', 8, 10 * 60 * 1000, 'ip');
-	if (!limited.ok) return json(limited.body, { status: limited.status });
+	if (!dev) {
+		const limited = checkRate(event, 'admin-enable', 8, 10 * 60 * 1000, 'ip');
+		if (!limited.ok) return json(limited.body, { status: limited.status });
+	}
 
 	try {
 		const { request, cookies } = event;
@@ -28,11 +30,12 @@ export async function POST(event) {
 		if (actual !== expected) {
 			return json({ ok: false, error: 'Invalid code' }, { status: 403 });
 		}
+		const secureCookie = event.url.protocol === 'https:' && !dev;
 
 		cookies.set('admin_mode', '1', {
 			path: '/',
 			httpOnly: true,
-			secure: !dev,
+			secure: secureCookie,
 			sameSite: 'lax',
 			maxAge: 60 * 60 * 12
 		});
@@ -43,11 +46,13 @@ export async function POST(event) {
 	}
 }
 
-export async function DELETE({ cookies }) {
+export async function DELETE(event) {
+	const { cookies, url } = event;
+	const secureCookie = url.protocol === 'https:' && !dev;
 	cookies.set('admin_mode', '0', {
 		path: '/',
 		httpOnly: true,
-		secure: !dev,
+		secure: secureCookie,
 		sameSite: 'lax',
 		maxAge: 0
 	});

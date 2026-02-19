@@ -285,6 +285,28 @@
     - [x] Place admin health stats in help landing metrics strip (admin/dev only), not header
 - [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence
 
+## Autonomous Station Mode (Always-On Playback)
+- [ ] Phase A: Introduce server scheduler ownership
+    - [ ] Add `station_runtime` table for scheduler heartbeat/lease and last tick time
+    - [ ] Add `stationTick()` server service that advances playback based on DB clock only
+    - [ ] Make `stationTick()` idempotent and safe under concurrent invocations (advisory lock)
+- [ ] Phase B: Add execution path independent of viewers
+    - [ ] Add `/api/station/tick` internal endpoint protected by secret + rate guard
+    - [ ] Add Vercel Cron to call `/api/station/tick` every 15-30s
+    - [ ] Ensure catch-up logic advances multiple songs if downtime gap elapsed
+- [ ] Phase C: Realtime broadcast from server ticker
+    - [ ] Server publishes `song_playing`, `queue_changed`, `song_ended` from autonomous tick path
+    - [ ] Clients become passive listeners for normal operation (no client-required progress driving)
+- [ ] Phase D: Client/controller simplification
+    - [ ] Keep admin `skip/seed/clear` as explicit actions
+    - [ ] Remove dependency on controller polling for automatic transitions
+    - [ ] Retain controller lease only for admin command authority
+- [ ] Phase E: Validation + observability
+    - [ ] Unit tests for `stationTick()` timing transitions and catch-up
+    - [ ] Integration test: no clients connected -> queue still advances over time
+    - [ ] Add station lag/last tick metrics to health endpoint + help admin stats
+    - [ ] Add runbook for cron failure, Neon outage, and replay recovery
+
 ## Installability (2026-02-19)
 - [x] Add web app manifest (`static/manifest.webmanifest`)
 - [x] Include manifest screenshots in new format (desktop + mobile `form_factor`)
@@ -292,3 +314,9 @@
 - [x] Add service worker (`src/service-worker.js`) for installability/offline shell caching
 - [x] Wire manifest + mobile web app meta tags in `src/app.html`
 - [x] Update README with screenshot section and install instructions
+- [x] Generate PNG app icons (`192`, `512`, maskable variants) and wire manifest to PNG entries
+- [x] Add screenshot capture automation script (`npm run pwa:screenshots`) for seeded desktop/mobile shots
+- [x] Add icon generation automation script (`npm run pwa:icons`)
+- [x] Add preflight env/config sanity script (`npm run preflight:check`)
+- [x] Run Playwright E2E suite and fix stale tests to match controller-lease behavior
+- [x] Run Lighthouse audits and persist JSON reports to `docs/debug/`

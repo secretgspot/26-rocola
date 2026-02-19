@@ -29,11 +29,30 @@ test.describe('Rocola UI interactions', () => {
 	});
 
 	test('N triggers skip request in dev/admin mode', async ({ page }) => {
+		await page.context().addCookies([
+			{
+				name: 'admin_mode',
+				value: '1',
+				domain: '127.0.0.1',
+				path: '/'
+			},
+			{
+				name: 'session_id',
+				value: `pw-admin-${Date.now()}`,
+				domain: '127.0.0.1',
+				path: '/'
+			}
+		]);
 		await page.goto('/');
 		await page.evaluate(async () => {
 			await fetch('/api/debug/seed', { method: 'POST' });
 		});
-		await page.waitForTimeout(300);
+		await page.waitForFunction(async () => {
+			const r = await fetch('/api/admin/controller', { method: 'POST' });
+			const j = await r.json();
+			return Boolean(j?.isController);
+		});
+		await expect(page.locator('button.btn-next')).toBeVisible();
 
 		const skipResponsePromise = page.waitForResponse(
 			(resp) =>
@@ -49,7 +68,7 @@ test.describe('Rocola UI interactions', () => {
 	test('mobile help layout keeps landing top visible below header', async ({ page }) => {
 		await page.setViewportSize({ width: 425, height: 888 });
 		await page.goto('/');
-		await page.keyboard.press('h');
+		await page.locator('button.btn-help').click();
 
 		const help = page.locator('.help-modal');
 		const hero = page.locator('.landing .hero h1').first();
@@ -62,4 +81,3 @@ test.describe('Rocola UI interactions', () => {
 		expect(box.y).toBeGreaterThanOrEqual(56);
 	});
 });
-

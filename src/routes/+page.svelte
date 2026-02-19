@@ -188,7 +188,9 @@
 				addToast({ message: 'ADMIN MODE ENABLED', level: 'success' });
 				location.reload();
 			} else {
-				addToast({ message: 'ADMIN MODE FAILED', level: 'error' });
+				const detail = data?.error || `HTTP_${res.status}`;
+				const retry = data?.retryAfter ? ` RETRY ${data.retryAfter}s` : '';
+				addToast({ message: `ADMIN MODE FAILED: ${detail}${retry}`, level: 'error' });
 			}
 		} catch (e) {
 			addToast({ message: 'ADMIN MODE ERROR', level: 'error' });
@@ -203,8 +205,8 @@
 					key: e.key,
 					targetTagName: target?.tagName || null,
 					isHelpOpen: helpOpen,
-					isAdmin: canControl,
-					isDev: false,
+					isAdmin,
+					isDev: isDevEnv,
 					adminIndex,
 					konami
 				});

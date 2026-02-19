@@ -29,7 +29,7 @@ export async function handle({ event, resolve }) {
 	
 	// Admin mode (dev always enabled)
 	const adminCookie = event.cookies.get('admin_mode');
-	event.locals.isAdmin = adminCookie === '1';
+	event.locals.isAdmin = dev || adminCookie === '1';
 	event.locals.isDev = dev;
 
 	const response = await resolve(event);

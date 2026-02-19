@@ -4,9 +4,11 @@
 
 - **Problem**: High-tier songs can dominate playback and reduce variety.
 - **Solution**: Fair queue with tier gaps and enforced free-track interleaving.
+- **Operating model requirement**: Playback must continue server-side even when no clients are connected.
 - **Success**:
   - Premium tracks never play back-to-back when free tracks exist.
   - Queue feels varied and fair across tiers.
+  - Station continues advancing 24/7 without viewer/controller presence.
 
 ## 2. User Experience & Functionality
 
@@ -40,6 +42,13 @@
 - Persisted in DB (`playback_state`): `currentQueueId`, `startedAt`, `startedAtMs`.
 - `startedAtMs` is the sync source of truth for tighter cross-client alignment.
 - Clients sync via Ably events + periodic `GET /api/queue/current`.
+- Automatic queue progression target is server-authoritative scheduler (cron/worker tick), not client heartbeat.
+
+### Autonomous Station Tick (Planned)
+- Add server-side `stationTick()` loop invoked on schedule (e.g., Vercel Cron every 15-30s).
+- Tick computes elapsed time from DB clock and advances queue as needed.
+- Tick path must be idempotent, lock-protected, and able to catch up after downtime gaps.
+- Tick publishes realtime events so clients remain passive viewers.
 
 ### Realtime
 - **Ably Pub/Sub** events:
@@ -58,6 +67,8 @@
 - **Concurrency**: Use transactions + advisory locks during advance.
 - **Desync**: Ably events + 1s sync to `/api/queue/current`.
 - **Seed performance**: concurrent metadata fetch with timeouts.
+- **No-client downtime**: mitigate with autonomous server tick and catch-up logic.
+- **Scheduler outage**: expose health metrics (`lastTickAt`, lag) and alerting.
 
 ## 5. Non-Goals
 

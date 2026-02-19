@@ -12,6 +12,11 @@ A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe ch
 - Help menu and keyboard shortcuts
 - Installable PWA manifest with desktop/mobile screenshots
 
+## Playback Model (Current vs Target)
+- Current: playback state is persisted in DB, but automatic advancement is still driven by active controller heartbeat.
+- Target: autonomous 24/7 station mode where server ticker advances queue even with zero connected clients.
+- This means clients should only observe/play current live state, not drive timeline progression.
+
 ## Screenshots
 ### Desktop
 ![Rocola Desktop](static/screenshots/desktop.png)
@@ -54,6 +59,9 @@ npm run dev
 - `npm run test` - vitest suite
 - `npm run test:integration` - integration tests (expects running server)
 - `npm run test:e2e` - playwright e2e (browser install required)
+- `npm run pwa:screenshots` - capture seeded desktop/mobile screenshots for manifest
+- `npm run pwa:icons` - generate PNG app icons (including maskable variants)
+- `npm run preflight:check` - env/config sanity check (loads `.env` if present)
 
 ## Tests
 - Unit tests cover queue routes/services, security, checkout completion, playback precision, star route, shortcuts.
@@ -72,3 +80,4 @@ npm run test:integration
 - Realtime playback synchronization now uses millisecond precision where available.
 - Only the active admin controller can execute playback-control actions (`next`, unavailability marking).
 - Controller lease is persisted in DB (`controller_lease`) and renewed via `/api/admin/controller`.
+- Autonomous station mode (cron + server tick) is planned to remove client dependence for automatic queue progression.

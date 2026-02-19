@@ -17,7 +17,10 @@
 		"stripe:listen": "docker run --rm -it -v $HOME/.config/stripe:/root/.config/stripe --add-host=host.docker.internal:host-gateway stripe/stripe-cli listen --forward-to host.docker.internal:5173/api/webhooks/stripe",
 		"test:integration": "vitest run test/integration --config vitest.config.js",
 		"test:e2e": "playwright test",
-		"test": "vitest"
+		"test": "vitest",
+		"pwa:screenshots": "node scripts/capture-pwa-screenshots.mjs",
+		"pwa:icons": "node scripts/generate-pwa-icons.mjs",
+		"preflight:check": "node scripts/preflight-check.mjs"
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.58.2",
