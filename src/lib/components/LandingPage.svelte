@@ -120,6 +120,8 @@
 		--lp-muted: var(--text-dim);
 		--lp-line: color-mix(in srgb, var(--text-main) 20%, transparent);
 		--lp-line-soft: color-mix(in srgb, var(--text-main) 16%, transparent);
+		--lp-surface: color-mix(in srgb, var(--bg-panel) 72%, transparent);
+		--lp-surface-soft: color-mix(in srgb, var(--bg-panel) 52%, transparent);
 		color: var(--lp-fg);
 		container-type: inline-size;
 		container-name: landing;
@@ -196,8 +198,10 @@
 	.story {
 		display: grid;
 		gap: 6px;
-		padding: var(--size-2) 0;
+		padding: var(--size-2);
 		border-top: 1px solid var(--lp-line-soft);
+		background: var(--lp-surface-soft);
+		border-radius: 9px;
 	}
 	.story h2 {
 		margin: 0 0 var(--size-1);
@@ -232,7 +236,7 @@
 		padding: var(--size-2);
 		border: 1px solid var(--lp-line);
 		border-radius: 9px;
-		background: transparent;
+		background: var(--lp-surface);
 	}
 	.tier .top {
 		display: flex;
@@ -284,6 +288,7 @@
 		padding: var(--size-2);
 		border: 1px solid var(--lp-line-soft);
 		border-radius: 9px;
+		background: var(--lp-surface-soft);
 		font-family: var(--font-humanist);
 		font-size: var(--font-size-0);
 		color: var(--lp-muted);
@@ -315,10 +320,12 @@
 	}
 
 	:global([data-theme='light']) .landing {
-		--lp-fg: #f5f7fb;
-		--lp-muted: #cfd6df;
-		--lp-line: color-mix(in srgb, #ffffff 38%, transparent);
-		--lp-line-soft: color-mix(in srgb, #ffffff 28%, transparent);
+		--lp-fg: color-mix(in srgb, var(--text-main) 96%, #000);
+		--lp-muted: color-mix(in srgb, var(--text-dim) 90%, #111);
+		--lp-line: color-mix(in srgb, var(--text-main) 24%, transparent);
+		--lp-line-soft: color-mix(in srgb, var(--text-main) 16%, transparent);
+		--lp-surface: color-mix(in srgb, #ffffff 64%, transparent);
+		--lp-surface-soft: color-mix(in srgb, #ffffff 48%, transparent);
 	}
 
 	@container landing (max-width: 760px) {

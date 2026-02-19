@@ -789,7 +789,11 @@
 		padding: 0;
 		display: flex;
 		align-items: stretch;
-		background: linear-gradient(42deg, #000000 63%, transparent);
+		background: linear-gradient(
+			42deg,
+			color-mix(in srgb, var(--queue-fade-void) 96%, transparent) 63%,
+			transparent
+		);
 		border-radius: 0;
 		border: 0;
 	}
