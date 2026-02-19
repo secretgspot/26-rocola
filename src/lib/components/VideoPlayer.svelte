@@ -435,11 +435,18 @@
 				if (shouldHardLoad) {
 					player.load(current.videoId, true);
 					// Keep initial playback smooth: defer non-trivial seek until first "playing" state.
-					pendingJoinSeekTo = seekTo > 1.2 ? seekTo : null;
+					pendingJoinSeekTo = seekTo > 3.2 ? seekTo : null;
 					tryUnmuteAndPlay();
 				} else if (isNewStart || isNewTransition) {
 					// Transition lock: align exactly once per (queueId, startedAt).
-					player.seek(seekTo);
+					const currentTime = player.getCurrentTime?.();
+					if (
+						typeof currentTime !== 'number' ||
+						!Number.isFinite(currentTime) ||
+						Math.abs(currentTime - seekTo) > 1.8
+					) {
+						player.seek(seekTo);
+					}
 					player.play();
 					tryUnmuteAndPlay();
 				}

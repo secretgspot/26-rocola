@@ -42,6 +42,7 @@
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
 	const isIdleState = $derived(!playerState.currentSong && playerState.queue.length === 0);
+	const hasActiveQueuePlayback = $derived(Boolean(playerState.currentSong) && playerState.queue.length > 0);
 	const hideStarButton = $derived(!playerState.currentSong);
 	const konami = [
 		'arrowup',
@@ -426,15 +427,17 @@
 		<div class="header-meta">
 			{#if canControl}
 				<div class="admin-panel">
-					<button
-						class="btn-skip btn-next"
-						onclick={advance}
-						aria-label="Force advance to next song"
-						aria-busy={nextPending}
-						disabled={nextPending}
-					>
-						<Icon name="skip" size={20} color="currentColor" strokeWidth={1.8} />
-					</button>
+					{#if hasActiveQueuePlayback}
+						<button
+							class="btn-skip btn-next"
+							onclick={advance}
+							aria-label="Force advance to next song"
+							aria-busy={nextPending}
+							disabled={nextPending}
+						>
+							<Icon name="skip" size={20} color="currentColor" strokeWidth={1.8} />
+						</button>
+					{/if}
 					<button
 						class="btn-skip btn-seed"
 						onclick={async () => {
@@ -456,28 +459,30 @@
 					>
 						<Icon name="seed" size={20} color="currentColor" strokeWidth={1.8} />
 					</button>
-					<button
-						class="btn-skip btn-clear"
-						onclick={async () => {
-							if (clearPending) return;
-							clearPending = true;
-							const res = await fetch('/api/debug/clear', { method: 'POST' });
-							const data = await res.json();
-							if (data.ok) {
-								addToast({ message: 'Queue cleared!', level: 'plain' });
-								playerState.currentSong = null;
-								refreshQueue();
-							} else {
-								addToast({ message: `Clear failed: ${data.error}`, level: 'error' });
-							}
-							clearPending = false;
-						}}
-						aria-label="Clear all seeded data"
-						aria-busy={clearPending}
-						disabled={clearPending}
-					>
-						<Icon name="clear" size={20} color="currentColor" strokeWidth={1.8} />
-					</button>
+					{#if hasActiveQueuePlayback}
+						<button
+							class="btn-skip btn-clear"
+							onclick={async () => {
+								if (clearPending) return;
+								clearPending = true;
+								const res = await fetch('/api/debug/clear', { method: 'POST' });
+								const data = await res.json();
+								if (data.ok) {
+									addToast({ message: 'Queue cleared!', level: 'plain' });
+									playerState.currentSong = null;
+									refreshQueue();
+								} else {
+									addToast({ message: `Clear failed: ${data.error}`, level: 'error' });
+								}
+								clearPending = false;
+							}}
+							aria-label="Clear all seeded data"
+							aria-busy={clearPending}
+							disabled={clearPending}
+						>
+							<Icon name="clear" size={20} color="currentColor" strokeWidth={1.8} />
+						</button>
+					{/if}
 				</div>
 			{/if}
 				<button class="theme-toggle btn-skip btn-theme" onclick={toggleTheme} aria-label="Toggle theme">
