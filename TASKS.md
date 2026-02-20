@@ -283,35 +283,35 @@
 - [x] Add integration coverage for controller failover (active tab closed -> standby acquires)
 - [x] Add admin health widget in UI using `/api/admin/health/realtime`
     - [x] Place admin health stats in help landing metrics strip (admin/dev only), not header
-- [ ] Add Playwright E2E for controller exclusivity and restricted-video convergence
+- [x] Add Playwright E2E for controller exclusivity and restricted-video convergence
 
 ## Autonomous Station Mode (Always-On Playback)
 - [x] Phase A: Introduce server scheduler ownership
     - [x] Add `station_runtime` table for scheduler heartbeat/lease and last tick time
     - [x] Add `stationTick()` server service that advances playback based on DB clock only
     - [x] Make `stationTick()` idempotent and safe under concurrent invocations (advisory lock)
-- [ ] Phase B: Add execution path independent of viewers
+- [x] Phase B: Add execution path independent of viewers
     - [x] Add `/api/station/tick` internal endpoint protected by secret + rate guard
     - [x] Add Vercel Cron to call `/api/station/tick` every 15-30s
     - [x] Ensure catch-up logic advances multiple songs if downtime gap elapsed
-- [ ] Phase C: Realtime broadcast from server ticker
+- [x] Phase C: Realtime broadcast from server ticker
     - [x] Server publishes `song_playing`, `queue_changed`, `song_ended` from autonomous tick path
     - [x] Clients become passive listeners for normal operation (no client-required progress driving)
-- [ ] Phase D: Client/controller simplification
-    - [ ] Keep admin `skip/seed/clear` as explicit actions
+- [x] Phase D: Client/controller simplification
+    - [x] Keep admin `skip/seed/clear` as explicit actions
     - [x] Remove dependency on controller polling for automatic transitions
-    - [ ] Retain controller lease only for admin command authority
-- [ ] Phase E: Validation + observability
-    - [ ] Unit tests for `stationTick()` timing transitions and catch-up
+    - [x] Retain controller lease only for admin command authority
+- [x] Phase E: Validation + observability
+    - [x] Unit tests for `stationTick()` timing transitions and catch-up
     - [x] Integration test: no clients connected -> queue still advances over time
     - [x] Add station lag/last tick metrics to health endpoint + help admin stats
-    - [ ] Add runbook for cron failure, Neon outage, and replay recovery
-- [ ] Phase F: Playback pointer self-healing + stale client recovery
+    - [x] Add runbook for cron failure, Neon outage, and replay recovery
+- [x] Phase F: Playback pointer self-healing + stale client recovery
     - [x] Add `reconcilePlaybackState()` service: if playback pointer is stale, reset to fair queue head (or `null` when queue empty)
     - [x] Call reconciliation when `advanceQueue()` returns `Already advanced` from tick/station paths
     - [x] Add stuck-loop guard: detect repeated `tick_advance` on same `queueId` + `startedAtMs` and force reconciliation
     - [x] Ensure `/api/queue/current` always returns server truth after reconnect; treat client boot cache as short-lived hint only
-    - [ ] Add unit/integration tests for: stale pointer recovery, reconnect after long idle, and end-screen/stuck-state recovery
+    - [x] Add unit/integration tests for: stale pointer recovery, reconnect after long idle, and end-screen/stuck-state recovery
 
 ## Installability (2026-02-19)
 - [x] Add web app manifest (`static/manifest.webmanifest`)

@@ -7,7 +7,9 @@ import {
 	playbackState,
 	orders,
 	dailyPlayCounts,
-	freeSubmissions
+	freeSubmissions,
+	controllerLease,
+	stationRuntime
 } from '$lib/server/db/schema.js';
 import { invalidateQueueCache } from '$lib/server/services/queue.js';
 import { checkRate, isAdminRequest } from '$lib/server/security.js';
@@ -28,6 +30,8 @@ export async function POST(event) {
 		await db.delete(queue);
 		await db.delete(songs);
 		await db.delete(playbackState);
+		await db.delete(controllerLease);
+		await db.delete(stationRuntime);
 		invalidateQueueCache();
 
 		return json({ ok: true });

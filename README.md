@@ -105,3 +105,4 @@ npm run test:integration
 - Controller lease is persisted in DB (`controller_lease`) and renewed via `/api/admin/controller`.
 - Autonomous station mode is active via `station_runtime` + `POST /api/station/tick`.
 - Playback self-healing reconciles stale pointers to queue head/idle to avoid stuck loops.
+- Ops runbook: `docs/runbook-station-recovery.md`

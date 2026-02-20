@@ -8,6 +8,7 @@ import { broadcast } from '$lib/server/realtime.js';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { isActiveController } from '$lib/server/controller.js';
 import { addPlaybackLog } from '$lib/server/debug/playback-log.js';
+import { reconcilePlaybackState } from '$lib/server/services/playback-reconcile.js';
 
 export async function POST(event) {
 	if (!(await isActiveController(event))) {
@@ -97,6 +98,7 @@ export async function POST(event) {
 		await setPlaybackState({ currentQueueId: null, startedAtMs: null });
 		invalidateQueueCache();
 		await broadcast('queue_changed', { currentTurn: await getGlobalTurn() });
+		const reconciled = await reconcilePlaybackState({ reason: 'unavailable_marked' });
 		addPlaybackLog({
 			source: 'server',
 			event: 'unavailable_marked',
@@ -105,7 +107,8 @@ export async function POST(event) {
 			errorCode,
 			sessionId: event.locals?.sessionId || null,
 			clientIp: event.locals?.clientIp || null,
-			controller: true
+			controller: true,
+			data: { reconciled: reconciled?.changed === true }
 		});
 
 		return json({ ok: true, action: 'skip' });
