@@ -11,6 +11,7 @@ A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe ch
 - Admin/dev controls (seed, skip, clear)
 - Help menu and keyboard shortcuts
 - Installable PWA manifest with desktop/mobile screenshots
+- Public station health dashboard at `/status` (`/api/status`)
 
 ## Playback Model
 - Server + DB + Ably are authoritative for live station state.
@@ -106,3 +107,4 @@ npm run test:integration
 - Autonomous station mode is active via `station_runtime` + `POST /api/station/tick`.
 - Playback self-healing reconciles stale pointers to queue head/idle to avoid stuck loops.
 - Ops runbook: `docs/runbook-station-recovery.md`
+- Test harness endpoint (dev/admin only): `POST /api/debug/controller` for deterministic controller lease claiming in E2E.

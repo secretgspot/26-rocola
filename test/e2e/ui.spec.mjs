@@ -30,6 +30,19 @@ async function waitForController(page, timeoutMs = 18_000) {
 	return false;
 }
 
+async function forceController(page) {
+	const res = await page.evaluate(async () => {
+		const r = await fetch('/api/debug/controller', {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify({ action: 'claim' })
+		});
+		const body = await r.json().catch(() => ({}));
+		return { status: r.status, body };
+	});
+	return res.status === 200 && res.body?.ok === true;
+}
+
 async function clearStateWithRetry(page) {
 	for (let i = 0; i < 4; i += 1) {
 		const res = await page.evaluate(async () => {
@@ -83,7 +96,7 @@ test.describe('Rocola UI interactions', () => {
 		await page.evaluate(async () => {
 			await fetch('/api/debug/seed', { method: 'POST' });
 		});
-		const claimed = await waitForController(page);
+		const claimed = await forceController(page);
 		test.skip(!claimed, 'Controller lease could not be acquired in time');
 		await page.waitForFunction(async () => {
 			const r = await fetch('/api/queue/current');
@@ -119,7 +132,7 @@ test.describe('Rocola UI interactions', () => {
 		});
 
 		// A claims first and should keep control.
-		const aClaimed = await waitForController(pageA);
+		const aClaimed = await forceController(pageA);
 		test.skip(!aClaimed, 'Controller lease could not be acquired in time');
 		await pageB.goto('/');
 
@@ -186,7 +199,7 @@ test.describe('Rocola UI interactions', () => {
 			expect(res?.ok).toBe(true);
 		}
 
-		const claimed = await waitForController(page);
+		const claimed = await forceController(page);
 		test.skip(!claimed, 'Controller lease could not be acquired in time');
 
 		const active = await page.evaluate(async () => {

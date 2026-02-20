@@ -326,3 +326,9 @@
 - [x] Add preflight env/config sanity script (`npm run preflight:check`)
 - [x] Run Playwright E2E suite and fix stale tests to match controller-lease behavior
 - [x] Run Lighthouse audits and persist JSON reports to `docs/debug/`
+
+## Post-Completion Hardening (2026-02-20)
+- [x] Make Playwright controller tests deterministic with debug controller lease hook
+- [x] Stabilize E2E isolation by clearing controller/station runtime state in debug clear endpoint
+- [x] Add public `/status` dashboard + `/api/status` health summary endpoint
+- [x] Verify E2E suite fully green after deterministic harness updates
