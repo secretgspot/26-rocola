@@ -1,16 +1,17 @@
 <script>
-	import { playerState } from '$lib/client/stores.svelte.js';
 	import QueueItem from '$lib/components/QueueItem.svelte';
 	import { fly } from 'svelte/transition';
+
+	let { items = [], currentTurn = 0, emptyMessage = 'Queue is empty. Be the first!' } = $props();
 </script>
 
 <div class="list">
-	{#if playerState.queue.length === 0}
-		<div class="empty-queue">Queue is empty. Be the first!</div>
+	{#if items.length === 0}
+		<div class="empty-queue">{emptyMessage}</div>
 	{:else}
-		{#each playerState.queue as item (item.id)}
+		{#each items as item (item.id)}
 			<div in:fly={{ y: 10, duration: 200 }} class="item-wrapper">
-				<QueueItem {item} />
+				<QueueItem {item} {currentTurn} />
 			</div>
 		{/each}
 	{/if}

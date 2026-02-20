@@ -44,15 +44,15 @@
 - Clients sync via Ably events + periodic `GET /api/queue/current`.
 - Automatic queue progression target is server-authoritative scheduler (cron/worker tick), not client heartbeat.
 
-### Autonomous Station Tick (Planned)
-- Add server-side `stationTick()` loop invoked on schedule (e.g., Vercel Cron every 15-30s).
+### Autonomous Station Tick
+- Server-side `stationTick()` runs via schedule and explicit internal calls.
 - Tick computes elapsed time from DB clock and advances queue as needed.
-- Tick path must be idempotent, lock-protected, and able to catch up after downtime gaps.
-- Tick publishes realtime events so clients remain passive viewers.
+- Tick path is idempotent, lock-protected, and supports catch-up after downtime gaps.
+- Tick publishes realtime events so clients remain passive viewers in production.
 - Status:
-  - Implemented foundation service (`stationTick`) + internal endpoint (`POST /api/station/tick`).
-  - Implemented runtime heartbeat state (`station_runtime`) + admin health exposure.
-  - Remaining: schedule invocation (Vercel Cron) + full no-client progression validation.
+  - Implemented service (`stationTick`) and endpoint (`POST /api/station/tick`).
+  - Implemented runtime heartbeat state (`station_runtime`) and health/status exposure.
+  - Implemented no-client progression behavior with server-authoritative transitions.
 
 ### Realtime
 - **Ably Pub/Sub** events:

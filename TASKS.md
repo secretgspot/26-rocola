@@ -332,3 +332,17 @@
 - [x] Stabilize E2E isolation by clearing controller/station runtime state in debug clear endpoint
 - [x] Add public `/status` dashboard + `/api/status` health summary endpoint
 - [x] Verify E2E suite fully green after deterministic harness updates
+
+## Component Contract Refactor (2026-02-20)
+- [x] Define component portability rule (props-in / events-out / no hidden store ownership in presentational components)
+- [x] Refactor `Queue.svelte` to accept explicit `items`, `currentTurn`, `emptyMessage`
+- [x] Refactor `QueueItem.svelte` to compute cooldown from `currentTurn` prop instead of global store
+- [x] Refactor `LandingPage.svelte` to use explicit `metrics` props instead of reading `playerState`
+- [x] Wire page-level orchestration to pass contracts into refactored components
+- [x] Remove synthetic telemetry defaults/jitter (`bitrate`, `buffer`, and random BTR noise)
+- [x] Continue decomposition of `+page.svelte` into feature containers (`StationHeader`, `HelpOverlay`, `QueuePanel`)
+- [x] Decouple `VideoPlayer.svelte` from `playerState` by passing explicit playback contract props/callbacks
+- [x] Decouple `VideoPlayer.svelte` store ownership: pass `currentSong`, `clockOffsetSec`, toast/refresh callbacks from page
+- [x] Extract admin/control heartbeat + command actions from `+page.svelte` into dedicated client feature module (`src/lib/client/admin-runtime.js`)
+- [x] Extract page runtime concerns (shortcuts, queue hover/reveal, viewport watcher) into `src/lib/client/page-runtime.js`
+- [x] Collapse route script into composition shell via `src/lib/client/station-page-state.svelte.js`

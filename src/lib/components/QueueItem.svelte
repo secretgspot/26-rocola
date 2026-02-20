@@ -1,7 +1,6 @@
 <script>
-	import { playerState } from '$lib/client/stores.svelte.js';
 	import { getTierConfig } from '$lib/config.js';
-	let { item } = $props();
+	let { item, currentTurn = 0 } = $props();
 
 	// Determine tier for styling
 	let tier = $derived((item.tier || item.tierName || 'free').toLowerCase());
@@ -24,8 +23,8 @@
 	let tierConfig = $derived(getTierConfig(tier));
 	let gap = $derived(tierConfig.gap);
 	let nextEligible = $derived((item.lastPlayedTurn || 0) + gap);
-	let isCooldown = $derived(playerState.currentTurn < nextEligible);
-	let turnsToReady = $derived(nextEligible - playerState.currentTurn);
+	let isCooldown = $derived(currentTurn < nextEligible);
+	let turnsToReady = $derived(nextEligible - currentTurn);
 </script>
 
 <div class="item {tier}" class:cooldown={isCooldown}>

@@ -1,9 +1,9 @@
 <script>
 	import { TIER_CONFIG } from '$lib/config.js';
-	import { playerState } from '$lib/client/stores.svelte.js';
 
 	const tiers = Object.values(TIER_CONFIG).sort((a, b) => a.priority - b.priority);
 	let {
+		metrics = {},
 		showAdminHealth = false,
 		adminHealthState = '',
 		adminHealthError = false,
@@ -12,15 +12,15 @@
 		adminHealthTurn = 0,
 		adminHealthSeq = 0
 	} = $props();
-	const activeUsers = $derived(playerState.clientCount || 1);
-	const queueDepth = $derived(playerState.queue.length);
-	const connection = $derived((playerState.connectionState || 'connecting').toUpperCase());
-	const driftMs = $derived(Math.round(Math.abs(playerState.clockOffsetSec || 0) * 1000));
-	const syncP95 = $derived(playerState.syncStats?.driftP95Ms || 0);
-	const hardSync = $derived(playerState.syncStats?.hardSyncCount || 0);
-	const transitions = $derived(playerState.syncStats?.transitionCount || 0);
-	const transitionLag = $derived(playerState.syncStats?.lastTransitionLatencyMs || 0);
-	const currentTitle = $derived(playerState.currentSong?.title || 'Waiting for next drop');
+	const activeUsers = $derived(Number(metrics.activeUsers || 1));
+	const queueDepth = $derived(Number(metrics.queueDepth || 0));
+	const connection = $derived(String(metrics.connection || 'CONNECTING'));
+	const driftMs = $derived(Number(metrics.driftMs || 0));
+	const syncP95 = $derived(Number(metrics.syncP95 || 0));
+	const hardSync = $derived(Number(metrics.hardSync || 0));
+	const transitions = $derived(Number(metrics.transitions || 0));
+	const transitionLag = $derived(Number(metrics.transitionLag || 0));
+	const currentTitle = $derived(String(metrics.currentTitle || 'Waiting for next drop'));
 </script>
 
 <section class="landing">

@@ -1,9 +1,10 @@
 <script>
 	import { untrack } from 'svelte';
 	import { createPlayer } from '$lib/client/youtube-player';
-	import { playerState, addToast, refreshQueue } from '$lib/client/stores.svelte.js';
 
 	let {
+		currentSong = null,
+		clockOffsetSec = 0,
 		onnext,
 		ontimeupdate,
 		onstatsupdate,
@@ -11,6 +12,8 @@
 		onsynctelemetry,
 		onendedsignal,
 		onlocalblockstate,
+		onrefreshqueue,
+		ontoast,
 		ondebug,
 		canControl = false
 	} = $props();
@@ -20,7 +23,6 @@
 	let player = $state(null);
 	let playbackProgress = $state(0);
 	let allowSound = $state(false);
-	let nextRequestedForQueueId = $state(null);
 	let lastResumeAttemptAt = $state(0);
 	let lastTransitionKey = $state(null);
 	let transitionAtMs = $state(0);
@@ -35,7 +37,6 @@
 	let lastSeekAtMs = $state(0);
 	let lastErrorQueueId = $state(null);
 	let localPlaybackBlocked = $state(false);
-	let localPlaybackBlockedAt = $state(0);
 	let lastBlockedRefreshAt = $state(0);
 	let lastForcedLoadAt = $state(0);
 	let localErrorRetryByQueue = $state({});
@@ -76,10 +77,6 @@
 		}
 	}
 
-	function clamp(value, min, max) {
-		return Math.max(min, Math.min(max, value));
-	}
-
 	function nowMs() {
 		if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
 			return performance.now();
@@ -114,16 +111,6 @@
 		});
 	}
 
-	function requestNextOnce(minTrackAgeMs = 0) {
-		if (!canControl) return;
-		if (minTrackAgeMs > 0 && transitionAtMs > 0 && nowMs() - transitionAtMs < minTrackAgeMs) return;
-		const qid = playerState.currentSong?.queueId || playerState.currentSong?.id || null;
-		if (!qid) return;
-		if (nextRequestedForQueueId === qid) return;
-		nextRequestedForQueueId = qid;
-		onnext?.();
-	}
-
 	function emitDebug(event, data = {}) {
 		ondebug?.({
 			source: 'player',
@@ -133,7 +120,7 @@
 	}
 
 	async function reportUnavailableFromPlaybackError(errorPayload) {
-		const current = playerState.currentSong;
+		const current = currentSong;
 		if (!current?.queueId && !current?.songId) return;
 		const queueId = current.queueId || current.id || null;
 		if (queueId && lastErrorQueueId === queueId) return;
@@ -162,12 +149,12 @@
 	// Get the "official" server-side elapsed time
 	function getServerElapsed() {
 		const startedAtMs =
-			playerState.currentSong?.startedAtMs ??
-			(typeof playerState.currentSong?.startedAt === 'number'
-				? playerState.currentSong.startedAt * 1000
+			currentSong?.startedAtMs ??
+			(typeof currentSong?.startedAt === 'number'
+				? currentSong.startedAt * 1000
 				: null);
 		if (startedAtMs) {
-			const nowMs = Date.now() + (playerState.clockOffsetSec || 0) * 1000;
+			const nowMs = Date.now() + (clockOffsetSec || 0) * 1000;
 			const elapsed = (nowMs - startedAtMs) / 1000;
 			return elapsed > 0 ? elapsed : 0;
 		}
@@ -179,7 +166,7 @@
 		
 		/** @type {any} */
 		let p;
-		const initialVideoId = untrack(() => playerState.currentSong?.videoId);
+		const initialVideoId = untrack(() => currentSong?.videoId);
 		const seekTo = untrack(() => getServerElapsed());
 		
 			createPlayer(el.id, { 
@@ -197,7 +184,7 @@
 						try {
 							const ageMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
 							const current = p?.getCurrentTime?.();
-							const duration = p?._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+							const duration = p?._raw?.getDuration?.() || currentSong?.duration || 0;
 							const nearEnd =
 								typeof current === 'number' && duration > 0
 									? current >= Math.max(0.8, duration - 1.4)
@@ -206,23 +193,23 @@
 						} catch {
 							// ignore and fall through
 						}
-						const qid = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+						const qid = activeLoadedQueueId || currentSong?.queueId || currentSong?.id || null;
 						if (qid && endedHandledQueueId === qid) return;
 						endedHandledQueueId = qid;
 						emitDebug('yt_state_ended', {
 							queueId: qid,
-							videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null,
-							durationSec: p?._raw?.getDuration?.() || playerState.currentSong?.duration || null,
+							videoId: activeLoadedVideoId || currentSong?.videoId || null,
+							durationSec: p?._raw?.getDuration?.() || currentSong?.duration || null,
 							elapsedSec: p?.getCurrentTime?.() || null,
 							trackAgeMs: transitionAtMs > 0 ? nowMs() - transitionAtMs : null
 						});
 						onendedsignal?.({
 							queueId: qid,
-							videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null
+							videoId: activeLoadedVideoId || currentSong?.videoId || null
 						});
 					}
 					if (e.data === 1) {
-						const activeTransitionKey = `${playerState.currentSong?.queueId || playerState.currentSong?.id || playerState.currentSong?.videoId || 'unknown'}:${playerState.currentSong?.startedAtMs || playerState.currentSong?.startedAt || 0}`;
+						const activeTransitionKey = `${currentSong?.queueId || currentSong?.id || currentSong?.videoId || 'unknown'}:${currentSong?.startedAtMs || currentSong?.startedAt || 0}`;
 						if (transitionPlaybackReportedForKey !== activeTransitionKey) {
 							transitionPlaybackReportedForKey = activeTransitionKey;
 							if (transitionAtMs > 0) {
@@ -245,7 +232,7 @@
 						// When switching to Playing, do a tight correction.
 						const current = p.getCurrentTime();
 						const correct = getServerElapsed();
-						const duration = p._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+						const duration = p._raw?.getDuration?.() || currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 3;
 						const drift = correct - current;
 						const inWarmup = nowMs() - transitionAtMs < SYNC_CFG.warmupMs;
@@ -256,8 +243,8 @@
 			},
 				onError: async (e) => {
 					const errorVideoId = e?.target?.getVideoData?.()?.video_id || null;
-					const currentVideoId = playerState.currentSong?.videoId || null;
-					const currentQueueId = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+					const currentVideoId = currentSong?.videoId || null;
+					const currentQueueId = activeLoadedQueueId || currentSong?.queueId || currentSong?.id || null;
 					const errorCode = typeof e?.data === 'number' ? e.data : null;
 					const isRestriction = errorCode === 100 || errorCode === 101 || errorCode === 150;
 					// Ignore stale player errors from a previously loaded video.
@@ -265,7 +252,6 @@
 						return;
 					}
 					localPlaybackBlocked = true;
-					localPlaybackBlockedAt = Date.now();
 					onlocalblockstate?.({
 						blocked: true,
 						canControl,
@@ -279,8 +265,8 @@
 						trackAgeMs: transitionAtMs > 0 ? nowMs() - transitionAtMs : null
 					});
 					if (!canControl) {
-						addToast({ message: `LOCAL PLAYBACK BLOCKED`, level: 'error' });
-						refreshQueue();
+						ontoast?.({ message: `LOCAL PLAYBACK BLOCKED`, level: 'error' });
+						onrefreshqueue?.();
 						return;
 					}
 
@@ -343,7 +329,7 @@
 							videoId: currentVideoId,
 							errorCode
 						});
-						addToast({ message: `PLAYBACK RETRY`, level: 'info' });
+						ontoast?.({ message: `PLAYBACK RETRY`, level: 'info' });
 						setTimeout(() => {
 							try {
 								player?.play?.();
@@ -361,19 +347,19 @@
 						});
 						// Song was marked unavailable server-side; do not consume the next track.
 						// Let controller recovery promote the next playable item.
-						addToast({ message: `PLAYBACK BLOCKED -> RECOVER`, level: 'error' });
-						refreshQueue();
+						ontoast?.({ message: `PLAYBACK BLOCKED -> RECOVER`, level: 'error' });
+						onrefreshqueue?.();
 						return;
 					}
 					// Unknown outcome from unavailable endpoint (network/race/etc):
 					// do not consume next track optimistically; let server authoritative tick recover.
-					addToast({ message: `PLAYBACK ERROR -> RECOVER`, level: 'error' });
+					ontoast?.({ message: `PLAYBACK ERROR -> RECOVER`, level: 'error' });
 					emitDebug('unavailable_action_unknown', {
 						queueId: currentQueueId,
 						videoId: currentVideoId,
 						errorCode
 					});
-					refreshQueue();
+					onrefreshqueue?.();
 				}
 			}).then(res => {
 			p = res;
@@ -381,7 +367,7 @@
 			if (initialVideoId) {
 				lastLoadedVideoId = initialVideoId;
 				lastStartedAt =
-					untrack(() => playerState.currentSong?.startedAtMs ?? playerState.currentSong?.startedAt ?? null);
+					untrack(() => currentSong?.startedAtMs ?? currentSong?.startedAt ?? null);
 				if (seekTo > 0) p.seek(seekTo);
 				p.play();
 			}
@@ -416,7 +402,7 @@
 	});
 
 	$effect(() => {
-		const current = playerState.currentSong;
+		const current = currentSong;
 		if (!player || !current?.videoId) return;
 
 		const isNewVideo = current.videoId !== lastLoadedVideoId;
@@ -461,7 +447,6 @@
 				maxObservedPlayerSec = 0;
 				localPlaybackBlocked = false;
 				onlocalblockstate?.({ blocked: false });
-				nextRequestedForQueueId = null;
 				playbackProgress = 0;
 				emitSyncTelemetry(true);
 			}
@@ -473,7 +458,6 @@
 		let frame;
 		let lastUpdate = 0;
 		let lastSync = 0;
-		let lastHardSync = 0;
 		let lastStateCheck = 0;
 		let lastConvergenceCheck = 0;
 
@@ -482,17 +466,15 @@
 			// requestAnimationFrame runs at 60fps usually.
 				if (time - lastUpdate > 100) {
 				lastUpdate = time;
-				if (player && playerState.currentSong) {
+				if (player && currentSong) {
 					// Determine duration: Player is most accurate, fallback to metadata
 					let duration = 0;
-					let hasNativeDuration = false;
 					const raw = player._raw;
 					if (raw && typeof raw.getDuration === 'function') {
 						duration = raw.getDuration();
-						hasNativeDuration = duration > 0;
 					}
-					if ((!duration || duration === 0) && playerState.currentSong.duration) {
-						duration = playerState.currentSong.duration;
+					if ((!duration || duration === 0) && currentSong.duration) {
+						duration = currentSong.duration;
 					}
 
 						if (duration > 0) {
@@ -506,7 +488,7 @@
 								maxObservedPlayerSec = elapsedPlayer;
 							}
 							const activeVideoId = player?._raw?.getVideoData?.()?.video_id || null;
-							const targetVideoId = playerState.currentSong?.videoId || null;
+							const targetVideoId = currentSong?.videoId || null;
 							const sameVideoLoaded =
 								Boolean(activeVideoId) && Boolean(targetVideoId) && activeVideoId === targetVideoId;
 							// If local playback is blocked, keep HUD driven by server timeline.
@@ -542,12 +524,10 @@
 								'default': 1500
 							};
 							const baseBtr = qualityMap[quality] || 1500;
-							// Add a little jitter for realism
-							const btr = baseBtr + Math.floor(Math.random() * (baseBtr * 0.1));
 
 							onstatsupdate?.({
 								buffer: loaded,
-								bitrate: btr
+								bitrate: baseBtr
 							});
 						}
 
@@ -564,12 +544,12 @@
 								Number.isFinite(elapsedPlayer) &&
 								elapsedPlayer >= Math.max(1.8, duration - SYNC_CFG.preEndSignalSec)
 							) {
-								const qid = activeLoadedQueueId || playerState.currentSong?.queueId || playerState.currentSong?.id || null;
+								const qid = activeLoadedQueueId || currentSong?.queueId || currentSong?.id || null;
 								if (!qid || endedHandledQueueId !== qid) {
 									endedHandledQueueId = qid;
 									onendedsignal?.({
 										queueId: qid,
-										videoId: activeLoadedVideoId || playerState.currentSong?.videoId || null
+										videoId: activeLoadedVideoId || currentSong?.videoId || null
 									});
 								}
 							}
@@ -588,17 +568,17 @@
 					time - lastBlockedRefreshAt > 1200
 				) {
 					lastBlockedRefreshAt = time;
-					refreshQueue();
+					onrefreshqueue?.();
 				}
 				// Periodic drift correction (conservative; avoid startup stutter)
-				if (time - lastSync > SYNC_CFG.microSeekCadenceMs && player && playerState.currentSong) {
+				if (time - lastSync > SYNC_CFG.microSeekCadenceMs && player && currentSong) {
 					lastSync = time;
 					try {
 						const current = player.getCurrentTime?.();
 						const correct = getServerElapsed();
 						const state = player.getPlayerState?.();
 						const duration =
-							player._raw?.getDuration?.() || playerState.currentSong?.duration || 0;
+							player._raw?.getDuration?.() || currentSong?.duration || 0;
 						const nearEnd = duration > 0 && correct > duration - 4;
 						const drift = correct - current;
 						const inWarmup = nowMs() - transitionAtMs < SYNC_CFG.warmupMs;
@@ -627,7 +607,7 @@
 					}
 				}
 				// Ensure playback follows server even if user paused locally, but do not spam restart
-				if (time - lastStateCheck > 900 && player && playerState.currentSong) {
+				if (time - lastStateCheck > 900 && player && currentSong) {
 					lastStateCheck = time;
 					try {
 						const state = player.getPlayerState?.();
@@ -653,11 +633,11 @@
 					}
 				}
 				// Convergence safety: if iframe is on a different video than store state, force-load target.
-				if (time - lastConvergenceCheck > SYNC_CFG.convergenceCheckCadenceMs && player && playerState.currentSong?.videoId) {
+				if (time - lastConvergenceCheck > SYNC_CFG.convergenceCheckCadenceMs && player && currentSong?.videoId) {
 					lastConvergenceCheck = time;
 					try {
 						const liveVideoId = player?._raw?.getVideoData?.()?.video_id || null;
-						const targetVideoId = playerState.currentSong.videoId;
+						const targetVideoId = currentSong.videoId;
 						const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : Number.POSITIVE_INFINITY;
 						const playerStatus = player.getPlayerState?.();
 						if (
@@ -692,3 +672,4 @@
 <style>
 	.yt-embed { width: 100%; height: 100%; display: block; background: var(--bg-dark); pointer-events: none; }
 </style>
+
