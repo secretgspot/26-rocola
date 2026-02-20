@@ -7,15 +7,17 @@ A SvelteKit + Svelte 5 jukebox with Neon Postgres, Ably realtime sync, Stripe ch
 - YouTube iframe playback with shared timeline sync (`startedAtMs`)
 - Realtime events (queue changes, song transitions, star reactions)
 - Single active controller lease for authoritative playback control
-- Server-authoritative transition tick (`/api/playback/tick`)
+- Autonomous server station tick (`/api/station/tick`) for no-client progression
 - Admin/dev controls (seed, skip, clear)
 - Help menu and keyboard shortcuts
 - Installable PWA manifest with desktop/mobile screenshots
 
-## Playback Model (Current vs Target)
-- Current: playback state is persisted in DB, but automatic advancement is still driven by active controller heartbeat.
-- Target: autonomous 24/7 station mode where server ticker advances queue even with zero connected clients.
-- This means clients should only observe/play current live state, not drive timeline progression.
+## Playback Model
+- Server + DB + Ably are authoritative for live station state.
+- If queue is empty, station is idle.
+- When a track is added, station starts and continues advancing until queue is exhausted (even with zero clients connected).
+- In production, clients are passive observers for automatic transitions.
+- In dev, controller tick fallback remains enabled for rapid local iteration.
 
 ## Screenshots
 ### Desktop
@@ -101,8 +103,5 @@ npm run test:integration
 - Realtime playback synchronization now uses millisecond precision where available.
 - Only the active admin controller can execute playback-control actions (`next`, unavailability marking).
 - Controller lease is persisted in DB (`controller_lease`) and renewed via `/api/admin/controller`.
-- Autonomous station mode (cron + server tick) is planned to remove client dependence for automatic queue progression.
-- Phase A/B foundation implemented:
-  - `station_runtime` DB heartbeat state
-  - server tick service: `src/lib/server/services/station.js`
-  - internal tick endpoint: `POST /api/station/tick` (auth via `STATION_TICK_SECRET`)
+- Autonomous station mode is active via `station_runtime` + `POST /api/station/tick`.
+- Playback self-healing reconciles stale pointers to queue head/idle to avoid stuck loops.

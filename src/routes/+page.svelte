@@ -43,6 +43,7 @@
 	const isAdmin = $derived(Boolean(data?.isAdmin));
 	const isDevEnv = $derived(Boolean(data?.isDev));
 	const canControl = $derived(isAdmin && isController);
+	const canDrivePlayback = $derived(canControl && isDevEnv);
 	const showAdminHealth = $derived(isAdmin || isDevEnv);
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
@@ -390,7 +391,7 @@
 	}
 
 	async function tickPlayback() {
-		if (!canControl) return;
+		if (!canDrivePlayback) return;
 		if (tickInFlight) return;
 		if (Date.now() < suppressTickUntilMs) return;
 		tickInFlight = true;
@@ -416,7 +417,7 @@
 	}
 
 	async function endedPlayback(payload = null) {
-		if (!canControl) return;
+		if (!canDrivePlayback) return;
 		if (endedInFlight) return;
 		endedInFlight = true;
 		suppressTickUntilMs = Date.now() + 1200;
@@ -452,7 +453,7 @@
 	}
 
 	$effect(() => {
-		if (!canControl || typeof window === 'undefined') return;
+		if (!canDrivePlayback || typeof window === 'undefined') return;
 		const timer = setInterval(() => {
 			tickPlayback();
 		}, 320);
@@ -582,7 +583,7 @@
 					onplaystate={handlePlayState}
 					ondebug={writePlaybackDebug}
 					onlocalblockstate={handleLocalBlockState}
-					{canControl}
+					canControl={canDrivePlayback}
 					onsynctelemetry={handleSyncTelemetry} />
 			</svelte:boundary>
 		{:else}

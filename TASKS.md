@@ -292,14 +292,14 @@
     - [x] Make `stationTick()` idempotent and safe under concurrent invocations (advisory lock)
 - [ ] Phase B: Add execution path independent of viewers
     - [x] Add `/api/station/tick` internal endpoint protected by secret + rate guard
-    - [ ] Add Vercel Cron to call `/api/station/tick` every 15-30s
+    - [x] Add Vercel Cron to call `/api/station/tick` every 15-30s
     - [x] Ensure catch-up logic advances multiple songs if downtime gap elapsed
 - [ ] Phase C: Realtime broadcast from server ticker
-    - [ ] Server publishes `song_playing`, `queue_changed`, `song_ended` from autonomous tick path
-    - [ ] Clients become passive listeners for normal operation (no client-required progress driving)
+    - [x] Server publishes `song_playing`, `queue_changed`, `song_ended` from autonomous tick path
+    - [x] Clients become passive listeners for normal operation (no client-required progress driving)
 - [ ] Phase D: Client/controller simplification
     - [ ] Keep admin `skip/seed/clear` as explicit actions
-    - [ ] Remove dependency on controller polling for automatic transitions
+    - [x] Remove dependency on controller polling for automatic transitions
     - [ ] Retain controller lease only for admin command authority
 - [ ] Phase E: Validation + observability
     - [ ] Unit tests for `stationTick()` timing transitions and catch-up
