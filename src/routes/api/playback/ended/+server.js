@@ -89,6 +89,7 @@ export async function POST(event) {
 	}
 
 	const result = await advanceQueue(playback.currentQueueId);
+	const resultAny = /** @type {any} */ (result);
 	addPlaybackLog({
 		source: 'server',
 		event: 'ended_advance',
@@ -99,7 +100,8 @@ export async function POST(event) {
 		controller: true,
 		data: {
 			elapsedSec: elapsedMs / 1000,
-			nextQueueId: result?.next?.queueId || result?.next?.id || null
+			nextQueueId: resultAny?.next?.queueId || resultAny?.next?.id || null,
+			reconciled: false
 		}
 	});
 	return json({ ok: true, action: 'advance', result });

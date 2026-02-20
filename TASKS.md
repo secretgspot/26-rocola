@@ -306,6 +306,12 @@
     - [x] Integration test: no clients connected -> queue still advances over time
     - [x] Add station lag/last tick metrics to health endpoint + help admin stats
     - [ ] Add runbook for cron failure, Neon outage, and replay recovery
+- [ ] Phase F: Playback pointer self-healing + stale client recovery
+    - [x] Add `reconcilePlaybackState()` service: if playback pointer is stale, reset to fair queue head (or `null` when queue empty)
+    - [x] Call reconciliation when `advanceQueue()` returns `Already advanced` from tick/station paths
+    - [x] Add stuck-loop guard: detect repeated `tick_advance` on same `queueId` + `startedAtMs` and force reconciliation
+    - [x] Ensure `/api/queue/current` always returns server truth after reconnect; treat client boot cache as short-lived hint only
+    - [ ] Add unit/integration tests for: stale pointer recovery, reconnect after long idle, and end-screen/stuck-state recovery
 
 ## Installability (2026-02-19)
 - [x] Add web app manifest (`static/manifest.webmanifest`)

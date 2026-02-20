@@ -4,6 +4,7 @@ import { eq, and, gt, sql } from 'drizzle-orm';
 import { getPlaybackState, setPlaybackState } from '$lib/server/services/playback.js';
 import { getQueue, advanceQueue, getGlobalTurn } from '$lib/server/services/queue.js';
 import { broadcast } from '$lib/server/realtime.js';
+import { reconcilePlaybackState } from '$lib/server/services/playback-reconcile.js';
 
 const RUNTIME_ID = 'global';
 const TICK_LOCK_ID = 912736;
@@ -85,7 +86,7 @@ export async function stationTick(opts = {}) {
 	const maxAdvances = Math.max(1, Math.min(100, Number(opts.maxAdvances || 24)));
 	const runStartedAtMs = nowMs();
 
-	return db.transaction(async (tx) => {
+	const run = await db.transaction(async (tx) => {
 		await tx.execute(sql`select pg_advisory_lock(${TICK_LOCK_ID})`);
 		try {
 			await writeRuntimePatch(
@@ -99,6 +100,7 @@ export async function stationTick(opts = {}) {
 			let advances = 0;
 			let startedFromIdle = false;
 			let reason = 'noop';
+			let needsReconcile = false;
 
 			for (let i = 0; i < maxAdvances; i += 1) {
 				const playback = await getPlaybackState();
@@ -136,6 +138,7 @@ export async function stationTick(opts = {}) {
 					const advanced = await advanceQueue(playback.currentQueueId);
 					if (!advanced?.ok || advanced?.message === 'Already advanced') {
 						reason = 'stale_pointer';
+						needsReconcile = true;
 						break;
 					}
 					advances += 1;
@@ -162,6 +165,7 @@ export async function stationTick(opts = {}) {
 				}
 				if (advanced?.message === 'Already advanced') {
 					reason = 'already_advanced';
+					needsReconcile = false;
 					break;
 				}
 				advances += 1;
@@ -183,6 +187,7 @@ export async function stationTick(opts = {}) {
 				source,
 				reason,
 				advances,
+				needsReconcile,
 				startedFromIdle,
 				runStartedAtMs,
 				runFinishedAtMs: finished
@@ -203,4 +208,11 @@ export async function stationTick(opts = {}) {
 			await tx.execute(sql`select pg_advisory_unlock(${TICK_LOCK_ID})`);
 		}
 	});
+
+	if (run.needsReconcile) {
+		const reconciled = await reconcilePlaybackState({ reason: `station_${run.reason}` });
+		return { ...run, reconciled };
+	}
+
+	return run;
 }

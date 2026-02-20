@@ -7,6 +7,9 @@ import { advanceQueue } from '$lib/server/services/queue.js';
 import { db } from '$lib/server/db/index.js';
 import { queue, songs } from '$lib/server/db/schema.js';
 import { addPlaybackLog } from '$lib/server/debug/playback-log.js';
+import { reconcilePlaybackState } from '$lib/server/services/playback-reconcile.js';
+
+const RECONCILE_STALE_OVERRUN_MS = 10_000;
 
 export async function POST(event) {
 	if (!isAdminRequest(event, { allowDev: false })) {
@@ -40,6 +43,7 @@ export async function POST(event) {
 		// Stale playback pointer (another transition already moved playback).
 		// Do not consume again from tick path.
 		const advanced = { ok: true, message: 'Already advanced' };
+		const reconciled = await reconcilePlaybackState({ reason: 'tick_invalid_current' });
 		addPlaybackLog({
 			source: 'server',
 			event: 'tick_advance',
@@ -48,9 +52,18 @@ export async function POST(event) {
 			sessionId: event.locals?.sessionId || null,
 			clientIp: event.locals?.clientIp || null,
 			controller: true,
-			data: { nextQueueId: advanced?.next?.queueId || advanced?.next?.id || null }
+			data: {
+				nextQueueId: advanced?.next?.queueId || advanced?.next?.id || null,
+				reconciled: reconciled?.changed === true
+			}
 		});
-		return json({ ok: true, action: 'advance', reason: 'invalid_current', result: advanced });
+		return json({
+			ok: true,
+			action: 'advance',
+			reason: 'invalid_current',
+			result: advanced,
+			reconciled
+		});
 	}
 
 	const durationSec = Number(rows[0].s?.duration || 0);
@@ -66,6 +79,12 @@ export async function POST(event) {
 	}
 	if (elapsedMs >= durationSec * 1000 + 120) {
 		const advanced = await advanceQueue(playback.currentQueueId);
+		let reconciled = null;
+		const staleOverrunMs = elapsedMs - durationSec * 1000;
+		if (advanced?.message === 'Already advanced' && staleOverrunMs > RECONCILE_STALE_OVERRUN_MS) {
+			reconciled = await reconcilePlaybackState({ reason: 'tick_already_advanced' });
+		}
+		const advancedAny = /** @type {any} */ (advanced);
 		addPlaybackLog({
 			source: 'server',
 			event: 'tick_advance',
@@ -78,9 +97,13 @@ export async function POST(event) {
 			sessionId: event.locals?.sessionId || null,
 			clientIp: event.locals?.clientIp || null,
 			controller: true,
-			data: { nextQueueId: advanced?.next?.queueId || advanced?.next?.id || null }
+			data: {
+				nextQueueId: advancedAny?.next?.queueId || advancedAny?.next?.id || null,
+				reconciled: reconciled?.changed === true,
+				staleOverrunMs
+			}
 		});
-		return json({ ok: true, action: 'advance', reason: 'elapsed', result: advanced });
+		return json({ ok: true, action: 'advance', reason: 'elapsed', result: advanced, reconciled });
 	}
 
 	return json({ ok: true, action: 'noop', reason: 'in_progress' });

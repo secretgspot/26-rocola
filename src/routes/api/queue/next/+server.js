@@ -47,6 +47,7 @@ export async function POST(event) {
 				message: result.message || null,
 				nextQueueId: resultAny?.next?.queueId || resultAny?.next?.id || null,
 				playedQueueId: resultAny?.played?.queueId || null,
+				reconciled: false,
 				latencyMs: Date.now() - startedAt
 			}
 		});

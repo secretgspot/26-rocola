@@ -253,6 +253,8 @@ let refreshTimer = null;
 let cachedReactionClientId = null;
 const BOOT_CACHE_KEY = 'rocola-boot-cache-v1';
 const BOOT_READY_KEY = 'rocola-boot-ready-v1';
+const BOOT_CACHE_MAX_AGE_MS = 45_000;
+const DEFAULT_DURATION_FALLBACK_MS = 20_000;
 
 function saveBootCache() {
 	if (typeof window === 'undefined') return;
@@ -278,10 +280,19 @@ function hydrateBootCache() {
 		const data = JSON.parse(raw);
 		if (!data || typeof data !== 'object') return false;
 		const ageMs = Date.now() - Number(data.ts || 0);
-		if (!Number.isFinite(ageMs) || ageMs > 1000 * 60 * 10) return false;
+		if (!Number.isFinite(ageMs) || ageMs > BOOT_CACHE_MAX_AGE_MS) return false;
 
 		if (data.currentSong) {
-			playerState.currentSong = normalizeQueueItem(data.currentSong);
+			const cachedCurrent = normalizeQueueItem(data.currentSong);
+			const startedAtMs = Number(cachedCurrent?.startedAtMs || 0);
+			const durationSec = Number(cachedCurrent?.duration || 0);
+			const maxTrackAgeMs =
+				durationSec > 0 ? durationSec * 1000 + 4_000 : DEFAULT_DURATION_FALLBACK_MS;
+			const trackAgeMs = startedAtMs > 0 ? Date.now() - startedAtMs : Number.POSITIVE_INFINITY;
+			const looksFresh = Number.isFinite(trackAgeMs) && trackAgeMs >= 0 && trackAgeMs <= maxTrackAgeMs;
+			if (cachedCurrent && looksFresh) {
+				playerState.currentSong = cachedCurrent;
+			}
 		}
 		if (Array.isArray(data.queue)) {
 			playerState.queue = data.queue.map((q) => normalizeQueueItem(q)).filter(Boolean);
@@ -379,7 +390,6 @@ export async function initRealtime() {
 	const resumed = hydrateBootCache();
 	if (hadPriorBoot && resumed) {
 		pushInitLog('FAST RESUME', 'ok');
-		playerState.initializing = false;
 		await refreshQueue({ logInit: false });
 	} else {
 		pushInitLog('BOOT START');
