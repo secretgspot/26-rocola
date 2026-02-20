@@ -44,6 +44,7 @@
 	let maxObservedPlayerSec = $state(0);
 	let activeLoadedQueueId = $state(null);
 	let activeLoadedVideoId = $state(null);
+	let startupFailureReportedQueueId = $state(null);
 
 	const SYNC_CFG = {
 		warmupMs: 4200,
@@ -442,6 +443,7 @@
 				transitionAtMs = nowMs();
 				transitionPlaybackReportedForKey = null;
 				lastErrorQueueId = null;
+				startupFailureReportedQueueId = null;
 				endedHandledQueueId = null;
 				localErrorRetryByQueue = {};
 				maxObservedPlayerSec = 0;
@@ -630,6 +632,42 @@
 						}
 					} catch {
 						// ignore
+					}
+				}
+				// Startup failure watchdog: some restricted embeds do not reliably emit onError.
+				// If controller sees no playback progress for too long, mark track unavailable.
+				if (player && currentSong && canControl) {
+					try {
+						const trackAgeMs = transitionAtMs > 0 ? nowMs() - transitionAtMs : 0;
+						const queueId = currentSong.queueId || currentSong.id || null;
+						const state = player.getPlayerState?.();
+						const stuckState = state === -1 || state === 2 || state === 3 || state === 5;
+						if (
+							queueId &&
+							startupFailureReportedQueueId !== queueId &&
+							trackAgeMs > 14000 &&
+							maxObservedPlayerSec < 0.6 &&
+							stuckState
+						) {
+							startupFailureReportedQueueId = queueId;
+							emitDebug('startup_watchdog_unavailable', {
+								queueId,
+								videoId: currentSong.videoId || null,
+								trackAgeMs,
+								playerState: state,
+								maxObservedPlayerSec
+							});
+							reportUnavailableFromPlaybackError({
+								data: 150,
+								reason: 'startup_watchdog_timeout'
+							}).then((action) => {
+								if (action === 'skip' || action === 'retry') {
+									onrefreshqueue?.();
+								}
+							});
+						}
+					} catch {
+						// ignore watchdog errors
 					}
 				}
 				// Convergence safety: if iframe is on a different video than store state, force-load target.
