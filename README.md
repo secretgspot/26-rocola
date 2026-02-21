@@ -51,7 +51,7 @@ When deploying to Vercel, schedule autonomous ticks so playback advances without
 ```json
 {
   "crons": [
-    { "path": "/api/station/tick", "schedule": "*/1 * * * *" }
+    { "path": "/api/station/tick", "schedule": "0 0 * * *" }
   ]
 }
 ```
@@ -62,6 +62,9 @@ The endpoint accepts Bearer tokens, so matching `CRON_SECRET` and `STATION_TICK_
 Notes:
 - Local dev does not require cron; you can trigger manually with `POST /api/station/tick`.
 - In production, keep the endpoint secret mandatory.
+- `Vercel Hobby` only allows daily cron. For minute-level progression:
+  - Upgrade to `Vercel Pro` and use `*/1 * * * *`, or
+  - keep Hobby and call `POST /api/station/tick` from an external scheduler every minute using `Authorization: Bearer <STATION_TICK_SECRET>`.
 
 ## Operator Shortcuts (Dev/Admin)
 - `H` - toggle help menu

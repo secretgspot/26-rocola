@@ -2,8 +2,7 @@
 	"crons": [
 		{
 			"path": "/api/station/tick",
-			"schedule": "*/1 * * * *"
+			"schedule": "0 0 * * *"
 		}
 	]
 }
-
