@@ -5,6 +5,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { checkRate, isAdminRequest } from '$lib/server/security.js';
 
+const FALLBACK_SEED_LINES = [
+	'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+	'https://www.youtube.com/watch?v=3JZ_D3ELwOQ',
+	'https://www.youtube.com/watch?v=kXYiU_JCYtU',
+	'https://www.youtube.com/watch?v=9bZkp7q19f0',
+	'https://www.youtube.com/watch?v=OPf0YbXqDm0',
+	'https://www.youtube.com/watch?v=fJ9rUzIMcZQ',
+	'https://www.youtube.com/watch?v=RgKAFK5djSk',
+	'https://www.youtube.com/watch?v=L_jWHffIx5E'
+];
+
 function extractVideoId(urlOrId) {
 	if (!urlOrId) return null;
 	if (/^[A-Za-z0-9_-]{11,}$/.test(urlOrId)) return urlOrId;
@@ -106,12 +117,17 @@ export async function POST(event) {
 			// ignore empty body
 		}
 		const filePath = path.join(process.cwd(), 'docs', 'queue.txt');
-		if (!fs.existsSync(filePath)) {
-			return json({ ok: false, error: 'docs/queue.txt not found' }, { status: 404 });
+		let lines = [];
+		let source = 'docs/queue.txt';
+		if (fs.existsSync(filePath)) {
+			const fileContent = fs.readFileSync(filePath, 'utf-8');
+			lines = fileContent.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+		} else {
+			// Vercel serverless deployments may not always include arbitrary docs files in the function bundle.
+			// Fall back to an embedded seed list instead of returning 404.
+			lines = [...FALLBACK_SEED_LINES];
+			source = 'embedded_fallback';
 		}
-
-		const fileContent = fs.readFileSync(filePath, 'utf-8');
-		const lines = fileContent.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
 		const added = [];
 		const tasks = lines
@@ -155,7 +171,7 @@ export async function POST(event) {
 
 		invalidateQueueCache();
 
-		return json({ ok: true, message: `Seeded ${added.length} songs`, added });
+		return json({ ok: true, message: `Seeded ${added.length} songs`, source, added });
 
 	} catch (err) {
 		console.error('Seed error', err);
