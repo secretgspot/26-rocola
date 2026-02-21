@@ -51,6 +51,7 @@
 	</div>
 
 	<StationHeader
+		showAdmin={page.isAdmin}
 		canControl={page.canControl}
 		hasActiveQueuePlayback={page.hasActiveQueuePlayback}
 		theme={page.theme}

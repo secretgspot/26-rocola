@@ -1,0 +1,33 @@
+name: Station Tick
+
+on:
+  schedule:
+    - cron: "* * * * *"
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Trigger station tick
+        env:
+          ROCOLA_TICK_URL: ${{ secrets.ROCOLA_TICK_URL }}
+          STATION_TICK_SECRET: ${{ secrets.STATION_TICK_SECRET }}
+        run: |
+          if [ -z "$ROCOLA_TICK_URL" ] || [ -z "$STATION_TICK_SECRET" ]; then
+            echo "Missing required secrets: ROCOLA_TICK_URL and/or STATION_TICK_SECRET"
+            exit 1
+          fi
+
+          status=$(curl -sS -o /tmp/resp.json -w "%{http_code}" \
+            -X POST "$ROCOLA_TICK_URL" \
+            -H "Authorization: Bearer $STATION_TICK_SECRET" \
+            -H "Content-Type: application/json")
+
+          echo "HTTP $status"
+          cat /tmp/resp.json
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
+            exit 1
+          fi

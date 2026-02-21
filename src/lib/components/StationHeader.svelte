@@ -2,6 +2,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 
 	let {
+		showAdmin = false,
 		canControl = false,
 		hasActiveQueuePlayback = false,
 		theme = 'dark',
@@ -31,7 +32,7 @@
 		{/if}
 	</div>
 	<div class="header-meta">
-		{#if canControl}
+		{#if showAdmin}
 			<div class="admin-panel">
 				{#if hasActiveQueuePlayback}
 					<button
@@ -39,7 +40,7 @@
 						onclick={() => onAdvance()}
 						aria-label="Force advance to next song"
 						aria-busy={nextPending}
-						disabled={nextPending}
+						disabled={!canControl || nextPending}
 					>
 						<Icon name="skip" size={25} color="currentColor" strokeWidth={1.8} />
 					</button>
@@ -49,7 +50,7 @@
 					onclick={() => onSeed()}
 					aria-label="Seed queue with test data"
 					aria-busy={seedPending}
-					disabled={seedPending}
+					disabled={!canControl || seedPending}
 				>
 					<Icon name="seed" size={25} color="currentColor" strokeWidth={1.8} />
 				</button>
@@ -59,7 +60,7 @@
 						onclick={() => onClear()}
 						aria-label="Clear all seeded data"
 						aria-busy={clearPending}
-						disabled={clearPending}
+						disabled={!canControl || clearPending}
 					>
 						<Icon name="clear" size={25} color="currentColor" strokeWidth={1.8} />
 					</button>

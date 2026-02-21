@@ -332,6 +332,8 @@
 - [x] Stabilize E2E isolation by clearing controller/station runtime state in debug clear endpoint
 - [x] Add public `/status` dashboard + `/api/status` health summary endpoint
 - [x] Verify E2E suite fully green after deterministic harness updates
+- [x] Production fallback: allow active admin controller to drive playback when autonomous cron cadence is limited
+- [x] Header admin controls visible for admin sessions even before controller lease is active (actions disabled until controller acquired)
 
 ## Component Contract Refactor (2026-02-20)
 - [x] Define component portability rule (props-in / events-out / no hidden store ownership in presentational components)

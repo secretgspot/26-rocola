@@ -42,7 +42,9 @@ export function createStationPageState({ getData, playerState, addToast, refresh
 	const isAdmin = $derived(Boolean(getData?.()?.isAdmin));
 	const isDevEnv = $derived(Boolean(getData?.()?.isDev));
 	const canControl = $derived(isAdmin && isController);
-	const canDrivePlayback = $derived(canControl && isDevEnv);
+	// Allow active admin controller to drive playback in production as a fallback
+	// when server cron cadence is not sufficient (e.g. Hobby daily cron only).
+	const canDrivePlayback = $derived(canControl);
 	const showAdminHealth = $derived(isAdmin || isDevEnv);
 	const connectionState = $derived(playerState.connectionState || 'connecting');
 	const connectionTooltip = $derived(`Realtime: ${connectionState}`);
